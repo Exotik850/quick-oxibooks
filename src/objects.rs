@@ -1,21 +1,27 @@
-use chrono::{NaiveDate, DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Write;
 
-use crate::quickbook::{Line, LinkedTxn, Email, Addr, MetaData, NtRef};
+use crate::quickbook::{Addr, Email, Line, LinkedTxn, MetaData, NtRef};
 
-#[derive(Eq,PartialEq,Debug)]
+#[derive(Eq, PartialEq, Debug)]
 pub(crate) struct RefreshToken(String);
 
 impl RefreshToken {
     pub fn get() -> Self {
         let token = fs::read_to_string("refresh.txt");
         match token {
-            Ok(tok) => {Self(tok)}
-            Err(e) => {panic!("Could not retreive refresh token from file:\n\t{e:?}")}
+            Ok(tok) => Self(tok),
+            Err(e) => {
+                panic!("Could not retreive refresh token from file:\n\t{e:?}")
+            }
         }
+    }
+
+    pub fn new(val: &str) -> Self {
+        Self(val.to_owned())
     }
 }
 
@@ -31,11 +37,8 @@ impl Drop for RefreshToken {
     }
 }
 
-
-
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all="PascalCase")]
+#[serde(rename_all = "PascalCase")]
 pub struct Invoice {
     #[serde(default)]
     txn_date: NaiveDate,
@@ -76,16 +79,14 @@ pub struct Invoice {
     #[serde(default)]
     custom_field: Vec<CustomField>,
     #[serde(default)]
-    id: String
+    id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct CustomField {
-
-}
+struct CustomField {}
 
 #[derive(Serialize, Deserialize, Debug, JsonSchema, Clone, Default)]
-#[serde(rename_all="PascalCase")]
+#[serde(rename_all = "PascalCase")]
 struct TxnTaxDetail {
     #[serde(default)]
     txn_tax_code_ref: NtRef,
@@ -95,9 +96,8 @@ struct TxnTaxDetail {
     tax_line: Line,
 }
 
-
 #[derive(Deserialize)]
 pub(crate) struct InvoiceResponse {
     pub(crate) invoice: Invoice,
-    time: DateTime<Utc>
+    time: DateTime<Utc>,
 }

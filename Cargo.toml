@@ -14,3 +14,5 @@ chrono = {version="0.4.26", features=["serde"]}
 paste = "1.0.14"
 schemars = { version = "0.8.12", features = ["chrono", "uuid"] }
 uuid = { version = "1.0", features = ["serde", "v4"] }
+tokio = {version="1.29.1", features=["full"]}
+oauth2 = {version="4.4.1", features=["reqwest"]}
