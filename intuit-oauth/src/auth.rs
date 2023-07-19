@@ -7,48 +7,6 @@ pub const TOKEN_ENDPOINT: &'static str = "https://oauth.platform.intuit.com/oaut
 pub const REVOKE_ENDPOINT: &'static str = "https://developer.api.intuit.com/v2/oauth2/tokens/revoke";
 pub const ACCOUNTING_SCOPE: &'static str = "com.intuit.quickbooks.accounting";
 
-pub struct APIError {
-    pub status_code: StatusCode,
-    pub body: String,
-}
-impl std::fmt::Display for APIError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "APIError: status code -> {}, body -> {}",
-            self.status_code, self.body
-        )
-    }
-}
-impl std::fmt::Debug for APIError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "APIError: status code -> {}, body -> {}",
-            self.status_code, self.body
-        )
-    }
-}
-impl std::error::Error for APIError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        None
-    }
-}
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct AccessToken {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub access_token: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub token_type: String,
-    #[serde(default)]
-    pub expires_in: i64,
-    #[serde(default)]
-    pub x_refresh_token_expires_in: i64,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub refresh_token: String,
-}
-
 pub enum Environment {
     PRODUCTION,
     SANDBOX

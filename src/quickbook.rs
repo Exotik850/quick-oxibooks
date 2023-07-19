@@ -23,6 +23,7 @@
 use std::{env, error, fmt, sync::Arc};
 
 use chrono::{DateTime, NaiveDate, Utc};
+use oauth2::CsrfToken;
 use paste::paste;
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
@@ -31,7 +32,7 @@ use serde::{Deserialize, Serialize};
 use crate::objects::{Invoice, InvoiceResponse};
 
 /// Endpoint for the QuickBooks API.
-const ENDPOINT: &str = "https://quickbooks.api.intuit.com/v3/";
+const ENDPOINT: &str = "https://sandbox-quickbooks.api.intuit.com/v3/";
 
 const QUERY_PAGE_SIZE: i64 = 1000;
 
@@ -199,10 +200,10 @@ impl QuickBooks {
     }
 
     pub fn user_consent_url(&self) -> String {
-        let state = uuid::Uuid::new_v4();
+        let state = CsrfToken::new_random();
         format!(
             "https://appcenter.intuit.com/connect/oauth2?client_id={}&response_type=code&scope=com.intuit.quickbooks.accounting&redirect_uri={}&state={}",
-            self.client_id, self.redirect_uri, state
+            self.client_id, self.redirect_uri, state.secret()
         )
     }
 
@@ -1116,3 +1117,47 @@ pub struct PrimaryPhone {
 
 #[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct WebAddr {}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct AccessToken {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub access_token: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub token_type: String,
+    #[serde(default)]
+    pub expires_in: i64,
+    #[serde(default)]
+    pub x_refresh_token_expires_in: i64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub refresh_token: String,
+}
+
+
+pub struct APIError {
+    pub status_code: StatusCode,
+    pub body: String,
+}
+impl std::fmt::Display for APIError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code, self.body
+        )
+    }
+}
+impl std::fmt::Debug for APIError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "APIError: status code -> {}, body -> {}",
+            self.status_code, self.body
+        )
+    }
+}
+impl std::error::Error for APIError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
+}
+
