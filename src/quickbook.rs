@@ -6,6 +6,9 @@
  *
  * Example:
  *
+ * ORIGINIALLY FROM https://github.com/oxidecomputer/cio 
+ * LICENSED UNDER APACHE 2.0
+ * 
  * ```ignore
  * use quickbooks::QuickBooks;
  * use serde::{Deserialize, Serialize};
@@ -29,7 +32,7 @@ use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::objects::{Invoice, InvoiceResponse};
+use crate::objects::{Invoice, InvoiceResponse, InvoiceQueryResponse};
 
 /// Endpoint for the QuickBooks API.
 const ENDPOINT: &str = "https://sandbox-quickbooks.api.intuit.com/v3/";
@@ -73,7 +76,7 @@ pub struct QuickBooks {
     token: String,
     // This expires in 101 days. It is hardcoded in the GitHub Actions secrets,
     // We might want something a bit better like storing it in the database.
-    refresh_token: String,
+    pub refresh_token: String,
     client_id: String,
     client_secret: String,
     redirect_uri: String,
@@ -398,6 +401,35 @@ impl QuickBooks {
     get_qb_object!(bill, BillResponse);
     get_qb_object!(invoice, InvoiceResponse);
 
+    pub async fn get_invoice_by_doc_num(&self, doc_num: &str) -> Result<Invoice, APIError> {
+        let request = self.request(
+            Method::GET,
+            &format!("company/{}/query", self.company_id),
+            (),
+            Some(&[(
+                "query",
+                &format!(
+                    "select * from Invoice where DocNumber = '{doc_num}' MAXRESULTS {QUERY_PAGE_SIZE}"
+                ),
+            )]),
+        );
+
+        let resp = self.client.execute(request).await.unwrap();
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                return Err(APIError {
+                    status_code: s,
+                    body: resp.text().await.unwrap(),
+                })
+            }
+        };
+
+        let r: ItemsResponse = resp.json().await.unwrap();
+
+        Ok(r.query_response.invoice[0].clone())
+    }
+
     // pub async fn get_bill(&self, bill_id: &str) -> Result<Bill, APIError> {
     //     // Build the request.
     //     let request = self.request(
@@ -616,6 +648,8 @@ pub struct QueryResponse {
     pub bill_payment: Vec<BillPayment>,
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "CompanyInfo")]
     pub company_info: Vec<CompanyInfo>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Invoice")]
+    pub invoice: Vec<Invoice>,
     #[serde(default, rename = "startPosition")]
     pub start_position: i64,
     #[serde(default, rename = "maxResults")]
