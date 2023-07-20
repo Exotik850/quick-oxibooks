@@ -1,4 +1,6 @@
-/target
+target/
 .env
 refresh.txt
 .idea
+.vscode
+/intuit-oauth/target/

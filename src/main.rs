@@ -1,19 +1,9 @@
 
 use std::io::{Write, Read};
-
-use oauth2::{
-    basic::BasicClient, reqwest::async_http_client, AuthUrl, AuthorizationCode, ClientId,
-    ClientSecret, CsrfToken, RedirectUrl, Scope, TokenResponse, TokenUrl, AccessToken, RefreshToken,
-};
-use tokio::{
-    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
-    net::{TcpListener, TcpStream},
-};
 mod quickbook;
 mod objects;
-use quickbook::{QuickBooks};
-
-use intuit_oauth::AuthClient;
+use quickbook::QuickBooks;
+use intuit_oauth::{AuthClient, oauth2::{AccessToken, RefreshToken}};
 
 #[tokio::main]
 async fn main() {
@@ -24,13 +14,11 @@ async fn main() {
         file.read_to_string(&mut read).unwrap();
         rt = RefreshToken::new(read);
     } else {
-        let auth = AuthClient::new_from_env("4620816365257778210", intuit_oauth::Environment::SANDBOX);
+        let auth = AuthClient::new_from_env("4620816365257778210", intuit_oauth::Environment::SANDBOX).await;
         let mut auth = auth.authorize().await;
         auth.refresh_access_token().await;
         (at, rt) = auth.get_tokens();
     }
-    // println!("{:?}: {:?}", at.secret(), rt.secret());
-
     let mut qb = QuickBooks::new_from_env("4620816365257778210", at.secret(), rt.secret());
     qb.refresh_access_token().await.unwrap();
     

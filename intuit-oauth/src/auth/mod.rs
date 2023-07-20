@@ -2,8 +2,7 @@ mod token;
 pub use token::Environment;
 
 use oauth2::{CsrfToken, ClientId, ClientSecret, RedirectUrl, AuthUrl, TokenUrl, AccessToken, basic::BasicClient, RefreshToken, TokenResponse, Scope, reqwest::async_http_client, AuthorizationCode};
-use reqwest::{Client, header, StatusCode};
-use serde::{Deserialize, Serialize};
+use reqwest::StatusCode;
 use tokio::{net::{TcpStream, TcpListener}, io::{BufReader, AsyncBufReadExt, AsyncWriteExt}};
 
 pub const ACCOUNTING_SCOPE: &'static str = "com.intuit.quickbooks.accounting";
@@ -17,9 +16,9 @@ pub struct APIError {
 pub struct Unauthorized {
     client_id: ClientId,
     client_secret: ClientSecret,
+    discovery_doc: token::DiscoveryDoc,
 }
 pub struct Authorized {
-    discovery_doc: token::DiscoveryDoc,
     pub access_token: AccessToken,
     pub refresh_token: RefreshToken,
     client: BasicClient
@@ -40,8 +39,8 @@ where T: AuthorizeType
 impl<T> AuthClient<T> 
 where T: AuthorizeType
 {
-    async fn get_discovery_doc(&self) -> token::DiscoveryDoc {
-        let url = self.environment.discovery_url();
+    async fn get_discovery_doc(environment: &Environment) -> token::DiscoveryDoc {
+        let url = environment.discovery_url();
         let resp = reqwest::get(url).await.expect("Error getting discovery doc from url");
         if !resp.status().is_success() {
             panic!("Error getting discovery doc: {}", resp.status())
@@ -53,13 +52,6 @@ where T: AuthorizeType
             },
             Err(e) => panic!("Error deseralizing discovery doc: {e}"),
         }
-    }
-
-    fn get_consent_url(&self, client: &BasicClient) -> (url::Url, CsrfToken) {
-        client
-            .authorize_url(CsrfToken::new_random)
-            .add_scope(Scope::new(ACCOUNTING_SCOPE.to_string()))
-            .url()
     }
 
     async fn read_auth_params(stream: &mut TcpStream) -> Option<(AuthorizationCode, CsrfToken)> {
@@ -91,34 +83,19 @@ where T: AuthorizeType
       async fn handle_oauth_callback(client: &BasicClient, listener: TcpListener, csrf_state: CsrfToken) -> Option<(AccessToken, RefreshToken)> {
         let token_res = loop {
             if let Ok((mut stream, _)) = listener.accept().await {    
-                // read redirect response and parse code & state
                 let (code, state) = Self::read_auth_params(&mut stream).await.unwrap();
     
-                // send 200 OK response
-                Self::send_response(&mut stream, "Go back to your terminal :)").await.unwrap();
+                Self::send_ok_response(&mut stream, "Go back to your terminal :)").await.unwrap();
     
-                // check state matches expected
                 if state.secret() != csrf_state.secret() {
                     println!("State mismatch!");
                     return None;
                 }
     
-                // exchange code for token
                 let token_res = client.exchange_code(code)
                     .request_async(async_http_client)
                     .await
                     .ok()?;
-    
-    
-                let scopes = if let Some(scopes_vec) = token_res.scopes() {
-                    scopes_vec
-                        .iter()
-                        .map(|comma_separated| comma_separated.split(','))
-                        .flatten()
-                        .collect::<Vec<_>>()
-                } else {
-                    Vec::new()
-                };
     
                 break token_res;
             }
@@ -131,22 +108,23 @@ where T: AuthorizeType
         Some((access_token, refresh_token))
     }
 
-    async fn send_response(stream: &mut TcpStream, arg: &str) -> Result<(), std::io::Error> {
+    async fn send_ok_response(stream: &mut TcpStream, arg: &str) -> Result<(), std::io::Error> {
         let response = format!(
             "HTTP/1.1 200 OK\r\ncontent-length: {}\r\n\r\n{}",
             arg.len(),
             arg
         );
         stream.write_all(response.as_bytes()).await
-    }
-    
+    }    
 }
 
 impl AuthClient<Unauthorized> {
 
-    pub fn new<X, R, Q, O>(client_id: X, client_secret: Q, redirect_uri: R, realm_id: O, environment: Environment) -> Self
+    pub async fn new<X, R, Q, O>(client_id: X, client_secret: Q, redirect_uri: R, realm_id: O, environment: Environment) -> Self
     where X: ToString, Q: ToString, R: ToString, O: ToString
     {
+        let discovery_doc = Self::get_discovery_doc(&environment).await;
+
         Self {
             redirect_uri: RedirectUrl::new(redirect_uri.to_string()).expect("Invalid redirect URI!"),
             realm_id: realm_id.to_string(),
@@ -154,13 +132,16 @@ impl AuthClient<Unauthorized> {
             data: Unauthorized {
                 client_id: ClientId::new(client_id.to_string()),
                 client_secret: ClientSecret::new(client_secret.to_string()),
+                discovery_doc
             }
         }
     }
 
-    pub fn new_from_env<O>(realm_id: O, environment: Environment) -> Self
+    pub async fn new_from_env<O>(realm_id: O, environment: Environment) -> Self
     where O: ToString
     {
+        let discovery_doc = Self::get_discovery_doc(&environment).await;
+
         let client_id = ClientId::new(dotenv::var("QUICKBOOKS_CLIENT_ID").unwrap());
         let client_secret = ClientSecret::new(dotenv::var("QUICKBOOKS_CLIENT_SECRET").unwrap());
         let redirect_uri = RedirectUrl::new(dotenv::var("QUICKBOOKS_REDIRECT_URI").unwrap()).expect("Failed to parse redirect url");
@@ -171,19 +152,19 @@ impl AuthClient<Unauthorized> {
             data: Unauthorized {
                 client_id,
                 client_secret, 
+                discovery_doc
             }
         }
     }
 
-    pub async fn authorize(mut self) -> AuthClient<Authorized> {
-        let doc = self.get_discovery_doc().await;
+    pub async fn authorize(self) -> AuthClient<Authorized> {
 
-        let Unauthorized {client_id, client_secret} = self.data;
+        let Unauthorized {client_id, client_secret, discovery_doc} = self.data;
 
         let client = BasicClient::new(client_id,
             Some(client_secret), 
-            AuthUrl::new(doc.authorization_endpoint.to_string()).expect("Invalid Auth endpoint from Discovery Doc!"), 
-            Some(TokenUrl::new(doc.token_endpoint.to_string()).expect("Invalid Token endpoint from Discovery Doc!"))
+            AuthUrl::new(discovery_doc.authorization_endpoint.to_string()).expect("Invalid Auth endpoint from Discovery Doc!"), 
+            Some(TokenUrl::new(discovery_doc.token_endpoint.to_string()).expect("Invalid Token endpoint from Discovery Doc!"))
         ).set_redirect_uri(self.redirect_uri.clone());
 
         let (auth_url, csrf_state) = client.authorize_url(CsrfToken::new_random)
@@ -199,7 +180,6 @@ impl AuthClient<Unauthorized> {
         let (at, rt) = Self::handle_oauth_callback(&client, listener, csrf_state).await.unwrap();
 
         let data = Authorized {
-            discovery_doc: doc,
             access_token: at,
             refresh_token: rt, 
             client,
