@@ -39,6 +39,11 @@ const ENDPOINT: &str = "https://sandbox-quickbooks.api.intuit.com/v3/";
 
 const QUERY_PAGE_SIZE: i64 = 1000;
 
+pub struct APIError {
+    pub status_code: StatusCode,
+    pub body: String,
+}
+
 macro_rules! get_qb_object {
     ($name:ident, $response:ty) => {
         paste! {
@@ -1167,10 +1172,7 @@ pub struct AccessToken {
 }
 
 
-pub struct APIError {
-    pub status_code: StatusCode,
-    pub body: String,
-}
+
 impl std::fmt::Display for APIError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(

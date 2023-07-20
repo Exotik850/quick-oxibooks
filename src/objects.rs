@@ -37,7 +37,7 @@ impl Drop for RefreshToken {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "PascalCase")]
 pub struct Invoice {
     #[serde(default)]
@@ -82,7 +82,7 @@ pub struct Invoice {
     id: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
 struct CustomField {}
 
 #[derive(Serialize, Deserialize, Debug, JsonSchema, Clone, Default)]
@@ -100,4 +100,17 @@ struct TxnTaxDetail {
 pub(crate) struct InvoiceResponse {
     pub(crate) invoice: Invoice,
     time: DateTime<Utc>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all="camelCase")]
+pub(crate) struct InvoiceQueryResponse {
+    #[serde(default)]
+    start_position: i64,
+    #[serde(default)]
+    total_count: i64,
+    #[serde(default)]
+    max_results: i64,
+    #[serde(rename="Invoice")]
+    pub invoice: Vec<Invoice>,
 }
