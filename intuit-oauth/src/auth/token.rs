@@ -27,6 +27,7 @@ impl Environment {
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(unused)]
 pub(crate) struct DiscoveryDoc {
     #[serde(default)]
     issuer: String,

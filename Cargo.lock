@@ -805,7 +805,6 @@ dependencies = [
  "chrono",
  "dotenv",
  "intuit-oauth",
- "oauth2",
  "paste",
  "reqwest",
  "schemars",

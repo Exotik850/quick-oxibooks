@@ -5,6 +5,8 @@ use oauth2::{CsrfToken, ClientId, ClientSecret, RedirectUrl, AuthUrl, TokenUrl, 
 use reqwest::StatusCode;
 use tokio::{net::{TcpStream, TcpListener}, io::{BufReader, AsyncBufReadExt, AsyncWriteExt}};
 
+use self::token::DiscoveryDoc;
+
 pub const ACCOUNTING_SCOPE: &'static str = "com.intuit.quickbooks.accounting";
 
 #[derive(Debug)]
@@ -16,7 +18,7 @@ pub struct APIError {
 pub struct Unauthorized {
     client_id: ClientId,
     client_secret: ClientSecret,
-    discovery_doc: token::DiscoveryDoc,
+    discovery_doc: DiscoveryDoc,
 }
 pub struct Authorized {
     pub access_token: AccessToken,
@@ -39,17 +41,14 @@ where T: AuthorizeType
 impl<T> AuthClient<T> 
 where T: AuthorizeType
 {
-    async fn get_discovery_doc(environment: &Environment) -> token::DiscoveryDoc {
+    async fn get_discovery_doc(environment: &Environment) -> DiscoveryDoc {
         let url = environment.discovery_url();
         let resp = reqwest::get(url).await.expect("Error getting discovery doc from url");
         if !resp.status().is_success() {
             panic!("Error getting discovery doc: {}", resp.status())
         }
         match resp.json().await {
-            Ok(doc) => {
-                println!("{doc:?}");
-                doc
-            },
+            Ok(doc) => doc,
             Err(e) => panic!("Error deseralizing discovery doc: {e}"),
         }
     }
@@ -83,7 +82,7 @@ where T: AuthorizeType
       async fn handle_oauth_callback(client: &BasicClient, listener: TcpListener, csrf_state: CsrfToken) -> Option<(AccessToken, RefreshToken)> {
         let token_res = loop {
             if let Ok((mut stream, _)) = listener.accept().await {    
-                let (code, state) = Self::read_auth_params(&mut stream).await.unwrap();
+                let (code, state) = Self::read_auth_params(&mut stream).await?;
     
                 Self::send_ok_response(&mut stream, "Go back to your terminal :)").await.unwrap();
     

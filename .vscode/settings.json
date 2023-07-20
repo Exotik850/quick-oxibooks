@@ -1,6 +1,7 @@
 {
     "rust-analyzer.linkedProjects": [
         ".\\intuit-oauth\\Cargo.toml",
-        ".\\Cargo.toml"
+        ".\\Cargo.toml",
+        ".\\quickbooks-types\\Cargo.toml"
     ]
 }

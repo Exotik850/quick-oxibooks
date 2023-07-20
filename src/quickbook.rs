@@ -23,16 +23,17 @@
  * }
  * ```
  */
-use std::{env, error, fmt, sync::Arc};
+#[allow(dead_code)]
+
+use std::sync::Arc;
 
 use chrono::{DateTime, NaiveDate, Utc};
-use oauth2::CsrfToken;
 use paste::paste;
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::objects::{Invoice, InvoiceResponse, InvoiceQueryResponse};
+use crate::objects::{Invoice, InvoiceResponse};
 
 /// Endpoint for the QuickBooks API.
 const ENDPOINT: &str = "https://sandbox-quickbooks.api.intuit.com/v3/";
@@ -207,13 +208,6 @@ impl QuickBooks {
         rb.build().unwrap()
     }
 
-    pub fn user_consent_url(&self) -> String {
-        let state = CsrfToken::new_random();
-        format!(
-            "https://appcenter.intuit.com/connect/oauth2?client_id={}&response_type=code&scope=com.intuit.quickbooks.accounting&redirect_uri={}&state={}",
-            self.client_id, self.redirect_uri, state.secret()
-        )
-    }
 
     pub async fn refresh_access_token(&mut self) -> Result<AccessToken, APIError> {
         let mut headers = header::HeaderMap::new();
@@ -669,93 +663,6 @@ pub struct ItemsResponse {
 }
 
 #[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
-pub struct Item {
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Name")]
-    pub name: String,
-    #[serde(default, rename = "Active")]
-    pub active: bool,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "FullyQualifiedName"
-    )]
-    pub fully_qualified_name: String,
-    #[serde(default, rename = "Taxable")]
-    pub taxable: bool,
-    #[serde(default, rename = "UnitPrice")]
-    pub unit_price: f32,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Type")]
-    pub item_type: String,
-    #[serde(default, rename = "PurchaseCost")]
-    pub purchase_cost: f32,
-    #[serde(default, rename = "ExpenseAccountRef")]
-    pub expense_account_ref: NtRef,
-    #[serde(default, rename = "TrackQtyOnHand")]
-    pub track_qty_on_hand: bool,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub domain: String,
-    #[serde(default)]
-    pub sparse: bool,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Id")]
-    pub id: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "SyncToken"
-    )]
-    pub sync_token: String,
-    #[serde(rename = "MetaData")]
-    pub meta_data: MetaData,
-    #[serde(default, rename = "SubItem")]
-    pub sub_item: bool,
-    #[serde(default, rename = "ParentRef")]
-    pub parent_ref: NtRef,
-    #[serde(default, rename = "Level")]
-    pub level: i64,
-    #[serde(default, rename = "IncomeAccountRef")]
-    pub income_account_ref: NtRef,
-    #[serde(default, rename = "AssetAccountRef")]
-    pub asset_account_ref: NtRef,
-    #[serde(default, rename = "QtyOnHand")]
-    pub qty_on_hand: i64,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "InvStartDate"
-    )]
-    pub inv_start_date: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "Description"
-    )]
-    pub description: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "PurchaseDesc"
-    )]
-    pub purchase_desc: String,
-}
-
-#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
-pub struct NtRef {
-    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Value")]
-    pub value: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", alias = "Name")]
-    pub name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "type")]
-    pub entity_ref_type: String,
-}
-
-#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize, Default)]
-#[serde(rename_all = "PascalCase")]
-pub struct MetaData {
-    pub create_time: DateTime<Utc>,
-    pub last_updated_time: DateTime<Utc>,
-}
-
-#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
 pub struct PurchaseResponse {
     #[serde(default, rename = "QueryResponse")]
     pub query_response: QueryResponse,
@@ -1014,44 +921,6 @@ pub struct BillResponse {
     #[serde(rename = "Bill")]
     pub bill: Bill,
     pub time: DateTime<Utc>,
-}
-
-#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
-pub struct Bill {
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "SyncToken"
-    )]
-    pub sync_token: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub domain: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Id")]
-    pub id: String,
-    #[serde(default, rename = "APAccountRef")]
-    pub ap_account_ref: NtRef,
-    #[serde(default, rename = "VendorRef")]
-    pub vendor_ref: NtRef,
-    #[serde(rename = "TxnDate")]
-    pub txn_date: NaiveDate,
-    #[serde(default, rename = "TotalAmt")]
-    pub total_amt: f64,
-    #[serde(default, rename = "CurrencyRef")]
-    pub currency_ref: NtRef,
-    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "LinkedTxn")]
-    pub linked_txn: Vec<LinkedTxn>,
-    #[serde(default, rename = "SalesTermRef")]
-    pub sales_term_ref: NtRef,
-    #[serde(rename = "DueDate")]
-    pub due_date: NaiveDate,
-    #[serde(default)]
-    pub sparse: bool,
-    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "Line")]
-    pub line: Vec<Line>,
-    #[serde(default, rename = "Balance")]
-    pub balance: i64,
-    #[serde(rename = "MetaData")]
-    pub meta_data: MetaData,
 }
 
 #[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
