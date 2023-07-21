@@ -1,5 +1,6 @@
 use serde::Deserialize;
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Environment {
     PRODUCTION,
     SANDBOX

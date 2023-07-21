@@ -4,6 +4,7 @@ pub use token::Environment;
 use oauth2::{CsrfToken, ClientId, ClientSecret, RedirectUrl, AuthUrl, TokenUrl, AccessToken, basic::BasicClient, RefreshToken, TokenResponse, Scope, reqwest::async_http_client, AuthorizationCode};
 use reqwest::StatusCode;
 use tokio::{net::{TcpStream, TcpListener}, io::{BufReader, AsyncBufReadExt, AsyncWriteExt}};
+use url::Url;
 
 use self::token::DiscoveryDoc;
 
@@ -29,6 +30,7 @@ pub trait AuthorizeType {}
 impl AuthorizeType for Authorized {}
 impl AuthorizeType for Unauthorized {}
 
+#[derive(Debug)]
 pub struct AuthClient<T>
 where T: AuthorizeType
 {
@@ -141,9 +143,9 @@ impl AuthClient<Unauthorized> {
     {
         let discovery_doc = Self::get_discovery_doc(&environment).await;
 
-        let client_id = ClientId::new(dotenv::var("QUICKBOOKS_CLIENT_ID").unwrap());
-        let client_secret = ClientSecret::new(dotenv::var("QUICKBOOKS_CLIENT_SECRET").unwrap());
-        let redirect_uri = RedirectUrl::new(dotenv::var("QUICKBOOKS_REDIRECT_URI").unwrap()).expect("Failed to parse redirect url");
+        let client_id = ClientId::new(dotenv::var("INTUIT_CLIENT_ID").unwrap());
+        let client_secret = ClientSecret::new(dotenv::var("INTUIT_CLIENT_SECRET").unwrap());
+        let redirect_uri = RedirectUrl::new(dotenv::var("INTUIT_REDIRECT_URI").unwrap()).expect("Failed to parse redirect url");
         Self {
             redirect_uri,
             realm_id: realm_id.to_string(),
@@ -167,8 +169,8 @@ impl AuthClient<Unauthorized> {
         ).set_redirect_uri(self.redirect_uri.clone());
 
         let (auth_url, csrf_state) = client.authorize_url(CsrfToken::new_random)
-            .add_scope(Scope::new(ACCOUNTING_SCOPE.to_string()))
-            .url();
+        .add_scope(Scope::new(ACCOUNTING_SCOPE.to_string()))
+        .url();
 
         println!(
             "Open this URL in your browser:\n{}\n",
@@ -205,5 +207,11 @@ impl AuthClient<Authorized> {
 
     pub fn get_tokens(&self) -> (AccessToken, RefreshToken){
         (self.data.access_token.clone(), self.data.refresh_token.clone())
+    }
+
+    pub fn get_auth_url(&self) -> (Url, CsrfToken) {
+        self.data.client.authorize_url(CsrfToken::new_random)
+        .add_scope(Scope::new(ACCOUNTING_SCOPE.to_string()))
+        .url()
     }
 }

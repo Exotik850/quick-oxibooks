@@ -23,17 +23,17 @@
  * }
  * ```
  */
+use std::fmt::Display;
 #[allow(dead_code)]
 
 use std::sync::Arc;
 
 use chrono::{DateTime, NaiveDate, Utc};
+use intuit_oauth::{AuthClient, AuthorizeType, Unauthorized, Authorized};
 use paste::paste;
+use quickbooks_types::models::{MetaData, LinkedTxn, Invoice, Item, NtRef, Bill, WebAddr, CompanyInfo};
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use crate::objects::{Invoice, InvoiceResponse};
 
 /// Endpoint for the QuickBooks API.
 const ENDPOINT: &str = "https://sandbox-quickbooks.api.intuit.com/v3/";
@@ -45,99 +45,49 @@ pub struct APIError {
     pub body: String,
 }
 
-macro_rules! get_qb_object {
-    ($name:ident, $response:ty) => {
-        paste! {
-            pub async fn [<get_ $name>](&self, id: &str) -> Result<[<$name:camel>], APIError> {
-
-                let request = self.request(
-                    Method::GET,
-                    &format!("company/{}/{}/{}", self.company_id, stringify!($name), id),
-                    (),
-                    None,
-                );
-
-                let resp = self.client.execute(request).await.unwrap();
-                match resp.status() {
-                    reqwest::StatusCode::OK => (),
-                    s => {
-                        return Err( APIError {
-                            status_code: s,
-                            body: resp.text().await.unwrap(),
-                        })
-                    }
-                };
-
-                let r: $response = resp.json().await.unwrap();
-
-                Ok(r.$name)
-            }
-        }
-    };
-}
-
 /// Entrypoint for interacting with the QuickBooks API.
 #[derive(Debug, Clone)]
-pub struct QuickBooks {
-    token: String,
-    // This expires in 101 days. It is hardcoded in the GitHub Actions secrets,
-    // We might want something a bit better like storing it in the database.
-    pub refresh_token: String,
-    client_id: String,
-    client_secret: String,
+pub struct QuickBooks<T>
+where T: AuthorizeType
+{
     redirect_uri: String,
     company_id: String,
-
-    client: Arc<Client>,
+    client: Arc<AuthClient<T>>,
+    http_client: Arc<Client>,
 }
 
-impl QuickBooks {
+impl QuickBooks<Unauthorized> {
     /// Create a new QuickBooks client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API key your requests will work.
-    pub fn new<I, K, B, R, T, Q>(
+    pub async fn new<I, K, B, R>(
         client_id: I,
         client_secret: K,
         company_id: B,
         redirect_uri: R,
-        token: T,
-        refresh_token: Q,
-    ) -> Self
+    ) -> QuickBooks<Authorized>
     where
-        I: ToString,
-        K: ToString,
-        B: ToString,
-        R: ToString,
-        T: ToString,
-        Q: ToString,
+    I: Display,
+    K: Display,
+        B: Display,
+        R: Display,
     {
-        let client = Client::builder().build();
-        match client {
-            Ok(c) => {
-                let qb = QuickBooks {
-                    client_id: client_id.to_string(),
-                    client_secret: client_secret.to_string(),
-                    company_id: company_id.to_string(),
-                    redirect_uri: redirect_uri.to_string(),
-                    token: token.to_string(),
-                    refresh_token: refresh_token.to_string(),
+        let client = AuthClient::new(&client_id, &client_secret, &redirect_uri,
+            &company_id, intuit_oauth::Environment::SANDBOX).await;
+        
+        let mut client = client.authorize().await;
 
-                    client: Arc::new(c),
-                };
+        let qb = QuickBooks {
+            company_id: company_id.to_string(),
+            redirect_uri: redirect_uri.to_string(),
+            client: Arc::new(client),
+            http_client: Arc::new(Client::new())
+        };
 
-                if qb.token.is_empty() || qb.refresh_token.is_empty() {
-                    // This is super hacky and a work around since there is no way to
-                    // auth without using the browser.
-                    println!("quickbooks consent URL: {}", qb.user_consent_url());
-                }
-                // We do not refresh the access token since we leave that up to the
-                // user to do so they can re-save it to their database.
+        qb
+    }        
+    
 
-                qb
-            }
-            Err(e) => panic!("creating client failed: {e:?}"),
-        }
-    }
 
     /// Create a new QuickBooks client struct from environment variables. It
     /// takes a type that can convert into
@@ -145,25 +95,27 @@ impl QuickBooks {
     /// given a valid API key and your requests will work.
     /// We pass in the token and refresh token to the client so if you are storing
     /// it in a database, you can get it first.
-    pub fn new_from_env<C, T, R>(company_id: C, token: T, refresh_token: R) -> Self
+    pub async fn new_from_env<C>(company_id: C) -> QuickBooks<Authorized>
     where
-        C: ToString,
-        T: ToString,
-        R: ToString,
+        C: Display,
     {
-        let client_id = dotenv::var("QUICKBOOKS_CLIENT_ID").unwrap();
-        let client_secret = dotenv::var("QUICKBOOKS_CLIENT_SECRET").unwrap();
-        let redirect_uri = dotenv::var("QUICKBOOKS_REDIRECT_URI").unwrap();
+        let redirect_uri = dotenv::var("INTUIT_REDIRECT_URI").unwrap();
+        let client = AuthClient::new_from_env(&company_id, intuit_oauth::Environment::SANDBOX).await;
+        let mut client = client.authorize().await;
+        client.refresh_access_token().await;
 
-        QuickBooks::new(
-            client_id,
-            client_secret,
-            company_id,
+
+        QuickBooks { 
             redirect_uri,
-            token,
-            refresh_token,
-        )
+            company_id: company_id.to_string(),
+            client: Arc::new(client),
+            http_client: Arc::new(Client::new())
+        }
     }
+}
+
+impl QuickBooks<Authorized>
+{
 
     fn request<B>(
         &self,
@@ -178,7 +130,7 @@ impl QuickBooks {
         let base = Url::parse(ENDPOINT).unwrap();
         let url = base.join(path).unwrap();
 
-        let bt = format!("Bearer {}", self.token);
+        let bt = format!("Bearer {}", self.client.data.access_token.secret());
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
 
         // Set the default headers.
@@ -193,7 +145,7 @@ impl QuickBooks {
             header::HeaderValue::from_static("application/json"),
         );
 
-        let mut rb = self.client.request(method.clone(), url).headers(headers);
+        let mut rb = self.http_client.request(method.clone(), url).headers(headers);
 
         if let Some(val) = query {
             rb = rb.query(&val);
@@ -209,67 +161,6 @@ impl QuickBooks {
     }
 
 
-    pub async fn refresh_access_token(&mut self) -> Result<AccessToken, APIError> {
-        let mut headers = header::HeaderMap::new();
-        headers.append(
-            header::ACCEPT,
-            header::HeaderValue::from_static("application/json"),
-        );
-
-        let params = [
-            ("grant_type", "refresh_token"),
-            ("refresh_token", &self.refresh_token),
-        ];
-        let client = reqwest::Client::new();
-        let resp = client
-            .post("https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer")
-            .headers(headers)
-            .basic_auth(&self.client_id, Some(&self.client_secret))
-            .form(&params)
-            .send()
-            .await
-            .unwrap();
-
-        // Unwrap the response.
-        let t: AccessToken = resp.json().await.unwrap();
-
-        self.token = t.access_token.to_string();
-        self.refresh_token = t.refresh_token.to_string();
-
-        Ok(t)
-    }
-
-    pub async fn get_access_token(&mut self, code: &str) -> Result<AccessToken, APIError> {
-        let mut headers = header::HeaderMap::new();
-        headers.append(
-            header::ACCEPT,
-            header::HeaderValue::from_static("application/json"),
-        );
-
-        let params = [
-            ("grant_type", "authorization_code"),
-            ("code", code),
-            ("redirect_uri", &self.redirect_uri),
-        ];
-        let client = reqwest::Client::new();
-        let resp = client
-            .post("https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer")
-            .headers(headers)
-            .basic_auth(&self.client_id, Some(&self.client_secret))
-            .form(&params)
-            .send()
-            .await
-            .unwrap();
-
-        // Unwrap the response.
-        let t: AccessToken = resp.json().await.unwrap();
-
-        self.token = t.access_token.to_string();
-        self.refresh_token = t.refresh_token.to_string();
-
-        Ok(t)
-    }
-
     pub async fn company_info(&self, company_id: &str) -> Result<CompanyInfo, APIError> {
         // Build the request.
         let request = self.request(
@@ -279,7 +170,7 @@ impl QuickBooks {
             Some(&[("query", "select * from CompanyInfo")]),
         );
 
-        let resp = self.client.execute(request).await.unwrap();
+        let resp = self.http_client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             s => {
@@ -295,110 +186,6 @@ impl QuickBooks {
         Ok(r.query_response.company_info.get(0).unwrap().clone())
     }
 
-    pub async fn list_attachments_for_purchase(
-        &self,
-        purchase_id: &str,
-    ) -> Result<Vec<Attachment>, APIError> {
-        // Build the request.
-        let request = self.request(
-            Method::GET,
-            &format!("company/{}/query", self.company_id),
-            (),
-            Some(&[(
-                "query",
-                &format!(
-                    "select * from attachable where AttachableRef.EntityRef.Type = 'purchase' and \
-                     AttachableRef.EntityRef.value = '{purchase_id}' MAXRESULTS {QUERY_PAGE_SIZE}"
-                ),
-            )]),
-        );
-
-        let resp = self.client.execute(request).await.unwrap();
-        match resp.status() {
-            StatusCode::OK => (),
-            s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
-            }
-        };
-
-        let r: AttachmentResponse = resp.json().await.unwrap();
-
-        Ok(r.query_response.attachable)
-    }
-
-    pub async fn list_attachments_for_bill(
-        &self,
-        bill_id: &str,
-    ) -> Result<Vec<Attachment>, APIError> {
-        // Build the request.
-        let request = self.request(
-            Method::GET,
-            &format!("company/{}/query", self.company_id),
-            (),
-            Some(&[(
-                "query",
-                &format!(
-                    "select * from attachable where AttachableRef.EntityRef.Type = 'bill' and \
-                     AttachableRef.EntityRef.value = '{bill_id}' MAXRESULTS {QUERY_PAGE_SIZE}"
-                ),
-            )]),
-        );
-
-        let resp = self.client.execute(request).await.unwrap();
-        match resp.status() {
-            StatusCode::OK => (),
-            s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
-            }
-        };
-
-        let r: AttachmentResponse = resp.json().await.unwrap();
-
-        Ok(r.query_response.attachable)
-    }
-
-    pub async fn list_attachments_for_bill_payment(
-        &self,
-        bill_payment_id: &str,
-    ) -> Result<Vec<Attachment>, APIError> {
-        // Build the request.
-        let request = self.request(
-            Method::GET,
-            &format!("company/{}/query", self.company_id),
-            (),
-            Some(&[(
-                "query",
-                &format!(
-                    "select * from attachable where AttachableRef.EntityRef.Type = 'billpayment' \
-                     and AttachableRef.EntityRef.value = '{bill_payment_id}' MAXRESULTS {QUERY_PAGE_SIZE}"
-                ),
-            )]),
-        );
-
-        let resp = self.client.execute(request).await.unwrap();
-        match resp.status() {
-            StatusCode::OK => (),
-            s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
-            }
-        };
-
-        let r: AttachmentResponse = resp.json().await.unwrap();
-
-        Ok(r.query_response.attachable)
-    }
-
-    get_qb_object!(bill, BillResponse);
-    get_qb_object!(invoice, InvoiceResponse);
 
     pub async fn get_invoice_by_doc_num(&self, doc_num: &str) -> Result<Invoice, APIError> {
         let request = self.request(
@@ -413,7 +200,7 @@ impl QuickBooks {
             )]),
         );
 
-        let resp = self.client.execute(request).await.unwrap();
+        let resp = self.http_client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             s => {
@@ -454,143 +241,9 @@ impl QuickBooks {
     //     Ok(r.bill)
     // }
 
-    pub async fn fetch_bill_payment_page(
-        &self,
-        start_position: i64,
-    ) -> Result<Vec<BillPayment>, APIError> {
-        // Build the request.
-        let request = self.request(
-            Method::GET,
-            &format!("company/{}/query", self.company_id),
-            (),
-            Some(&[(
-                "query",
-                &format!(
-                    "SELECT * FROM BillPayment ORDERBY Id STARTPOSITION {start_position} MAXRESULTS {QUERY_PAGE_SIZE}"
-                ),
-            )]),
-        );
 
-        let resp = self.client.execute(request).await.unwrap();
-        match resp.status() {
-            StatusCode::OK => (),
-            s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
-            }
-        };
 
-        let r: BillPaymentResponse = resp.json().await.unwrap();
 
-        Ok(r.query_response.bill_payment)
-    }
-
-    pub async fn list_bill_payments(&self) -> Result<Vec<BillPayment>, APIError> {
-        // Build the request.
-        let request = self.request(
-            Method::GET,
-            &format!("company/{}/query", self.company_id),
-            (),
-            Some(&[("query", "SELECT COUNT(*) FROM BillPayment")]),
-        );
-
-        let resp = self.client.execute(request).await.unwrap();
-        match resp.status() {
-            StatusCode::OK => (),
-            s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
-            }
-        };
-
-        let r: CountResponse = resp.json().await.unwrap();
-        let mut bill_payments: Vec<BillPayment> = Vec::new();
-
-        let mut i = 0;
-        while i < r.query_response.total_count {
-            let mut page = self.fetch_bill_payment_page(i + 1).await.unwrap();
-
-            // Add our page to our array.
-            bill_payments.append(&mut page);
-
-            i += QUERY_PAGE_SIZE;
-        }
-
-        Ok(bill_payments)
-    }
-
-    pub async fn fetch_purchase_page(
-        &self,
-        start_position: i64,
-    ) -> Result<Vec<Purchase>, APIError> {
-        // Build the request.
-        let request = self.request(
-            Method::GET,
-            &format!("company/{}/query", self.company_id),
-            (),
-            Some(&[(
-                "query",
-                &format!(
-                    "SELECT * FROM Purchase ORDERBY Id STARTPOSITION {start_position} MAXRESULTS {QUERY_PAGE_SIZE}"
-                ),
-            )]),
-        );
-
-        let resp = self.client.execute(request).await.unwrap();
-        match resp.status() {
-            StatusCode::OK => (),
-            s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
-            }
-        };
-
-        let r: PurchaseResponse = resp.json().await.unwrap();
-
-        Ok(r.query_response.purchase)
-    }
-
-    pub async fn list_purchases(&self) -> Result<Vec<Purchase>, APIError> {
-        // Build the request.
-        let request = self.request(
-            Method::GET,
-            &format!("company/{}/query", self.company_id),
-            (),
-            Some(&[("query", "SELECT COUNT(*) FROM Purchase")]),
-        );
-
-        let resp = self.client.execute(request).await.unwrap();
-        match resp.status() {
-            StatusCode::OK => (),
-            s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
-            }
-        };
-
-        let r: CountResponse = resp.json().await.unwrap();
-        let mut purchases: Vec<Purchase> = Vec::new();
-
-        let mut i = 0;
-        while i < r.query_response.total_count {
-            let mut page = self.fetch_purchase_page(i + 1).await.unwrap();
-
-            // Add our page to our array.
-            purchases.append(&mut page);
-
-            i += QUERY_PAGE_SIZE;
-        }
-
-        Ok(purchases)
-    }
 
     pub async fn list_items(&self) -> Result<Vec<Item>, APIError> {
         // Build the request.
@@ -604,7 +257,7 @@ impl QuickBooks {
             )]),
         );
 
-        let resp = self.client.execute(request).await.unwrap();
+        let resp = self.http_client.execute(request).await.unwrap();
         match resp.status() {
             StatusCode::OK => (),
             s => {
@@ -621,19 +274,19 @@ impl QuickBooks {
     }
 }
 
-#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CountResponse {
     #[serde(default, rename = "QueryResponse")]
     pub query_response: QueryResponse,
 }
 
-#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CompanyInfoResponse {
     #[serde(default, rename = "QueryResponse")]
     pub query_response: QueryResponse,
 }
 
-#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct QueryResponse {
     #[serde(default, rename = "totalCount")]
     pub total_count: i64,
@@ -655,35 +308,15 @@ pub struct QueryResponse {
     pub max_results: i64,
 }
 
-#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ItemsResponse {
     #[serde(default, rename = "QueryResponse")]
     pub query_response: QueryResponse,
     pub time: DateTime<Utc>,
 }
 
-#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
-pub struct PurchaseResponse {
-    #[serde(default, rename = "QueryResponse")]
-    pub query_response: QueryResponse,
-    pub time: String,
-}
 
-#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
-pub struct BillPaymentResponse {
-    #[serde(default, rename = "QueryResponse")]
-    pub query_response: QueryResponse,
-    pub time: String,
-}
-
-#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
-pub struct AttachmentResponse {
-    #[serde(default, rename = "QueryResponse")]
-    pub query_response: QueryResponse,
-    pub time: String,
-}
-
-#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Purchase {
     #[serde(default, rename = "AccountRef")]
     pub account_ref: NtRef,
@@ -734,7 +367,7 @@ pub struct Purchase {
     pub private_note: String,
 }
 
-#[derive(Debug, JsonSchema, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Line {
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "Id")]
     pub id: String,
@@ -757,16 +390,7 @@ pub struct Line {
     #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "LinkedTxn")]
     pub linked_txn: Vec<LinkedTxn>,
 }
-
-#[derive(Debug, JsonSchema, Default, Clone, Serialize, Deserialize)]
-pub struct LinkedTxn {
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "TxnId")]
-    pub txn_id: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "TxnType")]
-    pub txn_type: String,
-}
-
-#[derive(Debug, JsonSchema, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct AccountBasedExpenseLineDetail {
     #[serde(default, rename = "AccountRef")]
     pub account_ref: NtRef,
@@ -780,13 +404,13 @@ pub struct AccountBasedExpenseLineDetail {
     pub tax_code_ref: NtRef,
 }
 
-#[derive(Debug, JsonSchema, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct PurchaseEx {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub any: Vec<Any>,
 }
 
-#[derive(Debug, JsonSchema, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Any {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
@@ -808,7 +432,7 @@ pub struct Any {
     pub type_substituted: bool,
 }
 
-#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Attachment {
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "FileName")]
     pub file_name: String,
@@ -848,7 +472,7 @@ pub struct Attachment {
     pub attachable_ref: Vec<AttachableRef>,
 }
 
-#[derive(Debug, JsonSchema, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct AttachableRef {
     #[serde(default, rename = "EntityRef")]
     pub entity_ref: NtRef,
@@ -856,7 +480,7 @@ pub struct AttachableRef {
     pub include_on_send: bool,
 }
 
-#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BillPayment {
     #[serde(default, rename = "VendorRef")]
     pub vendor_ref: NtRef,
@@ -902,7 +526,7 @@ pub struct BillPayment {
     pub credit_card_payment: Payment,
 }
 
-#[derive(Debug, JsonSchema, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Payment {
     #[serde(default, rename = "CCAccountRef")]
     pub cc_account_ref: NtRef,
@@ -916,131 +540,12 @@ pub struct Payment {
     pub print_status: String,
 }
 
-#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BillResponse {
     #[serde(rename = "Bill")]
     pub bill: Bill,
     pub time: DateTime<Utc>,
 }
-
-#[derive(Debug, JsonSchema, Clone, Serialize, Deserialize)]
-pub struct CompanyInfo {
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "SyncToken"
-    )]
-    pub sync_token: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub domain: String,
-    #[serde(default, rename = "LegalAddr")]
-    pub legal_addr: Addr,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "SupportedLanguages"
-    )]
-    pub supported_languages: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "CompanyName"
-    )]
-    pub company_name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Country")]
-    pub country: String,
-    #[serde(default, rename = "CompanyAddr")]
-    pub company_addr: Addr,
-    #[serde(default)]
-    pub sparse: bool,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Id")]
-    pub id: String,
-    #[serde(default, rename = "WebAddr")]
-    pub web_addr: WebAddr,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "FiscalYearStartMonth"
-    )]
-    pub fiscal_year_start_month: String,
-    #[serde(default, rename = "CustomerCommunicationAddr")]
-    pub customer_communication_addr: Addr,
-    #[serde(default, rename = "PrimaryPhone")]
-    pub primary_phone: PrimaryPhone,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "LegalName"
-    )]
-    pub legal_name: String,
-    #[serde(rename = "CompanyStartDate")]
-    pub company_start_date: NaiveDate,
-    #[serde(default, rename = "Email")]
-    pub email: Email,
-    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "NameValue")]
-    pub name_value: Vec<NtRef>,
-    #[serde(rename = "MetaData")]
-    pub meta_data: MetaData,
-}
-
-#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
-pub struct Addr {
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "City")]
-    pub city: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Country")]
-    pub country: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Line1")]
-    pub line1: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "PostalCode"
-    )]
-    pub postal_code: String,
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "CountrySubDivisionCode"
-    )]
-    pub country_sub_division_code: String,
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Id")]
-    pub id: String,
-}
-
-#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
-pub struct Email {
-    #[serde(default, skip_serializing_if = "String::is_empty", rename = "Address")]
-    pub address: String,
-}
-
-#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
-pub struct PrimaryPhone {
-    #[serde(
-        default,
-        skip_serializing_if = "String::is_empty",
-        rename = "FreeFormNumber"
-    )]
-    pub free_form_number: String,
-}
-
-#[derive(Debug, Default, JsonSchema, Clone, Serialize, Deserialize)]
-pub struct WebAddr {}
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct AccessToken {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub access_token: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub token_type: String,
-    #[serde(default)]
-    pub expires_in: i64,
-    #[serde(default)]
-    pub x_refresh_token_expires_in: i64,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub refresh_token: String,
-}
-
-
 
 impl std::fmt::Display for APIError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
