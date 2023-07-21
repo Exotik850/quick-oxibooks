@@ -30,8 +30,7 @@ use std::sync::Arc;
 
 use chrono::{DateTime, NaiveDate, Utc};
 use intuit_oauth::{AuthClient, AuthorizeType, Unauthorized, Authorized};
-use paste::paste;
-use quickbooks_types::models::{MetaData, LinkedTxn, Invoice, Item, NtRef, Bill, WebAddr, CompanyInfo};
+use quickbooks_types::models::{MetaData, LinkedTxn, Invoice, Item, NtRef, Bill, CompanyInfo};
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 
@@ -75,7 +74,7 @@ impl QuickBooks<Unauthorized> {
         let client = AuthClient::new(&client_id, &client_secret, &redirect_uri,
             &company_id, intuit_oauth::Environment::SANDBOX).await;
         
-        let mut client = client.authorize().await;
+        let client = client.authorize().await;
 
         let qb = QuickBooks {
             company_id: company_id.to_string(),
@@ -130,7 +129,7 @@ impl QuickBooks<Authorized>
         let base = Url::parse(ENDPOINT).unwrap();
         let url = base.join(path).unwrap();
 
-        let bt = format!("Bearer {}", self.client.data.access_token.secret());
+        let bt = format!("Bearer {}", self.client.get_tokens().0.secret());
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
 
         // Set the default headers.
