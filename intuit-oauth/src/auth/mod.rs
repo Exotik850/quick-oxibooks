@@ -22,8 +22,8 @@ pub struct Unauthorized {
     discovery_doc: DiscoveryDoc,
 }
 pub struct Authorized {
-    pub access_token: AccessToken,
-    pub refresh_token: RefreshToken,
+    access_token: AccessToken,
+    refresh_token: RefreshToken,
     client: BasicClient
 }
 pub trait AuthorizeType {}
