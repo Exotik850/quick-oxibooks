@@ -3,9 +3,8 @@ use quickbook::QuickBooks;
 
 #[tokio::main]
 async fn main() {
-    
     let qb = QuickBooks::new_from_env("4620816365257778210").await;
-    
+
     let ci = qb.company_info("4620816365257778210").await.unwrap();
     println!("{:?}", serde_json::to_string_pretty(&ci).unwrap());
 
