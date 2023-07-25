@@ -23,25 +23,39 @@
  * }
  * ```
  */
-use std::fmt::Display;
+use std::{fmt::Display, error::Error};
 #[allow(dead_code)]
 use std::sync::Arc;
 
-use chrono::{DateTime, Utc};
+
 use intuit_oauth::{AuthClient, AuthorizeType, Authorized, Unauthorized};
-use quickbooks_types::{models::{Invoice, common::MetaData}, HasQBData};
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 /// Endpoint for the QuickBooks API.
 const ENDPOINT: &str = "https://sandbox-quickbooks.api.intuit.com/v3/";
+// const ENDPOINT: &str = "https://quickbooks.api.intuit.com/v3/";
 
-const QUERY_PAGE_SIZE: i64 = 1000;
 
 #[derive(Debug)]
 pub struct APIError {
     pub status_code: StatusCode,
     pub body: String,
+}
+
+impl Error for APIError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        None
+    }
+}
+
+impl From<reqwest::Error> for APIError {
+    fn from(value: reqwest::Error) -> Self {
+        Self {
+            status_code: value.status().unwrap_or(StatusCode::EXPECTATION_FAILED),
+            body: value.to_string()
+        }
+    }
 }
 
 impl Display for APIError {
@@ -56,17 +70,17 @@ impl Display for APIError {
 
 /// Entrypoint for interacting with the QuickBooks API.
 #[derive(Debug, Clone)]
-pub struct QuickBooks<T>
+pub struct Quickbooks<T>
 where
     T: AuthorizeType,
 {
     redirect_uri: String,
-    company_id: String,
+    pub(crate) company_id: String,
     client: Arc<AuthClient<T>>,
-    http_client: Arc<Client>,
+    pub(crate) http_client: Arc<Client>,
 }
 
-impl QuickBooks<Unauthorized> {
+impl Quickbooks<Unauthorized> {
     /// Create a new QuickBooks client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API key your requests will work.
@@ -75,7 +89,7 @@ impl QuickBooks<Unauthorized> {
         client_secret: K,
         company_id: B,
         redirect_uri: R,
-    ) -> QuickBooks<Authorized>
+    ) -> Quickbooks<Authorized>
     where
         I: Display,
         K: Display,
@@ -93,7 +107,7 @@ impl QuickBooks<Unauthorized> {
 
         let client = client.authorize().await;
 
-        let qb = QuickBooks {
+        let qb = Quickbooks {
             company_id: company_id.to_string(),
             redirect_uri: redirect_uri.to_string(),
             client: Arc::new(client),
@@ -109,14 +123,14 @@ impl QuickBooks<Unauthorized> {
     /// given a valid API key and your requests will work.
     /// We pass in the token and refresh token to the client so if you are storing
     /// it in a database, you can get it first.
-    pub async fn new_from_env<C: Display>(company_id: C) -> QuickBooks<Authorized> {
+    pub async fn new_from_env<C: Display>(company_id: C) -> Quickbooks<Authorized> {
         let redirect_uri = dotenv::var("INTUIT_REDIRECT_URI").unwrap();
         let client =
             AuthClient::new_from_env(&company_id, intuit_oauth::Environment::SANDBOX).await;
         let mut client = client.authorize().await;
         client.refresh_access_token().await;
 
-        QuickBooks {
+        Quickbooks {
             redirect_uri,
             company_id: company_id.to_string(),
             client: Arc::new(client),
@@ -125,8 +139,8 @@ impl QuickBooks<Unauthorized> {
     }
 }
 
-impl QuickBooks<Authorized> {
-    fn request<B>(
+impl Quickbooks<Authorized> {
+    pub fn request<B>(
         &self,
         method: Method,
         path: &str,
@@ -161,6 +175,7 @@ impl QuickBooks<Authorized> {
 
         if let Some(val) = query {
             rb = rb.query(&val);
+            rb = rb.query(&[("minorversion", "65")])
         }
 
         // Add the body, this is to ensure our GET and DELETE calls succeed.
@@ -172,33 +187,33 @@ impl QuickBooks<Authorized> {
         rb.build().unwrap()
     }
 
-    pub async fn get_invoice_by_doc_num(&self, doc_num: &str) -> Result<Invoice, APIError> {
-        let request = self.request(
-            Method::GET,
-            &format!("company/{}/query", self.company_id),
-            (),
-            Some(&[(
-                "query",
-                &format!(
-                    "select * from Invoice where DocNumber = '{doc_num}' MAXRESULTS {QUERY_PAGE_SIZE}"
-                ),
-            )]),
-        );
+    // pub async fn get_invoice_by_doc_num(&self, doc_num: &str) -> Result<Invoice, APIError> {
+        // let request = self.request(
+        //     Method::GET,
+        //     &format!("company/{}/query", self.company_id),
+        //     (),
+        //     Some(&[(
+        //         "query",
+        //         &format!(
+        //             "select * from Invoice where DocNumber = '{doc_num}' MAXRESULTS {QUERY_PAGE_SIZE}"
+        //         ),
+        //     )]),
+        // );
 
-        let resp = self.http_client.execute(request).await.unwrap();
-        match resp.status() {
-            StatusCode::OK => (),
-            s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await.unwrap(),
-                })
-            }
-        };
+    //     let resp = self.http_client.execute(request).await.unwrap();
+        // match resp.status() {
+        //     StatusCode::OK => (),
+        //     s => {
+        //         return Err(APIError {
+        //             status_code: s,
+        //             body: resp.text().await.unwrap(),
+        //         })
+        //     }
+        // };
 
-        let r: QueryResponseExt<Invoice> = resp.json().await.unwrap();
+    //     let r: QueryResponseExt<Invoice> = resp.json().await.unwrap();
 
-        Ok(r.query_response.items[0].clone())
-    }
+    //     Ok(r.query_response.items[0].clone())
+    // }
 }
 
