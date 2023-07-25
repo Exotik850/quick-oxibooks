@@ -1,21 +1,32 @@
 use async_trait::async_trait;
 use intuit_oauth::Authorized;
 use quickbooks_types::QBItem;
-use reqwest::Method;
+use reqwest::{Method, StatusCode};
 
-use crate::quickbook::Quickbooks;
+use super::{qb_request, QBResponse};
 use crate::error::APIError;
-use super::{QBResponse, qb_request};
+use crate::quickbook::Quickbooks;
 
 #[async_trait]
 pub trait QBRead
-where Self: QBItem
+where
+    Self: QBItem,
 {
     async fn read(&mut self, qb: &Quickbooks<Authorized>) -> Result<Self, APIError> {
+        let id = match self.id() {
+            Some(id) => id,
+            None => {
+                return Err(APIError {
+                    status_code: StatusCode::NOT_FOUND,
+                    body: "No Id set for object when trying to grab from QB".to_owned(),
+                })
+            }
+        };
+
         let response = qb_request!(
             qb,
             Method::GET,
-            &format!("company/{}/{}/{}", qb.company_id, Self::qb_id(), self.id().expect("Trying to read when no ID set for object")),
+            &format!("company/{}/{}/{}", qb.company_id, Self::qb_id(), id),
             (),
             None
         );
@@ -26,7 +37,7 @@ where Self: QBItem
         Ok(resp.object)
     }
 
-    async fn get(id: String, qb: &Quickbooks<Authorized>) -> Result<Self, APIError> {
+    async fn get(id: &str, qb: &Quickbooks<Authorized>) -> Result<Self, APIError> {
         let response = qb_request!(
             qb,
             Method::GET,

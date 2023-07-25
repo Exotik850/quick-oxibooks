@@ -4,69 +4,22 @@
  * For more information, you can check out their documentation at:
  * https://developer.intuit.com/app/developer/qbo/docs/develop
  *
- * Example:
- *
  * ORIGINIALLY FROM https://github.com/oxidecomputer/cio
  * LICENSED UNDER APACHE 2.0
  *
- * ```ignore
- * use quickbooks::QuickBooks;
- * use serde::{Deserialize, Serialize};
- *
- * async fn list_purchases() {
- *     // Initialize the QuickBooks client.
- *     let quickbooks = QuickBooks::new_from_env("", "", "");
- *
- *     let purchases = quickbooks.list_purchases().await.unwrap();
- *
- *     println!("{:?}", purchases);
- * }
- * ```
  */
-use std::{fmt::Display, error::Error};
+#[allow(unused)]
 #[allow(dead_code)]
+use std::fmt::Display;
 use std::sync::Arc;
 
-
 use intuit_oauth::{AuthClient, AuthorizeType, Authorized, Unauthorized};
-use reqwest::{header, Client, Method, Request, StatusCode, Url};
+use reqwest::{header, Client, Method, Request, Url};
 use serde::Serialize;
 
 /// Endpoint for the QuickBooks API.
 const ENDPOINT: &str = "https://sandbox-quickbooks.api.intuit.com/v3/";
 // const ENDPOINT: &str = "https://quickbooks.api.intuit.com/v3/";
-
-
-// #[derive(Debug)]
-// pub struct APIError {
-//     pub status_code: StatusCode,
-//     pub body: String,
-// }
-
-// impl Error for APIError {
-//     fn source(&self) -> Option<&(dyn Error + 'static)> {
-//         None
-//     }
-// }
-
-// impl From<reqwest::Error> for APIError {
-//     fn from(value: reqwest::Error) -> Self {
-//         Self {
-//             status_code: value.status().unwrap_or(StatusCode::EXPECTATION_FAILED),
-//             body: value.to_string()
-//         }
-//     }
-// }
-
-// impl Display for APIError {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         write! (
-//             f,
-//             "APIError : Status Code: {} -> {}", 
-//             self.status_code, self.body
-//         )
-//     }
-// }
 
 /// Entrypoint for interacting with the QuickBooks API.
 #[derive(Debug, Clone)]
@@ -186,34 +139,4 @@ impl Quickbooks<Authorized> {
         // Build the request.
         rb.build().unwrap()
     }
-
-    // pub async fn get_invoice_by_doc_num(&self, doc_num: &str) -> Result<Invoice, APIError> {
-        // let request = self.request(
-        //     Method::GET,
-        //     &format!("company/{}/query", self.company_id),
-        //     (),
-        //     Some(&[(
-        //         "query",
-        //         &format!(
-        //             "select * from Invoice where DocNumber = '{doc_num}' MAXRESULTS {QUERY_PAGE_SIZE}"
-        //         ),
-        //     )]),
-        // );
-
-    //     let resp = self.http_client.execute(request).await.unwrap();
-        // match resp.status() {
-        //     StatusCode::OK => (),
-        //     s => {
-        //         return Err(APIError {
-        //             status_code: s,
-        //             body: resp.text().await.unwrap(),
-        //         })
-        //     }
-        // };
-
-    //     let r: QueryResponseExt<Invoice> = resp.json().await.unwrap();
-
-    //     Ok(r.query_response.items[0].clone())
-    // }
 }
-

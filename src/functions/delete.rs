@@ -3,19 +3,24 @@ use intuit_oauth::Authorized;
 use quickbooks_types::QBItem;
 use reqwest::Method;
 
-use crate::quickbook::Quickbooks;
+use super::{qb_request, QBResponse};
 use crate::error::APIError;
-use super::{QBResponse, qb_request};
+use crate::quickbook::Quickbooks;
 
 #[async_trait]
 pub trait QBDelete
-where Self: QBItem
+where
+    Self: QBItem,
 {
     async fn delete(&self, qb: &Quickbooks<Authorized>) -> Result<Self, APIError> {
         let response = qb_request!(
             qb,
             Method::POST,
-            &format!("company/{}/{}?operation=delete", qb.company_id, Self::qb_id()),
+            &format!(
+                "company/{}/{}?operation=delete",
+                qb.company_id,
+                Self::qb_id()
+            ),
             self,
             None
         );

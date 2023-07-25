@@ -33,5 +33,5 @@ pub(crate) use qb_request;
 #[serde(default)]
 pub struct QBResponse<T> {
     object: T,
-    time: DateTime<Utc>
+    time: DateTime<Utc>,
 }
