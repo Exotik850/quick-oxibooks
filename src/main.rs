@@ -3,6 +3,7 @@ use functions::query::QBQuery;
 use quickbook::Quickbooks;
 use quickbooks_types::models::Invoice;
 mod functions;
+mod error;
 
 #[tokio::main]
 async fn main() {

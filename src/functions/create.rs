@@ -3,7 +3,8 @@ use intuit_oauth::Authorized;
 use quickbooks_types::QBItem;
 use reqwest::{Method, StatusCode};
 
-use crate::quickbook::{APIError, Quickbooks};
+use crate::quickbook::Quickbooks;
+use crate::error::APIError;
 
 use super::QBResponse;
 

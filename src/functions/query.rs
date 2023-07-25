@@ -5,7 +5,8 @@ use reqwest::Method;
 use serde::Deserialize;
 use async_trait::async_trait;
 
-use crate::quickbook::{Quickbooks, APIError};
+use crate::quickbook::{Quickbooks};
+use crate::error::APIError;
 use super::qb_request;
 
 #[async_trait]

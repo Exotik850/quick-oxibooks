@@ -37,36 +37,36 @@ const ENDPOINT: &str = "https://sandbox-quickbooks.api.intuit.com/v3/";
 // const ENDPOINT: &str = "https://quickbooks.api.intuit.com/v3/";
 
 
-#[derive(Debug)]
-pub struct APIError {
-    pub status_code: StatusCode,
-    pub body: String,
-}
+// #[derive(Debug)]
+// pub struct APIError {
+//     pub status_code: StatusCode,
+//     pub body: String,
+// }
 
-impl Error for APIError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        None
-    }
-}
+// impl Error for APIError {
+//     fn source(&self) -> Option<&(dyn Error + 'static)> {
+//         None
+//     }
+// }
 
-impl From<reqwest::Error> for APIError {
-    fn from(value: reqwest::Error) -> Self {
-        Self {
-            status_code: value.status().unwrap_or(StatusCode::EXPECTATION_FAILED),
-            body: value.to_string()
-        }
-    }
-}
+// impl From<reqwest::Error> for APIError {
+//     fn from(value: reqwest::Error) -> Self {
+//         Self {
+//             status_code: value.status().unwrap_or(StatusCode::EXPECTATION_FAILED),
+//             body: value.to_string()
+//         }
+//     }
+// }
 
-impl Display for APIError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write! (
-            f,
-            "APIError : Status Code: {} -> {}", 
-            self.status_code, self.body
-        )
-    }
-}
+// impl Display for APIError {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         write! (
+//             f,
+//             "APIError : Status Code: {} -> {}", 
+//             self.status_code, self.body
+//         )
+//     }
+// }
 
 /// Entrypoint for interacting with the QuickBooks API.
 #[derive(Debug, Clone)]
