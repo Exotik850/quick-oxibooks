@@ -10,11 +10,7 @@ macro_rules! qb_request {
     ($qb:expr, $method:expr, $url:expr, $body:expr, $query:expr) => {{
         let request = $qb.request($method, $url, $body, $query);
 
-        println!("{request:?}");
-
         let resp = $qb.http_client.execute(request).await?;
-
-        // println!("\n{:?}", resp.text().await);
 
         if !resp.status().is_success() {
             return Err(APIError {

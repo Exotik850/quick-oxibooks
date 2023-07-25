@@ -13,13 +13,9 @@
 use std::fmt::Display;
 use std::sync::Arc;
 
-use intuit_oauth::{AuthClient, AuthorizeType, Authorized, Unauthorized};
+use intuit_oauth::{AuthClient, AuthorizeType, Authorized, Environment, Unauthorized};
 use reqwest::{header, Client, Method, Request, Url};
 use serde::Serialize;
-
-/// Endpoint for the QuickBooks API.
-const ENDPOINT: &str = "https://sandbox-quickbooks.api.intuit.com/v3/";
-// const ENDPOINT: &str = "https://quickbooks.api.intuit.com/v3/";
 
 /// Entrypoint for interacting with the QuickBooks API.
 #[derive(Debug, Clone)]
@@ -29,6 +25,7 @@ where
 {
     redirect_uri: String,
     pub(crate) company_id: String,
+    pub environment: Environment,
     client: Arc<AuthClient<T>>,
     pub(crate) http_client: Arc<Client>,
 }
@@ -42,6 +39,7 @@ impl Quickbooks<Unauthorized> {
         client_secret: K,
         company_id: B,
         redirect_uri: R,
+        environment: Environment,
     ) -> Quickbooks<Authorized>
     where
         I: Display,
@@ -54,7 +52,7 @@ impl Quickbooks<Unauthorized> {
             &client_secret,
             &redirect_uri,
             &company_id,
-            intuit_oauth::Environment::SANDBOX,
+            environment,
         )
         .await;
 
@@ -64,6 +62,7 @@ impl Quickbooks<Unauthorized> {
             company_id: company_id.to_string(),
             redirect_uri: redirect_uri.to_string(),
             client: Arc::new(client),
+            environment,
             http_client: Arc::new(Client::new()),
         };
 
@@ -76,10 +75,12 @@ impl Quickbooks<Unauthorized> {
     /// given a valid API key and your requests will work.
     /// We pass in the token and refresh token to the client so if you are storing
     /// it in a database, you can get it first.
-    pub async fn new_from_env<C: Display>(company_id: C) -> Quickbooks<Authorized> {
+    pub async fn new_from_env<C: Display>(
+        company_id: C,
+        environment: Environment,
+    ) -> Quickbooks<Authorized> {
         let redirect_uri = dotenv::var("INTUIT_REDIRECT_URI").unwrap();
-        let client =
-            AuthClient::new_from_env(&company_id, intuit_oauth::Environment::SANDBOX).await;
+        let client = AuthClient::new_from_env(&company_id, environment).await;
         let mut client = client.authorize().await;
         client.refresh_access_token().await;
 
@@ -87,6 +88,7 @@ impl Quickbooks<Unauthorized> {
             redirect_uri,
             company_id: company_id.to_string(),
             client: Arc::new(client),
+            environment,
             http_client: Arc::new(Client::new()),
         }
     }
@@ -103,7 +105,7 @@ impl Quickbooks<Authorized> {
     where
         B: Serialize,
     {
-        let base = Url::parse(ENDPOINT).unwrap();
+        let base = Url::parse(self.environment.endpoint_url()).unwrap();
         let url = base.join(path).unwrap();
 
         let bt = format!("Bearer {}", self.client.get_tokens().0.secret());
@@ -136,7 +138,6 @@ impl Quickbooks<Authorized> {
             rb = rb.json(&body);
         }
 
-        // Build the request.
         rb.build().unwrap()
     }
 }

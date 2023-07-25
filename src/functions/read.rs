@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use intuit_oauth::Authorized;
 use quickbooks_types::QBItem;
-use reqwest::{Method, StatusCode};
+use reqwest::Method;
 
 use super::{qb_request, QBResponse};
 use crate::error::APIError;
@@ -16,10 +16,7 @@ where
         let id = match self.id() {
             Some(id) => id,
             None => {
-                return Err(APIError {
-                    status_code: StatusCode::NOT_FOUND,
-                    body: "No Id set for object when trying to grab from QB".to_owned(),
-                })
+                return Err(APIError::NoIdOnRead)
             }
         };
 

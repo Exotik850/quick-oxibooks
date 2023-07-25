@@ -23,13 +23,11 @@ where
             Some(&[(
                 "query",
                 &format!(
-                    "select * from {} where {query_str} MAXRESULTS 1000",
+                    "select * from {} {query_str} MAXRESULTS 1000",
                     Self::name(),
                 ),
             )])
         );
-
-        println!("{:?}\n\n", response);
 
         let resp: QueryResponseExt<Self> = response.json().await?;
 
