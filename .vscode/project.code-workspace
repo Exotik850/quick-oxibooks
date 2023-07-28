@@ -1,0 +1,17 @@
+{
+    "folders": [
+        {
+            "name": "quick-oxibooks",
+            "path": "../"
+        },
+        {
+            "name": "intuit-oauth",
+            "path": "../intuit-oauth"
+        }, 
+        {
+            "name": "quickbooks-types",
+            "path": "../quickbooks-types"
+        }
+    ],
+    "settings": {}
+}
