@@ -26,7 +26,7 @@ impl Serialize for APIError {
                 serializer.serialize_str(&format!("UrlParseError: {}", e))
             }
             APIError::BadRequest(msg) => {
-                serializer.serialize_str(msg)
+                serializer.serialize_str(&format!("BadRequest: {}", msg))
             }
             APIError::NoIdOnRead => {
                 serializer.serialize_str("NoIdOnRead")
