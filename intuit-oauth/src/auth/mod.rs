@@ -189,7 +189,7 @@ impl AuthClient<Unauthorized> {
             Environment::PRODUCTION => unimplemented!(),
             Environment::SANDBOX => {
                 let listener = TcpListener::bind("127.0.0.1:3320").await.expect("Error starting localhost callback listener!");
-                (at, rt) = Self::handle_oauth_callback(&client, listener, csrf_state).await.unwrap();        
+                (at, rt) = Self::handle_oauth_callback(&client, listener, csrf_state).await?;        
             },
         }
 

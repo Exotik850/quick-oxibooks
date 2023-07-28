@@ -284,12 +284,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dotenv"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
-
-[[package]]
 name = "encoding_rs"
 version = "0.8.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -632,11 +626,11 @@ dependencies = [
 name = "intuit-oauth"
 version = "0.1.0"
 dependencies = [
- "dotenv",
  "oauth2",
  "open",
  "reqwest",
  "serde",
+ "thiserror",
  "tokio",
  "url",
 ]
@@ -959,12 +953,11 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "chrono",
- "dotenv",
  "intuit-oauth",
  "quickbooks-types",
  "reqwest",
  "serde",
- "serde_json",
+ "thiserror",
  "tokio",
  "url",
 ]
@@ -1367,18 +1360,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.40"
+version = "1.0.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "978c9a314bd8dc99be594bc3c175faaa9794be04a5a5e153caba6915336cebac"
+checksum = "611040a08a0439f8248d1990b111c95baa9c704c805fa1f62104b39655fd7f90"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.40"
+version = "1.0.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9456a42c5b0d803c8cd86e73dd7cc9edd429499f37a3550d286d5e86720569f"
+checksum = "090198534930841fab3a5d1bb637cde49e339654e606195f8d9c76eeb081dc96"
 dependencies = [
  "proc-macro2",
  "quote",

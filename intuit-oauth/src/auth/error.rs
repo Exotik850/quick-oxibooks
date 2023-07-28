@@ -1,46 +1,26 @@
 use oauth2::{RequestTokenError, StandardErrorResponse, basic::BasicErrorResponseType, reqwest::Error};
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum AuthError {
+    #[error("Request unsuccessful")]
     UnsuccessfulRequest,
-    ReqwestError(reqwest::Error),
-    ParseError(url::ParseError),
-    EnvVarError(std::env::VarError),
-    IoError(std::io::Error),
+    #[error(transparent)]
+    ReqwestError(#[from] reqwest::Error),
+    #[error(transparent)]
+    ParseError(#[from] url::ParseError),
+    #[error(transparent)]
+    EnvVarError(#[from] std::env::VarError),
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
     // Very ugly, might do a PR on oauth2 to clean up
-    RequestTokenError(RequestTokenError<Error<reqwest::Error>, StandardErrorResponse<BasicErrorResponseType>>),
+    #[error(transparent)]
+    RequestTokenError(#[from] RequestTokenError<Error<reqwest::Error>, StandardErrorResponse<BasicErrorResponseType>>),
+    #[error("State mismatch on authentication")]
     StateMismatch,
+    #[error("Redirect URL not found, try putting it in your environment variables with the name INTUIT_REDIRECT_URI")]
     NoRedirectUrl,
+    #[error("Key not found in authentication response: {0}")]
     KeyNotFound(&'static str),
+    #[error("No response when trying to authorize")]
     NoTokenResponse,
-}
-
-impl From<reqwest::Error> for AuthError {
-    fn from(value: reqwest::Error) -> Self {
-        Self::ReqwestError(value)
-    }
-}
-
-impl From<url::ParseError> for AuthError {
-    fn from(value: url::ParseError) -> Self {
-        Self::ParseError(value)
-    }
-}
-
-impl From<std::env::VarError> for AuthError {
-    fn from(value: std::env::VarError) -> Self {
-        Self::EnvVarError(value)
-    }
-}
-
-impl From<std::io::Error> for AuthError {
-    fn from(value: std::io::Error) -> Self {
-        Self::IoError(value)
-    }
-}
-
-impl From<RequestTokenError<Error<reqwest::Error>, StandardErrorResponse<BasicErrorResponseType>>> for AuthError {
-    fn from(value: RequestTokenError<Error<reqwest::Error>, StandardErrorResponse<BasicErrorResponseType>>) -> Self {
-        Self::RequestTokenError(value)
-    }
 }

@@ -3,4 +3,4 @@ target/
 refresh.txt
 .idea
 .vscode
-/intuit-oauth/target/
+intuit-oauth/
