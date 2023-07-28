@@ -1,3 +1,5 @@
+use serde::{Serialize, Serializer};
+
 
 #[derive(Debug)]
 pub enum APIError {
@@ -6,6 +8,31 @@ pub enum APIError {
     UrlParseError(url::ParseError),
     BadRequest(String),
     NoIdOnRead,
+}
+
+impl Serialize for APIError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            APIError::ReqwestError(e) => {
+                serializer.serialize_str(&format!("ReqwestError: {}", e))
+            }
+            APIError::AuthError(e) => {
+                serializer.serialize_str(&format!("AuthError: {:?}", e)) 
+            }
+            APIError::UrlParseError(e) => {
+                serializer.serialize_str(&format!("UrlParseError: {}", e))
+            }
+            APIError::BadRequest(msg) => {
+                serializer.serialize_str(msg)
+            }
+            APIError::NoIdOnRead => {
+                serializer.serialize_str("NoIdOnRead")
+            }
+        }
+    }
 }
 
 impl From<reqwest::Error> for APIError {
