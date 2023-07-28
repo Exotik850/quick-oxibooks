@@ -8,7 +8,6 @@
  * LICENSED UNDER APACHE 2.0
  *
  */
-#[allow(unused)]
 #[allow(dead_code)]
 use std::fmt::Display;
 use std::sync::Arc;
@@ -24,7 +23,7 @@ type Result<T> = std::result::Result<T, APIError>;
 #[derive(Debug, Clone)]
 pub struct Quickbooks<T>
 where
-    T: AuthorizeType,
+T: AuthorizeType,
 {
     pub(crate) company_id: String,
     pub environment: Environment,
@@ -36,6 +35,7 @@ impl Quickbooks<Unauthorized> {
     /// Create a new QuickBooks client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API key your requests will work.
+    #[allow(unused)]
     pub async fn new<I, K, B, R>(
         client_id: I,
         client_secret: K,
@@ -80,7 +80,7 @@ impl Quickbooks<Unauthorized> {
     ) -> Result<Quickbooks<Authorized>> {
         let client = AuthClient::new_from_env(&company_id, environment).await?;
         let mut client = client.authorize().await?;
-        client.refresh_access_token().await;
+        client.refresh_access_token().await?;
 
         Ok(Quickbooks {
             company_id: company_id.to_string(),

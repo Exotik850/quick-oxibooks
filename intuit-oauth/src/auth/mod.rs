@@ -61,6 +61,8 @@ where T: AuthorizeType
         };
         let url = url::Url::parse(&("http://localhost".to_string() + redirect_url)).unwrap();
       
+        println!("{url}");
+
         let code = match url.query_pairs().find(|pair| {
                   let &(ref key, _) = pair;
                   key == "code"
