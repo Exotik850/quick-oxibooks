@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 
 #[derive(Debug, thiserror::Error)]
 pub enum APIError {
@@ -11,4 +13,12 @@ pub enum APIError {
     BadRequest(String),
     #[error("Trying to update an object when it doesn't have an ID set")]
     NoIdOnRead,
+}
+
+impl Serialize for APIError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer {
+        serializer.serialize_str(self.to_string().as_ref())
+    }
 }
