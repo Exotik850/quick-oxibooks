@@ -5,14 +5,14 @@ pub enum AuthError {
     UnsuccessfulRequest,
     ReqwestError(reqwest::Error),
     ParseError(url::ParseError),
-    EnvVarError(dotenv::Error),
+    EnvVarError(std::env::VarError),
+    IoError(std::io::Error),
+    // Very ugly, might do a PR on oauth2 to clean up
+    RequestTokenError(RequestTokenError<Error<reqwest::Error>, StandardErrorResponse<BasicErrorResponseType>>),
     StateMismatch,
     NoRedirectUrl,
     KeyNotFound(&'static str),
     NoTokenResponse,
-    IoError(std::io::Error),
-    // Very ugly, might do a PR on oauth2 to clean up
-    RequestTokenError(RequestTokenError<Error<reqwest::Error>, StandardErrorResponse<BasicErrorResponseType>>),
 }
 
 impl From<reqwest::Error> for AuthError {
@@ -27,8 +27,8 @@ impl From<url::ParseError> for AuthError {
     }
 }
 
-impl From<dotenv::Error> for AuthError {
-    fn from(value: dotenv::Error) -> Self {
+impl From<std::env::VarError> for AuthError {
+    fn from(value: std::env::VarError) -> Self {
         Self::EnvVarError(value)
     }
 }

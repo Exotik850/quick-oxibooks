@@ -147,9 +147,9 @@ impl AuthClient<Unauthorized> {
     {
         let discovery_doc = Self::get_discovery_doc(&environment).await?;
 
-        let client_id = ClientId::new(dotenv::var("INTUIT_CLIENT_ID")?);
-        let client_secret = ClientSecret::new(dotenv::var("INTUIT_CLIENT_SECRET")?);
-        let redirect_uri = RedirectUrl::new(dotenv::var("INTUIT_REDIRECT_URI")?)?;
+        let client_id = ClientId::new(std::env::var("INTUIT_CLIENT_ID")?);
+        let client_secret = ClientSecret::new(std::env::var("INTUIT_CLIENT_SECRET")?);
+        let redirect_uri = RedirectUrl::new(std::env::var("INTUIT_REDIRECT_URI")?)?;
         Ok(Self {
             redirect_uri,
             realm_id: realm_id.to_string(),
