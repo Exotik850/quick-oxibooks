@@ -6,7 +6,7 @@ use reqwest::{Method, StatusCode};
 use crate::error::APIError;
 use crate::quickbook::Quickbooks;
 
-use super::QBResponse;
+use super::{QBResponse, qb_request};
 
 #[async_trait]
 pub trait QBCreate
@@ -14,23 +14,13 @@ where
     Self: QBItem,
 {
     async fn create(&self, qb: &Quickbooks<Authorized>) -> Result<Self, APIError> {
-        let request = qb.request(
+        let resp = qb_request!(
+            qb,
             Method::POST,
             &format!("company/{}/{}", qb.company_id, Self::qb_id()),
             self,
-            None,
+            None
         );
-
-        let resp = qb.http_client.execute(request).await?;
-        match resp.status() {
-            StatusCode::OK => (),
-            s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await?,
-                })
-            }
-        };
 
         let resp: QBResponse<Self> = resp.json().await?;
 

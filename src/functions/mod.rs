@@ -8,15 +8,12 @@ pub mod read;
 
 macro_rules! qb_request {
     ($qb:expr, $method:expr, $url:expr, $body:expr, $query:expr) => {{
-        let request = $qb.request($method, $url, $body, $query);
+        let request = $qb.request($method, $url, $body, $query)?;
 
         let resp = $qb.http_client.execute(request).await?;
 
         if !resp.status().is_success() {
-            return Err(APIError {
-                status_code: resp.status(),
-                body: resp.text().await?,
-            });
+            return Err(APIError::BadRequest(resp.text().await.unwrap()));
         }
 
         resp

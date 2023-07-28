@@ -16,6 +16,9 @@ use std::sync::Arc;
 use intuit_oauth::{AuthClient, AuthorizeType, Authorized, Environment, Unauthorized};
 use reqwest::{header, Client, Method, Request, Url};
 use serde::Serialize;
+use crate::error::APIError;
+
+type Result<T> = std::result::Result<T, APIError>;
 
 /// Entrypoint for interacting with the QuickBooks API.
 #[derive(Debug, Clone)]
@@ -23,7 +26,6 @@ pub struct Quickbooks<T>
 where
     T: AuthorizeType,
 {
-    redirect_uri: String,
     pub(crate) company_id: String,
     pub environment: Environment,
     client: Arc<AuthClient<T>>,
@@ -40,7 +42,7 @@ impl Quickbooks<Unauthorized> {
         company_id: B,
         redirect_uri: R,
         environment: Environment,
-    ) -> Quickbooks<Authorized>
+    ) -> Result<Quickbooks<Authorized>>
     where
         I: Display,
         K: Display,
@@ -54,19 +56,16 @@ impl Quickbooks<Unauthorized> {
             &company_id,
             environment,
         )
-        .await;
+        .await?;
 
-        let client = client.authorize().await;
+        let client = client.authorize().await?;
 
-        let qb = Quickbooks {
+        Ok(Quickbooks {
             company_id: company_id.to_string(),
-            redirect_uri: redirect_uri.to_string(),
             client: Arc::new(client),
             environment,
             http_client: Arc::new(Client::new()),
-        };
-
-        qb
+        })
     }
 
     /// Create a new QuickBooks client struct from environment variables. It
@@ -78,19 +77,17 @@ impl Quickbooks<Unauthorized> {
     pub async fn new_from_env<C: Display>(
         company_id: C,
         environment: Environment,
-    ) -> Quickbooks<Authorized> {
-        let redirect_uri = dotenv::var("INTUIT_REDIRECT_URI").unwrap();
-        let client = AuthClient::new_from_env(&company_id, environment).await;
-        let mut client = client.authorize().await;
+    ) -> Result<Quickbooks<Authorized>> {
+        let client = AuthClient::new_from_env(&company_id, environment).await?;
+        let mut client = client.authorize().await?;
         client.refresh_access_token().await;
 
-        Quickbooks {
-            redirect_uri,
+        Ok(Quickbooks {
             company_id: company_id.to_string(),
             client: Arc::new(client),
             environment,
             http_client: Arc::new(Client::new()),
-        }
+        })
     }
 }
 
@@ -101,12 +98,15 @@ impl Quickbooks<Authorized> {
         path: &str,
         body: B,
         query: Option<&[(&str, &str)]>,
-    ) -> Request
+    ) -> Result<Request>
     where
         B: Serialize,
     {
         let base = Url::parse(self.environment.endpoint_url()).unwrap();
-        let url = base.join(path).unwrap();
+        let url = match base.join(path) {
+            Ok(url) => url,
+            Err(e) => return Err(e.into()),
+        };
 
         let bt = format!("Bearer {}", self.client.get_tokens().0.secret());
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
@@ -138,6 +138,6 @@ impl Quickbooks<Authorized> {
             rb = rb.json(&body);
         }
 
-        rb.build().unwrap()
+        Ok(rb.build()?)
     }
 }
