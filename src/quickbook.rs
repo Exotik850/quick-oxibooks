@@ -13,7 +13,7 @@ use std::fmt::Display;
 use std::sync::Arc;
 
 use crate::error::APIError;
-use intuit_oauth::{AuthClient, AuthorizeType, Authorized, Environment, Unauthorized};
+use intuit_oxi_auth::{AuthClient, AuthorizeType, Authorized, Environment, Unauthorized};
 use reqwest::{header, Client, Method, Request, Url};
 use serde::Serialize;
 

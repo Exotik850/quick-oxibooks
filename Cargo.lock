@@ -644,7 +644,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "intuit-oauth"
+name = "intuit-oxi-auth"
 version = "0.1.0"
 dependencies = [
  "chrono",
@@ -950,7 +950,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "chrono",
- "intuit-oauth",
+ "intuit-oxi-auth",
  "quickbooks-types",
  "reqwest",
  "serde",
