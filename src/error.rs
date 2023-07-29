@@ -1,7 +1,5 @@
 use serde::Serialize;
 #[allow(dead_code)]
-
-
 #[derive(Debug, thiserror::Error)]
 pub enum APIError {
     #[error(transparent)]
@@ -19,7 +17,8 @@ pub enum APIError {
 impl Serialize for APIError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer {
+        S: serde::Serializer,
+    {
         serializer.serialize_str(self.to_string().as_ref())
     }
 }

@@ -6,7 +6,7 @@ use reqwest::Method;
 use crate::error::APIError;
 use crate::quickbook::Quickbooks;
 
-use super::{QBResponse, qb_request};
+use super::{qb_request, QBResponse};
 
 #[async_trait]
 pub trait QBCreate

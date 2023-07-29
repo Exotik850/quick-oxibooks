@@ -12,10 +12,10 @@
 use std::fmt::Display;
 use std::sync::Arc;
 
+use crate::error::APIError;
 use intuit_oauth::{AuthClient, AuthorizeType, Authorized, Environment, Unauthorized};
 use reqwest::{header, Client, Method, Request, Url};
 use serde::Serialize;
-use crate::error::APIError;
 
 type Result<T> = std::result::Result<T, APIError>;
 
@@ -23,7 +23,7 @@ type Result<T> = std::result::Result<T, APIError>;
 #[derive(Debug, Clone)]
 pub struct Quickbooks<T>
 where
-T: AuthorizeType,
+    T: AuthorizeType,
 {
     pub(crate) company_id: String,
     pub environment: Environment,

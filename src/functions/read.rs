@@ -15,9 +15,7 @@ where
     async fn read(&mut self, qb: &Quickbooks<Authorized>) -> Result<Self, APIError> {
         let id = match self.id() {
             Some(id) => id,
-            None => {
-                return Err(APIError::NoIdOnRead)
-            }
+            None => return Err(APIError::NoIdOnRead),
         };
 
         let response = qb_request!(
