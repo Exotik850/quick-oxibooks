@@ -1,17 +1,17 @@
 {
     "folders": [
         {
-            "name": "quick-oxibooks",
-            "path": "../"
-        },
-        {
             "name": "intuit-oxi-auth",
             "path": "../intuit-oxi-auth"
         }, 
         {
             "name": "quickbooks-types",
             "path": "../quickbooks-types"
-        }
+        },
+        {
+            "name": "quick-oxibooks",
+            "path": "../"
+        },
     ],
     "settings": {}
 }
