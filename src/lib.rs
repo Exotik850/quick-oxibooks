@@ -12,5 +12,5 @@ pub mod actions {
     pub use crate::functions::read::QBRead;
 }
 
-pub use intuit_oauth::{Authorized, Environment, Unauthorized};
+pub use intuit_oxi_auth::{Authorized, Environment, Unauthorized};
 pub use quickbook::Quickbooks;

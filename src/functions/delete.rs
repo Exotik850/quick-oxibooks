@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use intuit_oauth::Authorized;
+use intuit_oxi_auth::Authorized;
 use quickbooks_types::QBItem;
 use reqwest::Method;
 
