@@ -58,7 +58,7 @@ impl Quickbooks<Unauthorized> {
         )
         .await?;
 
-        let client = client.authorize().await?;
+        let client = client.authorize(None).await?;
 
         Ok(Quickbooks {
             company_id: company_id.to_string(),
@@ -79,7 +79,7 @@ impl Quickbooks<Unauthorized> {
         environment: Environment,
     ) -> Result<Quickbooks<Authorized>> {
         let client = AuthClient::new_from_env(&company_id, environment).await?
-            .authorize().await?;
+            .authorize(None).await?;
         // client.refresh_access_token().await?;
 
         Ok(Quickbooks {
