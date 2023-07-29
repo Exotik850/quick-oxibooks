@@ -103,12 +103,8 @@ impl Quickbooks<Authorized> {
         B: Serialize,
     {
         let base = Url::parse(self.environment.endpoint_url()).unwrap();
-        let url = match base.join(path) {
-            Ok(url) => url,
-            Err(e) => return Err(e.into()),
-        };
-
-        let bt = format!("Bearer {}", self.client.get_tokens().0.secret());
+        let url = base.join(path)?;
+        let bt = format!("Bearer {}", self.client.access_token().secret());
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
 
         // Set the default headers.
