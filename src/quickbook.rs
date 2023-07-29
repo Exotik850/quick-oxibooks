@@ -23,7 +23,7 @@ type Result<T> = std::result::Result<T, APIError>;
 #[derive(Debug, Clone)]
 pub struct Quickbooks<T>
 where
-    T: AuthorizeType,
+    T: AuthorizeType + 'static,
 {
     pub(crate) company_id: String,
     pub environment: Environment,
@@ -78,9 +78,9 @@ impl Quickbooks<Unauthorized> {
         company_id: C,
         environment: Environment,
     ) -> Result<Quickbooks<Authorized>> {
-        let client = AuthClient::new_from_env(&company_id, environment).await?;
-        let mut client = client.authorize().await?;
-        client.refresh_access_token().await?;
+        let client = AuthClient::new_from_env(&company_id, environment).await?
+            .authorize().await?;
+        // client.refresh_access_token().await?;
 
         Ok(Quickbooks {
             company_id: company_id.to_string(),
