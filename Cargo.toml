@@ -17,4 +17,7 @@ async-trait = "0.1.72"
 tokio = {version="1.29.1", features=["macros"]}
 thiserror = "1.0.44"
 
+[features]
+cache = ["intuit-oxi-auth/cache"]
+
 [dev-dependencies]
