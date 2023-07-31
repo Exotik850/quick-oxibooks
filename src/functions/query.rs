@@ -30,6 +30,10 @@ where
 
         Ok(resp.query_response.items)
     }
+
+    async fn query_single(qb: &Quickbooks<Authorized>, query_str: &str) -> Result<Self, APIError> {
+        Ok(Self::query(qb, query_str).await?.remove(0))
+    }
 }
 
 impl<T: QBItem> QBQuery for T {}
