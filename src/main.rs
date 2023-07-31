@@ -1,8 +1,8 @@
 mod error;
 mod functions;
-mod quickbook;
+mod client;
 use functions::query::QBQuery;
-use quickbook::Quickbooks;
+use client::Quickbooks;
 use quickbooks_types::models::Customer;
 
 #[tokio::main]

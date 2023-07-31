@@ -5,7 +5,7 @@ use reqwest::Method;
 
 use super::{qb_request, QBResponse};
 use crate::error::APIError;
-use crate::quickbook::Quickbooks;
+use crate::client::Quickbooks;
 
 #[async_trait]
 pub trait QBRead

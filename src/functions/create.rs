@@ -4,7 +4,7 @@ use quickbooks_types::QBItem;
 use reqwest::Method;
 
 use crate::error::APIError;
-use crate::quickbook::Quickbooks;
+use crate::client::Quickbooks;
 
 use super::{qb_request, QBResponse};
 
