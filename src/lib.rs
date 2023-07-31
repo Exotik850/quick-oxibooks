@@ -23,3 +23,6 @@ pub mod actions {
 }
 
 pub use intuit_oxi_auth::{Authorized, Environment, Unauthorized};
+
+#[cfg(feature = "cache")]
+pub use intuit_oxi_auth::Cache;
