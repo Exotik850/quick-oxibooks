@@ -1,8 +1,10 @@
 {
     "rust-analyzer.linkedProjects": [
-        ".\\intuit-oauth\\Cargo.toml",
         ".\\Cargo.toml",
+        ".\\intuit-oxi-auth\\Cargo.toml",
         ".\\quickbooks-types\\Cargo.toml",
-        ".\\intuit-oauth\\Cargo.toml",
+    ],
+    "rust-analyzer.diagnostics.disabled": [
+        "unreasolved-proc-macro"
     ]
 }
