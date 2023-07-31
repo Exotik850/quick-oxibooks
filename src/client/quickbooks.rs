@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use intuit_oxi_auth::{Environment, AuthClient};
+use intuit_oxi_auth::{Environment, AuthClient, Cache};
 use reqwest::Client;
 
 use crate::error::APIError;
@@ -18,6 +18,11 @@ pub struct Quickbooks<T>
     pub(crate) http_client: Arc<Client>,
 }
 
-pub trait QBData<T> {
-    fn get_data(&self) -> Option<&T>;
+#[cfg(feature = "cache")]
+impl<T> Cache for Quickbooks<T>
+where T: Cache
+{
+    fn cleanup(&self) {
+        self.client.cleanup();
+    }
 }

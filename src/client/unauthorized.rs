@@ -55,7 +55,6 @@ impl Quickbooks<Unauthorized> {
     ) -> super::quickbooks::Result<Quickbooks<Authorized>> {
         let client = AuthClient::new_from_env(&company_id, environment).await?
             .authorize(None).await?;
-        // client.refresh_access_token().await?;
 
         Ok(Quickbooks {
             company_id: company_id.to_string(),
@@ -63,11 +62,5 @@ impl Quickbooks<Unauthorized> {
             environment,
             http_client: Arc::new(Client::new()),
         })
-    }
-}
-
-impl super::quickbooks::QBData<Unauthorized> for Quickbooks<Unauthorized> {
-    fn get_data(&self) -> Option<&Unauthorized> {
-        None
     }
 }

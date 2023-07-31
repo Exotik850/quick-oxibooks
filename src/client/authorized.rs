@@ -5,10 +5,6 @@ use url::Url;
 
 use super::quickbooks::Quickbooks;
 
-
-
-
-
 impl Quickbooks<Authorized> {
     pub fn request<B>(
         &self,
@@ -53,11 +49,5 @@ impl Quickbooks<Authorized> {
         }
 
         Ok(rb.build()?)
-    }
-}
-
-impl super::quickbooks::QBData<Authorized> for Quickbooks<Authorized> {
-    fn get_data(&self) -> Option<&Authorized> {
-        Some(&self.client.data)
     }
 }
