@@ -8,13 +8,15 @@
  * LICENSED UNDER APACHE 2.0
  *
  */
+
 pub mod error;
-mod functions;
 pub mod client;
 
 pub mod types {
     pub use quickbooks_types::*;
 }
+
+mod functions;
 pub mod actions {
     pub use crate::functions::create::QBCreate;
     pub use crate::functions::delete::QBDelete;

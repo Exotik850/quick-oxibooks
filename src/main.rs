@@ -3,7 +3,7 @@ mod functions;
 mod client;
 use functions::query::QBQuery;
 use client::Quickbooks;
-use quickbooks_types::models::Customer;
+use quickbooks_types::Customer;
 
 #[tokio::main]
 async fn main() {
