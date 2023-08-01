@@ -12,6 +12,8 @@ pub enum APIError {
     BadRequest(String),
     #[error("Trying to update an object when it doesn't have an ID set")]
     NoIdOnRead,
+    #[error("Missing objects when trying to create item")]
+    CreateMissingItems,
 }
 
 impl Serialize for APIError {
