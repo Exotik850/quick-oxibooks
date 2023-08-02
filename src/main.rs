@@ -16,7 +16,9 @@ async fn main() -> Result<(), APIError> {
 
     let line = LineBuilder::default()
     .line_detail(Some(LineDetail::SalesItemLineDetail(SalesItemLineDetail{item_ref:item.into(), ..Default::default()})))
+    .amount(5.26)
     .build().unwrap();
+    println!("{line}");
     let line = vec![line];
 
     let new_inv = InvoiceBuilder::default()

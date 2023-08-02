@@ -22,7 +22,7 @@ where
             (),
             Some(&[(
                 "query",
-                &format!("select * from {} {query_str} MAXRESULTS 1000", Self::name(),),
+                &format!("select * from {} {query_str} MAXRESULTS 10", Self::name(),),
             )])
         );
 
