@@ -2,7 +2,8 @@ use quick_oxibooks::actions::{QBCreate, QBQuery};
 use quick_oxibooks::error::APIError;
 use quick_oxibooks::types::Customer;
 use quick_oxibooks::client::Quickbooks;
-use quickbooks_types::{InvoiceBuilder, LineBuilder, LineDetail, SalesItemLineDetail, Item};
+use quickbooks_types::common::{TxnTaxDetail, NtRef};
+use quickbooks_types::{InvoiceBuilder, LineBuilder, LineDetail, SalesItemLineDetail, Item, Invoice, Line, TaxLineDetail};
 
 
 #[tokio::main]
@@ -10,25 +11,36 @@ async fn main() -> Result<(), APIError> {
     let qb = Quickbooks::new_from_env("4620816365257778210", intuit_oxi_auth::Environment::SANDBOX)
     .await?;
     let start = std::time::Instant::now();
-    let cust = Customer::query_single(&qb, r#"where GivenName = 'John' and FamilyName = 'Melton'"#)
-    .await?;
-    let item = Item::query_single(&qb, "").await?;
+    // let cust = Customer::query_single(&qb, r#"where GivenName = 'John' and FamilyName = 'Melton'"#)
+    // .await?;
+    // let item = Item::query_single(&qb, "").await?;
 
-    let line = LineBuilder::default()
-    .line_detail(Some(LineDetail::SalesItemLineDetail(SalesItemLineDetail{item_ref:item.into(), ..Default::default()})))
-    .amount(5.26)
-    .build().unwrap();
-    // println!("{line}");
-    let line = vec![line];
+    // let line = LineBuilder::default()
+    // .line_detail(Some(LineDetail::SalesItemLineDetail(SalesItemLineDetail{item_ref:item.into(), ..Default::default()})))
+    // .amount(5.26)
+    // .build().unwrap();
+    // // println!("{line}");
+    // let line = vec![line];
 
-    let new_inv = InvoiceBuilder::default()
-    .customer_ref(Some(cust.into()))
-    .line(Some(line))
-    .build()
-    .unwrap();
-    // println!("\n{new_inv}");
+    // let new_inv = InvoiceBuilder::default()
+    // .customer_ref(Some(cust.into()))
+    // .line(Some(line))
+    // .build()
+    // .unwrap();
+    // // println!("\n{new_inv}");
 
-    new_inv.create(&qb).await?;
+    // new_inv.create(&qb).await?;
+    let inv = Invoice::query_single(&qb, "where DocNumber = '1015'").await?;
+
+    let tax_amount = (inv..unwrap_or(0.0) * 0.0975) as f32;
+
+    let new_line = inv.line.unwrap().iter().map(|i| i.).collect();
+
+    let inv = Invoice {
+        line: Some(new_line)
+        ..inv
+    };
+    println!("{inv}");
     
     let end = start.elapsed();
     println!("Done in {end:?}");
