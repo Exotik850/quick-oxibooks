@@ -7,18 +7,18 @@ use quickbooks_types::{InvoiceBuilder, LineBuilder, LineDetail, SalesItemLineDet
 
 #[tokio::main]
 async fn main() -> Result<(), APIError> {
-    let start = std::time::Instant::now();
     let qb = Quickbooks::new_from_env("4620816365257778210", intuit_oxi_auth::Environment::SANDBOX)
-        .await?;
+    .await?;
+    let start = std::time::Instant::now();
     let cust = Customer::query_single(&qb, r#"where GivenName = 'John' and FamilyName = 'Melton'"#)
-        .await?;
+    .await?;
     let item = Item::query_single(&qb, "").await?;
 
     let line = LineBuilder::default()
     .line_detail(Some(LineDetail::SalesItemLineDetail(SalesItemLineDetail{item_ref:item.into(), ..Default::default()})))
     .amount(5.26)
     .build().unwrap();
-    println!("{line}");
+    // println!("{line}");
     let line = vec![line];
 
     let new_inv = InvoiceBuilder::default()
@@ -26,6 +26,7 @@ async fn main() -> Result<(), APIError> {
     .line(Some(line))
     .build()
     .unwrap();
+    // println!("\n{new_inv}");
 
     new_inv.create(&qb).await?;
     
