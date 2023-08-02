@@ -53,6 +53,7 @@ pub struct QueryResponse<T> {
         alias = "Employee",
         alias = "Estimate",
         alias = "Payment",
+        alias = "SalesReceipt",
         alias = "Vendor"
     )]
     items: Vec<T>,
