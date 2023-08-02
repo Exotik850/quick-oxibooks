@@ -14,7 +14,7 @@ pub trait QBQuery
 where
     Self: QBItem,
 {
-    async fn query(qb: &Quickbooks<Authorized>, query_str: &str) -> Result<Vec<Self>, APIError> {
+    async fn query(qb: &Quickbooks<Authorized>, query_str: &str, max_results: usize) -> Result<Vec<Self>, APIError> {
         let response = qb_request!(
             qb,
             Method::GET,
@@ -22,7 +22,7 @@ where
             (),
             Some(&[(
                 "query",
-                &format!("select * from {} {query_str} MAXRESULTS 10", Self::name(),),
+                &format!("select * from {} {query_str} MAXRESULTS {max_results}", Self::name()),
             )])
         );
 
@@ -32,7 +32,7 @@ where
     }
 
     async fn query_single(qb: &Quickbooks<Authorized>, query_str: &str) -> Result<Self, APIError> {
-        Ok(Self::query(qb, query_str).await?.remove(0))
+        Ok(Self::query(&qb, query_str, 1).await?.remove(0))
     }
 }
 
