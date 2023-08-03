@@ -32,7 +32,7 @@ where
     }
 
     async fn query_single(qb: &Quickbooks<Authorized>, query_str: &str) -> Result<Self, APIError> {
-        Ok(Self::query(&qb, query_str, 1).await?.remove(0))
+        Ok(Self::query(qb, query_str, 1).await?.remove(0))
     }
 }
 
