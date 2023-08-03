@@ -1,9 +1,7 @@
-use quick_oxibooks::actions::{QBCreate, QBQuery};
+use quick_oxibooks::actions::QBQuery;
 use quick_oxibooks::error::APIError;
-use quick_oxibooks::types::Customer;
 use quick_oxibooks::client::Quickbooks;
-use quickbooks_types::common::{TxnTaxDetail, NtRef};
-use quickbooks_types::{InvoiceBuilder, LineBuilder, LineDetail, SalesItemLineDetail, Item, Invoice, Line, TaxLineDetail};
+use quickbooks_types::{Invoice, TaxableLine};
 
 
 #[tokio::main]
@@ -30,16 +28,9 @@ async fn main() -> Result<(), APIError> {
     // // println!("\n{new_inv}");
 
     // new_inv.create(&qb).await?;
-    let inv = Invoice::query_single(&qb, "where DocNumber = '1015'").await?;
+    let mut inv = Invoice::query_single(&qb, "where DocNumber = '1015'").await?;
+    inv.line.iter_mut().for_each(|c| c.set_taxable());
 
-    let tax_amount = (inv..unwrap_or(0.0) * 0.0975) as f32;
-
-    let new_line = inv.line.unwrap().iter().map(|i| i.).collect();
-
-    let inv = Invoice {
-        line: Some(new_line)
-        ..inv
-    };
     println!("{inv}");
     
     let end = start.elapsed();
