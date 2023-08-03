@@ -1,13 +1,12 @@
 use quick_oxibooks::actions::QBQuery;
-use quick_oxibooks::error::APIError;
 use quick_oxibooks::client::Quickbooks;
+use quick_oxibooks::error::APIError;
 use quickbooks_types::{Invoice, TaxableLine};
-
 
 #[tokio::main]
 async fn main() -> Result<(), APIError> {
     let qb = Quickbooks::new_from_env("4620816365257778210", intuit_oxi_auth::Environment::SANDBOX)
-    .await?;
+        .await?;
     let start = std::time::Instant::now();
     // let cust = Customer::query_single(&qb, r#"where GivenName = 'John' and FamilyName = 'Melton'"#)
     // .await?;
@@ -29,10 +28,14 @@ async fn main() -> Result<(), APIError> {
 
     // new_inv.create(&qb).await?;
     let mut inv = Invoice::query_single(&qb, "where DocNumber = '1015'").await?;
-    inv.line.iter_mut().for_each(|c| c.set_taxable());
+    inv.line
+        .as_mut()
+        .unwrap()
+        .iter_mut()
+        .for_each(|f| f.set_taxable());
 
     println!("{inv}");
-    
+
     let end = start.elapsed();
     println!("Done in {end:?}");
     Ok(())

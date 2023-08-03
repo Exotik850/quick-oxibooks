@@ -6,15 +6,19 @@ use reqwest::Method;
 use serde::Deserialize;
 
 use super::qb_request;
-use crate::error::APIError;
 use crate::client::Quickbooks;
+use crate::error::APIError;
 
 #[async_trait]
 pub trait QBQuery
 where
     Self: QBItem,
 {
-    async fn query(qb: &Quickbooks<Authorized>, query_str: &str, max_results: usize) -> Result<Vec<Self>, APIError> {
+    async fn query(
+        qb: &Quickbooks<Authorized>,
+        query_str: &str,
+        max_results: usize,
+    ) -> Result<Vec<Self>, APIError> {
         let response = qb_request!(
             qb,
             Method::GET,
@@ -22,7 +26,10 @@ where
             (),
             Some(&[(
                 "query",
-                &format!("select * from {} {query_str} MAXRESULTS {max_results}", Self::name()),
+                &format!(
+                    "select * from {} {query_str} MAXRESULTS {max_results}",
+                    Self::name()
+                ),
             )])
         );
 

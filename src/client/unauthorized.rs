@@ -1,10 +1,9 @@
 use std::{fmt::Display, sync::Arc};
 
-use intuit_oxi_auth::{Unauthorized, Environment, Authorized, AuthClient};
+use intuit_oxi_auth::{AuthClient, Authorized, Environment, Unauthorized};
 use reqwest::Client;
 
 use super::quickbooks::Quickbooks;
-
 
 impl Quickbooks<Unauthorized> {
     /// Create a new QuickBooks client struct. It takes a type that can convert into
@@ -53,8 +52,10 @@ impl Quickbooks<Unauthorized> {
         company_id: C,
         environment: Environment,
     ) -> super::quickbooks::Result<Quickbooks<Authorized>> {
-        let client = AuthClient::new_from_env(&company_id, environment).await?
-            .authorize(None).await?;
+        let client = AuthClient::new_from_env(&company_id, environment)
+            .await?
+            .authorize(None)
+            .await?;
 
         Ok(Quickbooks {
             company_id: company_id.to_string(),

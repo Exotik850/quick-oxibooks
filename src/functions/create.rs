@@ -1,19 +1,18 @@
 use async_trait::async_trait;
 use intuit_oxi_auth::Authorized;
-use quickbooks_types::{QBItem, QBCreatable};
+use quickbooks_types::{QBCreatable, QBItem};
 use reqwest::Method;
 
-use crate::error::APIError;
 use crate::client::Quickbooks;
+use crate::error::APIError;
 
 use super::{qb_request, QBResponse};
 
 #[async_trait]
-pub trait QBCreate: QBCreatable + QBItem
-{
+pub trait QBCreate: QBCreatable + QBItem {
     async fn create(&self, qb: &Quickbooks<Authorized>) -> Result<Self, APIError> {
         if !self.can_create() {
-            return Err(APIError::CreateMissingItems)
+            return Err(APIError::CreateMissingItems);
         }
 
         let resp = qb_request!(

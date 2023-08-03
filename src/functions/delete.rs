@@ -4,8 +4,8 @@ use quickbooks_types::QBItem;
 use reqwest::Method;
 
 use super::{qb_request, QBResponse};
-use crate::error::APIError;
 use crate::client::Quickbooks;
+use crate::error::APIError;
 
 #[async_trait]
 pub trait QBDelete
@@ -26,13 +26,15 @@ where
                     self,
                     None
                 );
-        
+
                 // Deleting returns a diff object than normal, currently won't work
                 let resp: QBResponse<Self> = response.json().await?;
-        
+
                 Ok(resp.object)
             }
-            _ => Err(APIError::BadRequest("Missing ID or Sync token on delete".into()))
+            _ => Err(APIError::BadRequest(
+                "Missing ID or Sync token on delete".into(),
+            )),
         }
     }
 }

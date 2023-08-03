@@ -1,6 +1,6 @@
 mod authorized;
-mod unauthorized;
 mod quickbooks;
-pub use quickbooks::*;
+mod unauthorized;
 pub use authorized::*;
+pub use quickbooks::*;
 pub use unauthorized::*;

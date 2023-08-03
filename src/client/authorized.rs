@@ -1,5 +1,5 @@
 use intuit_oxi_auth::Authorized;
-use reqwest::{header, Request, Method};
+use reqwest::{header, Method, Request};
 use serde::Serialize;
 use url::Url;
 
