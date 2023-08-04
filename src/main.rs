@@ -1,7 +1,7 @@
 use quick_oxibooks::actions::QBQuery;
 use quick_oxibooks::client::Quickbooks;
 use quick_oxibooks::error::APIError;
-use quickbooks_types::{Invoice, TaxableLine};
+use quickbooks_types::{Invoice, TaxableLine, Preferences};
 
 #[tokio::main]
 async fn main() -> Result<(), APIError> {
@@ -27,13 +27,13 @@ async fn main() -> Result<(), APIError> {
     // // println!("\n{new_inv}");
 
     // new_inv.create(&qb).await?;
+    
     let mut inv = Invoice::query_single(&qb, "where DocNumber = '1015'").await?;
     inv.line
         .as_mut()
         .unwrap()
         .iter_mut()
         .for_each(|f| f.set_taxable());
-
     println!("{inv}");
 
     let end = start.elapsed();

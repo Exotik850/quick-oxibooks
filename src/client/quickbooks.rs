@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use intuit_oxi_auth::{AuthClient, Cache, Environment};
+use intuit_oxi_auth::{AuthClient, Environment};
 use reqwest::Client;
 
 use crate::error::APIError;
@@ -15,6 +15,9 @@ pub struct Quickbooks<T> {
     pub(crate) client: Arc<AuthClient<T>>,
     pub(crate) http_client: Arc<Client>,
 }
+
+#[cfg(feature = "cache")]
+use intuit_oxi_auth::Cache;
 
 #[cfg(feature = "cache")]
 impl<T> Cache for Quickbooks<T>
