@@ -14,6 +14,8 @@ pub enum APIError {
     NoIdOnRead,
     #[error("Missing objects when trying to create item")]
     CreateMissingItems,
+    #[error("No query objects returned")]
+    NoQueryObjects,
 }
 
 impl Serialize for APIError {

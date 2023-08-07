@@ -35,11 +35,18 @@ where
 
         let resp: QueryResponseExt<Self> = response.json().await?;
 
-        Ok(resp.query_response.items)
+        match resp.query_response.items.is_empty() {
+            false => Ok(resp.query_response.items),
+            true => Err(APIError::NoQueryObjects)
+        }
     }
 
     async fn query_single(qb: &Quickbooks<Authorized>, query_str: &str) -> Result<Self, APIError> {
-        Ok(Self::query(qb, query_str, 1).await?.remove(0))
+        let mut query_results = Self::query(qb, query_str, 1).await?;
+        match query_results.is_empty() {
+            false => Ok(query_results.remove(0)),
+            true => Err(APIError::NoQueryObjects)
+        }
     }
 }
 
