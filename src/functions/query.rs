@@ -37,7 +37,7 @@ where
 
         match resp.query_response.items.is_empty() {
             false => Ok(resp.query_response.items),
-            true => Err(APIError::NoQueryObjects)
+            true => Err(APIError::NoQueryObjects),
         }
     }
 
@@ -45,7 +45,7 @@ where
         let mut query_results = Self::query(qb, query_str, 1).await?;
         match query_results.is_empty() {
             false => Ok(query_results.remove(0)),
-            true => Err(APIError::NoQueryObjects)
+            true => Err(APIError::NoQueryObjects),
         }
     }
 }
