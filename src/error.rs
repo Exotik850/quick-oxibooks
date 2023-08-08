@@ -12,6 +12,8 @@ pub enum APIError {
     BadRequest(String),
     #[error("Trying to update an object when it doesn't have an ID set")]
     NoIdOnRead,
+    #[error("Trying to send object email when it doesn't have an ID set")]
+    NoIdOnSend,
     #[error("Missing objects when trying to create item")]
     CreateMissingItems,
     #[error("No query objects returned")]
