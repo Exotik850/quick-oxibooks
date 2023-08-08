@@ -3,10 +3,10 @@ use serde::Deserialize;
 
 pub mod create;
 pub mod delete;
+pub mod pdfable;
 pub mod query;
 pub mod read;
 pub mod send;
-pub mod pdfable;
 
 macro_rules! qb_request {
     ($qb:expr, $method:expr, $url:expr, $body:expr, $query:expr) => {{

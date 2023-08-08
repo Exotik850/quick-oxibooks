@@ -10,6 +10,10 @@ pub enum APIError {
     UrlParseError(#[from] url::ParseError),
     #[error("Bad request: {0}")]
     BadRequest(String),
+    #[error(transparent)]
+    TokioIoError(#[from] tokio::io::Error),
+    #[error(transparent)]
+    InvalidHeaderValue(#[from] reqwest::header::InvalidHeaderValue),
     #[error("Trying to update an object when it doesn't have an ID set")]
     NoIdOnRead,
     #[error("Trying to send object email when it doesn't have an ID set")]

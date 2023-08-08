@@ -22,7 +22,7 @@ where
             qb,
             Method::GET,
             &format!("company/{}/{}/{}", qb.company_id, Self::qb_id(), id),
-            (),
+            None::<Self>,
             None
         );
 
@@ -38,7 +38,7 @@ where
             qb,
             Method::GET,
             &format!("company/{}/{}/{}", qb.company_id, Self::qb_id(), id),
-            (),
+            None::<Self>,
             None
         );
         let resp: QBResponse<Self> = response.json().await?;

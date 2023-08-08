@@ -16,7 +16,7 @@ where
     async fn send_email(&self, email: &str, qb: &Quickbooks<Authorized>) -> Result<Self, APIError> {
         let id = match self.id() {
             Some(id) => id,
-            None => return Err(APIError::NoIdOnSend)
+            None => return Err(APIError::NoIdOnSend),
         };
 
         let request = qb_request!(

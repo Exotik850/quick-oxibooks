@@ -23,7 +23,7 @@ where
             qb,
             Method::GET,
             &format!("company/{}/query", qb.company_id),
-            (),
+            None::<Self>,
             Some(&[(
                 "query",
                 &format!(

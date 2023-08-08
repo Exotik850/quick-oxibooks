@@ -23,7 +23,7 @@ where
                         qb.company_id,
                         Self::qb_id()
                     ),
-                    self,
+                    Some(self),
                     None
                 );
 

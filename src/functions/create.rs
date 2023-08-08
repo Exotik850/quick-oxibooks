@@ -19,7 +19,7 @@ pub trait QBCreate: QBCreatable + QBItem {
             qb,
             Method::POST,
             &format!("company/{}/{}", qb.company_id, Self::qb_id()),
-            self,
+            Some(self),
             None
         );
 
