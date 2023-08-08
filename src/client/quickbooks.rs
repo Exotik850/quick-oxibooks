@@ -24,7 +24,7 @@ impl<T> Cache for Quickbooks<T>
 where
     T: Cache,
 {
-    fn cleanup(&self) {
-        self.client.cleanup();
+    fn cleanup(&self, file_name: &str) {
+        self.client.cleanup(file_name);
     }
 }
