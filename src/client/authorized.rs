@@ -67,7 +67,7 @@ impl Quickbooks<Authorized> {
     where
         B: Serialize,
     {
-        let url = self.build_url(&path, &query)?;
+        let url = self.build_url(path, &query)?;
         let headers = self.build_headers("application/json")?;
         let request = self.build_request(&method, url, headers, &body)?;
 
@@ -75,7 +75,7 @@ impl Quickbooks<Authorized> {
             "Built Request with params: \n\t{}\n\t{}\n\t{}\n\t{:?}",
             path,
             method,
-            if let Some(_) = body {
+            if body.is_some() {
                 "With JSON Body"
             } else {
                 "No JSON Body"

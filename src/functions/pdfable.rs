@@ -46,7 +46,13 @@ pub trait QBPDF: QBPDFable + QBItem {
             .write(true)
             .open(file_name)
             .await?;
-        file.write(&bytes).await?;
+        let amt = file.write(&bytes).await?;
+        
+        if bytes.len() != amt {
+            log::error!("Couldn't write all the bytes of file : {}", file_name);
+            return Err(APIError::ByteLengthMismatch)
+        }
+
         log::info!(
             "Successfully saved {} with ID : {}",
             Self::name(),

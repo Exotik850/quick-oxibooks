@@ -24,6 +24,8 @@ pub enum APIError {
     NoIdOnGetPDF,
     #[error("No query objects returned")]
     NoQueryObjects,
+    #[error("Couldn't write all the bytes of file")]
+    ByteLengthMismatch,
 }
 
 impl Serialize for APIError {
