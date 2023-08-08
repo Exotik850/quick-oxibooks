@@ -24,7 +24,7 @@ where
             reqwest::Method::POST,
             &format!("company/{}/{}/{}/send", qb.company_id, Self::qb_id(), id),
             None::<Self>,
-            Some(&[("send", &format!("sendTo={email}"))])
+            Some(&[("sendTo", email)])
         );
 
         let resp: QBResponse<Self> = request.json().await?;
