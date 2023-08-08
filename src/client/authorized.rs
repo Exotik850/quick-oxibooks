@@ -48,6 +48,13 @@ impl Quickbooks<Authorized> {
             rb = rb.json(&body);
         }
 
+        log::info!(
+            "Built Request with params: \n\t{}\n\t{}\n\t{}\n\t{:?}",
+            path,
+            method,
+            serde_json::to_string_pretty(&body).unwrap_or("Couldn't deserialize!".into()),
+            query
+        );
         Ok(rb.build()?)
     }
 }

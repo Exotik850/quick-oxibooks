@@ -30,6 +30,11 @@ where
                 // Deleting returns a diff object than normal, currently won't work
                 let resp: QBResponse<Self> = response.json().await?;
 
+                log::info!(
+                    "Successfully deleted {} with ID of {}",
+                    Self::name(),
+                    self.id().unwrap()
+                );
                 Ok(resp.object)
             }
             _ => Err(APIError::BadRequest(

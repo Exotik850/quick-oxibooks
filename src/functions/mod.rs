@@ -5,6 +5,7 @@ pub mod create;
 pub mod delete;
 pub mod query;
 pub mod read;
+pub mod send;
 
 macro_rules! qb_request {
     ($qb:expr, $method:expr, $url:expr, $body:expr, $query:expr) => {{

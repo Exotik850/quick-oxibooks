@@ -25,6 +25,12 @@ pub trait QBCreate: QBCreatable + QBItem {
 
         let resp: QBResponse<Self> = resp.json().await?;
 
+        log::info!(
+            "Successfully deleted {} with ID of {}",
+            Self::name(),
+            resp.object.id().unwrap()
+        );
+
         Ok(resp.object)
     }
 }

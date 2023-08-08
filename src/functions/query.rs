@@ -36,8 +36,17 @@ where
         let resp: QueryResponseExt<Self> = response.json().await?;
 
         match resp.query_response.items.is_empty() {
-            false => Ok(resp.query_response.items),
-            true => Err(APIError::NoQueryObjects),
+            false => {
+                log::info!(
+                    "Successfully Queried {} items for query string : {query_str}",
+                    resp.query_response.items.len()
+                );
+                Ok(resp.query_response.items)
+            }
+            true => {
+                log::warn!("Queried no items for query : {query_str}");
+                Err(APIError::NoQueryObjects)
+            }
         }
     }
 

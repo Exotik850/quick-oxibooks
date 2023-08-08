@@ -33,6 +33,7 @@ impl Quickbooks<Unauthorized> {
         .await?;
 
         let client = client.authorize(None).await?;
+        log::info!("Authorized Quickbooks Client in {:?}", environment);
 
         Ok(Quickbooks {
             company_id: company_id.to_string(),

@@ -1,10 +1,10 @@
 use async_trait::async_trait;
-use intuit_oauth::Authorized;
+use intuit_oxi_auth::Authorized;
 use quickbooks_types::QBItem;
-use reqwest::{Method, StatusCode};
 
+use crate::client::Quickbooks;
 use crate::error::APIError;
-use crate::quickbook::Quickbooks;
+use crate::functions::qb_request;
 
 use super::QBResponse;
 
@@ -14,26 +14,17 @@ where
     Self: QBItem,
 {
     async fn create(&self, qb: &Quickbooks<Authorized>) -> Result<Self, APIError> {
-        let request = qb.request(
-            Method::POST,
+        let request = qb_request!(
+            qb,
+            reqwest::Method::POST,
             &format!("company/{}/{}", qb.company_id, Self::qb_id()),
             self,
-            None,
+            None
         );
 
-        let resp = qb.http_client.execute(request).await?;
-        match resp.status() {
-            StatusCode::OK => (),
-            s => {
-                return Err(APIError {
-                    status_code: s,
-                    body: resp.text().await?,
-                })
-            }
-        };
+        let resp: QBResponse<Self> = request.json().await?;
 
-        let resp: QBResponse<Self> = resp.json().await?;
-
+        log::info!("Successfully Created {} object : {resp:?}", Self::name());
         Ok(resp.object)
     }
 }

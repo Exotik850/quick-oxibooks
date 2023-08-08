@@ -28,6 +28,7 @@ where
 
         let resp: QBResponse<Self> = response.json().await?;
 
+        log::info!("Successfully Read {} object : {resp:?}", Self::name());
         *self = resp.object.clone();
         Ok(resp.object)
     }
