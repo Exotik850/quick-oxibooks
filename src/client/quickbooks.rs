@@ -20,11 +20,10 @@ pub struct Quickbooks<T> {
 use intuit_oxi_auth::Cache;
 
 #[cfg(feature = "cache")]
-impl<T> Cache for Quickbooks<T>
-where
-    T: Cache,
+impl<T: Cache> Quickbooks<T>
 {
-    fn cleanup(&self, file_name: &str) {
-        self.client.cleanup(file_name);
+    pub fn cleanup(&self) {
+        let file_name = self.environment.cache_name();
+        self.client.cleanup(file_name)
     }
 }
