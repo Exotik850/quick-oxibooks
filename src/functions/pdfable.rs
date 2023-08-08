@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use intuit_oxi_auth::Authorized;
-use quickbooks_types::{QBCreatable, QBItem};
+use quickbooks_types::{QBItem, QBPDFable, QBReadable};
 use reqwest::Method;
 
 use crate::client::Quickbooks;
@@ -9,10 +9,10 @@ use crate::error::APIError;
 use super::{qb_request, QBResponse};
 
 #[async_trait]
-pub trait QBCreate: QBCreatable + QBItem {
-    async fn create(&self, qb: &Quickbooks<Authorized>) -> Result<Self, APIError> {
-        if !self.can_create() {
-            return Err(APIError::CreateMissingItems);
+pub trait QBPDF: QBPDFable + QBItem {
+    async fn get_pdf(&self, qb: &Quickbooks<Authorized>) -> Result<Self, APIError> {
+        if !self.can_read() {
+            return Err(APIError::NoIdOnGetPDF);
         }
 
         let resp = qb_request!(
@@ -26,7 +26,7 @@ pub trait QBCreate: QBCreatable + QBItem {
         let resp: QBResponse<Self> = resp.json().await?;
 
         log::info!(
-            "Successfully created {} with ID of {}",
+            "Successfully deleted {} with ID of {}",
             Self::name(),
             resp.object.id().unwrap()
         );
@@ -35,4 +35,4 @@ pub trait QBCreate: QBCreatable + QBItem {
     }
 }
 
-impl<T: QBItem + QBCreatable> QBCreate for T {}
+impl<T: QBItem + QBPDFable> QBPDF for T {}

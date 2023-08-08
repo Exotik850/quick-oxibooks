@@ -16,6 +16,8 @@ pub enum APIError {
     NoIdOnSend,
     #[error("Missing objects when trying to create item")]
     CreateMissingItems,
+    #[error("Missing ID when trying to get PDF of object")]
+    NoIdOnGetPDF,
     #[error("No query objects returned")]
     NoQueryObjects,
 }
