@@ -10,12 +10,22 @@ pub enum APIError {
     UrlParseError(#[from] url::ParseError),
     #[error("Bad request: {0}")]
     BadRequest(String),
+    #[error(transparent)]
+    TokioIoError(#[from] tokio::io::Error),
+    #[error(transparent)]
+    InvalidHeaderValue(#[from] reqwest::header::InvalidHeaderValue),
     #[error("Trying to update an object when it doesn't have an ID set")]
     NoIdOnRead,
+    #[error("Trying to send object email when it doesn't have an ID set")]
+    NoIdOnSend,
     #[error("Missing objects when trying to create item")]
     CreateMissingItems,
+    #[error("Missing ID when trying to get PDF of object")]
+    NoIdOnGetPDF,
     #[error("No query objects returned")]
     NoQueryObjects,
+    #[error("Couldn't write all the bytes of file")]
+    ByteLengthMismatch,
 }
 
 impl Serialize for APIError {

@@ -20,8 +20,10 @@ mod functions;
 pub mod actions {
     pub use crate::functions::create::QBCreate;
     pub use crate::functions::delete::QBDelete;
+    pub use crate::functions::pdfable::QBPDF;
     pub use crate::functions::query::QBQuery;
     pub use crate::functions::read::QBRead;
+    pub use crate::functions::send::QBSend;
 }
 
 pub use intuit_oxi_auth::{Authorized, Environment, Unauthorized};

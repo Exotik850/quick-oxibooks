@@ -19,14 +19,14 @@ pub trait QBCreate: QBCreatable + QBItem {
             qb,
             Method::POST,
             &format!("company/{}/{}", qb.company_id, Self::qb_id()),
-            self,
+            Some(self),
             None
         );
 
         let resp: QBResponse<Self> = resp.json().await?;
 
         log::info!(
-            "Successfully deleted {} with ID of {}",
+            "Successfully created {} with ID of {}",
             Self::name(),
             resp.object.id().unwrap()
         );

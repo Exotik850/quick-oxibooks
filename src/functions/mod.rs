@@ -3,6 +3,7 @@ use serde::Deserialize;
 
 pub mod create;
 pub mod delete;
+pub mod pdfable;
 pub mod query;
 pub mod read;
 pub mod send;
