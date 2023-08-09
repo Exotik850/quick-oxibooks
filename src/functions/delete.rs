@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use intuit_oxi_auth::Authorized;
-use quickbooks_types::QBItem;
+use quickbooks_types::{QBItem, QBDeletable};
 use reqwest::Method;
 
 use super::{qb_request, QBResponse};
@@ -44,5 +44,4 @@ where
     }
 }
 
-// TODO Not all types can be deleted, only implement trait for those that can
-// impl<T: QBItem> QBDelete for T {}
+impl<T: QBItem + QBDeletable> QBDelete for T {}
