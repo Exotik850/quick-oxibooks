@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use intuit_oxi_auth::Authorized;
-use quickbooks_types::{QBItem, QBDeletable};
+use quickbooks_types::{QBDeletable, QBItem};
 use reqwest::Method;
 
 use super::{qb_request, QBResponse};

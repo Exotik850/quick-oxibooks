@@ -22,8 +22,8 @@ pub enum APIError {
     CreateMissingItems,
     #[error("Missing ID when trying to get PDF of object")]
     NoIdOnGetPDF,
-    #[error("No query objects returned")]
-    NoQueryObjects,
+    #[error("No query objects returned for query_str : {0}")]
+    NoQueryObjects(String),
     #[error("Couldn't write all the bytes of file")]
     ByteLengthMismatch,
 }

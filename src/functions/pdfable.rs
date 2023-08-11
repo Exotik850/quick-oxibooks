@@ -23,7 +23,7 @@ pub trait QBPDF: QBPDFable + QBItem {
         let resp = qb.http_client.execute(request).await?;
 
         if !resp.status().is_success() {
-            return Err(APIError::BadRequest(resp.text().await?))
+            return Err(APIError::BadRequest(resp.text().await?));
         }
 
         log::info!(
@@ -47,10 +47,10 @@ pub trait QBPDF: QBPDFable + QBItem {
             .open(file_name)
             .await?;
         let amt = file.write(&bytes).await?;
-        
+
         if bytes.len() != amt {
             log::error!("Couldn't write all the bytes of file : {}", file_name);
-            return Err(APIError::ByteLengthMismatch)
+            return Err(APIError::ByteLengthMismatch);
         }
 
         log::info!(
