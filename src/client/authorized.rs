@@ -40,9 +40,15 @@ impl Quickbooks<Authorized> {
         Ok(headers)
     }
 
-    pub(crate) fn build_request<B>(&self, method: &Method, url: Url, headers: HeaderMap, body: &Option<B>) -> Result<Request, APIError>
-    where 
-        B: Serialize
+    pub(crate) fn build_request<B>(
+        &self,
+        method: &Method,
+        url: Url,
+        headers: HeaderMap,
+        body: &Option<B>,
+    ) -> Result<Request, APIError>
+    where
+        B: Serialize,
     {
         let mut rb = self
             .http_client
