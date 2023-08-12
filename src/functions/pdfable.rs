@@ -15,6 +15,10 @@ pub trait QBPDF: QBPDFable + QBItem {
             None => return Err(APIError::NoIdOnGetPDF),
         };
 
+        // if qb.client.is_expired() {
+        //     qb.client.refresh_access_token().await;
+        // }
+
         let path = &format!("company/{}/{}/{}/pdf", qb.company_id, Self::qb_id(), id);
         let url = qb.build_url(path, &None)?;
         let headers = qb.build_headers("application/pdf")?;

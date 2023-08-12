@@ -38,8 +38,9 @@ where
         match resp.query_response.items.is_empty() {
             false => {
                 log::info!(
-                    "Successfully Queried {} items for query string : {query_str}",
-                    resp.query_response.items.len()
+                    "Successfully Queried {} {}(s) for query string : {query_str}",
+                    resp.query_response.items.len(),
+                    Self::name()
                 );
                 Ok(resp.query_response.items)
             }

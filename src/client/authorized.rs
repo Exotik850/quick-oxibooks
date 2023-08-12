@@ -27,7 +27,7 @@ impl Quickbooks<Authorized> {
     }
 
     pub(crate) fn build_headers(&self, header_type: &str) -> Result<HeaderMap, InvalidHeaderValue> {
-        let bt = format!("Bearer {}", self.client.access_token().secret());
+        let bt = format!("Bearer {}", self.client.secret());
         let bearer =
             header::HeaderValue::from_str(&bt).expect("Invalid access token in Authorized Client");
         let mut headers = header::HeaderMap::new();
@@ -57,7 +57,7 @@ impl Quickbooks<Authorized> {
         Ok(rb.build()?)
     }
 
-    pub fn request<B>(
+    pub async fn request<B>(
         &self,
         method: Method,
         path: &str,
@@ -67,6 +67,11 @@ impl Quickbooks<Authorized> {
     where
         B: Serialize,
     {
+
+        // if self.client.is_expired() {
+        //     self.client.refresh_access_token().await?; // TODO make this be done from immutable reference
+        // }
+
         let url = self.build_url(path, &query)?;
         let headers = self.build_headers("application/json")?;
         let request = self.build_request(&method, url, headers, &body)?;
