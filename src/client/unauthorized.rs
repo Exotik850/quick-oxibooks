@@ -1,4 +1,4 @@
-use std::{fmt::Display, sync::Arc};
+use std::sync::Arc;
 
 use intuit_oxi_auth::{AuthClient, Authorized, Environment, Unauthorized};
 use reqwest::Client;
@@ -10,18 +10,13 @@ impl Quickbooks<Unauthorized> {
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API key your requests will work.
     #[allow(unused)]
-    pub async fn new<I, K, B, R>(
-        client_id: I,
-        client_secret: K,
-        company_id: B,
-        redirect_uri: R,
+    pub async fn new(
+        client_id: &str,
+        client_secret: &str,
+        company_id: &str,
+        redirect_uri: &str,
         environment: Environment,
     ) -> super::quickbooks::Result<Quickbooks<Authorized>>
-    where
-        I: Display,
-        K: Display,
-        B: Display,
-        R: Display,
     {
         let client = AuthClient::new(
             &client_id,
@@ -43,14 +38,11 @@ impl Quickbooks<Unauthorized> {
         })
     }
 
-    /// Create a new QuickBooks client struct from environment variables. It
-    /// takes a type that can convert into
-    /// an &str (`String` or `Vec<u8>` for example). As long as the function is
-    /// given a valid API key and your requests will work.
+    /// Create a new QuickBooks client struct from environment variables. 
     /// We pass in the token and refresh token to the client so if you are storing
     /// it in a database, you can get it first.
-    pub async fn new_from_env<C: Display>(
-        company_id: C,
+    pub async fn new_from_env(
+        company_id: &str,
         environment: Environment,
     ) -> super::quickbooks::Result<Quickbooks<Authorized>> {
         let client = AuthClient::new_from_env(&company_id, environment)
