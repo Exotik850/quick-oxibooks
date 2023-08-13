@@ -16,8 +16,7 @@ impl Quickbooks<Unauthorized> {
         company_id: &str,
         redirect_uri: &str,
         environment: Environment,
-    ) -> super::quickbooks::Result<Quickbooks<Authorized>>
-    {
+    ) -> super::quickbooks::Result<Quickbooks<Authorized>> {
         let client = AuthClient::new(
             &client_id,
             &client_secret,
@@ -38,7 +37,7 @@ impl Quickbooks<Unauthorized> {
         })
     }
 
-    /// Create a new QuickBooks client struct from environment variables. 
+    /// Create a new QuickBooks client struct from environment variables.
     /// We pass in the token and refresh token to the client so if you are storing
     /// it in a database, you can get it first.
     pub async fn new_from_env(
