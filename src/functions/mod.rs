@@ -27,6 +27,21 @@ pub(crate) use qb_request;
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(default)]
 pub struct QBResponse<T> {
+    #[serde(
+        alias = "Item",
+        alias = "Account",
+        alias = "Attachabe",
+        alias = "Invoice",
+        alias = "Attachable",
+        alias = "Bill",
+        alias = "CompanyInfo",
+        alias = "Customer",
+        alias = "Employee",
+        alias = "Estimate",
+        alias = "Payment",
+        alias = "SalesReceipt",
+        alias = "Vendor"
+    )]
     object: T,
     time: DateTime<Utc>,
 }

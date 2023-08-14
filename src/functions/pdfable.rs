@@ -29,7 +29,7 @@ pub trait QBPDF: QBPDFable + QBItem {
         log::info!(
             "Successfully got PDF of {} with ID : {}",
             Self::name(),
-            self.id().unwrap()
+            self.id().expect("No ID on QBObject when getting PDF")
         );
 
         Ok(resp.bytes().await?.into())

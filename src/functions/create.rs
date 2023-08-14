@@ -28,7 +28,7 @@ pub trait QBCreate: QBCreatable + QBItem {
         log::info!(
             "Successfully created {} with ID of {}",
             Self::name(),
-            resp.object.id().unwrap()
+            resp.object.id().expect("No ID on QB object after creation")
         );
 
         Ok(resp.object)

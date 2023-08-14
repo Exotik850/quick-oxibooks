@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use intuit_oxi_auth::Authorized;
 use quickbooks_types::{QBDeletable, QBItem};
 use reqwest::Method;
+use serde::Deserialize;
 
 use super::{qb_request, QBResponse};
 use crate::client::Quickbooks;
@@ -12,7 +13,7 @@ pub trait QBDelete
 where
     Self: QBItem,
 {
-    async fn delete(&self, qb: &Quickbooks<Authorized>) -> Result<Self, APIError> {
+    async fn delete(&self, qb: &Quickbooks<Authorized>) -> Result<QBDeleted, APIError> {
         match (self.sync_token(), self.id()) {
             (Some(_), Some(_)) => {
                 let response = qb_request!(
@@ -27,13 +28,12 @@ where
                     None
                 );
 
-                // Deleting returns a diff object than normal, currently won't work
-                let resp: QBResponse<Self> = response.json().await?;
+                let resp: QBResponse<QBDeleted> = response.json().await?;
 
                 log::info!(
                     "Successfully deleted {} with ID of {}",
                     Self::name(),
-                    self.id().unwrap()
+                    &resp.object.id
                 );
                 Ok(resp.object)
             }
@@ -45,3 +45,11 @@ where
 }
 
 impl<T: QBItem + QBDeletable> QBDelete for T {}
+
+#[derive(Deserialize, Debug, Default)]
+pub struct QBDeleted {
+    pub status: String,
+    pub domain: String,
+    #[serde(rename = "Id")]
+    pub id: String,
+}
