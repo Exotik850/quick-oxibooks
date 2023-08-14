@@ -20,6 +20,8 @@ pub enum APIError {
     NoIdOnSend,
     #[error("Missing objects when trying to create item")]
     CreateMissingItems,
+    #[error("Can't delete objects without ID or SyncToken")]
+    DeleteMissingItems,
     #[error("Missing ID when trying to get PDF of object")]
     NoIdOnGetPDF,
     #[error("No query objects returned for query_str : {0}")]
