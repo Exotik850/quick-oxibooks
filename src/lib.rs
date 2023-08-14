@@ -1,4 +1,4 @@
-/*!
+/*
  * A rust library for interacting with the QuickBooks API.
  *
  * For more information, you can check out their documentation at:
@@ -27,6 +27,3 @@ pub mod actions {
 }
 
 pub use intuit_oxi_auth::{Authorized, Environment, Unauthorized};
-
-#[cfg(feature = "cache")]
-pub use intuit_oxi_auth::Cache;
