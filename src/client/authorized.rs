@@ -82,7 +82,9 @@ impl Quickbooks<Authorized> {
         }
 
         let url = self.build_url(path, &query)?;
-        let headers = self.build_headers("application/json", "application/json").await?;
+        let headers = self
+            .build_headers("application/json", "application/json")
+            .await?;
         let request = self.build_request(&method, url, headers, &body)?;
 
         log::info!(

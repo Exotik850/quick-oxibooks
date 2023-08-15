@@ -14,5 +14,6 @@ pub struct Quickbooks<T> {
     pub environment: Environment,
     pub(crate) client: Arc<AuthClient<T>>,
     pub(crate) http_client: Arc<Client>,
-    #[cfg(feature="cache")] pub(crate) key: String,
+    #[cfg(feature = "cache")]
+    pub(crate) key: String,
 }

@@ -16,7 +16,7 @@ impl Quickbooks<Unauthorized> {
         company_id: &str,
         redirect_uri: &str,
         environment: Environment,
-        #[cfg(feature="cache")] key: &str,
+        #[cfg(feature = "cache")] key: &str,
     ) -> super::quickbooks::Result<Quickbooks<Authorized>> {
         let client = AuthClient::new(
             client_id,
@@ -27,36 +27,36 @@ impl Quickbooks<Unauthorized> {
         )
         .await?;
 
-        #[cfg(feature="cache")]
+        #[cfg(feature = "cache")]
         let client = client.authorize(None, key).await?;
-        #[cfg(not(feature="cache"))]
+        #[cfg(not(feature = "cache"))]
         let client = client.authorize(None).await?;
 
         log::info!("Authorized Quickbooks Client in {:?}", environment);
-        
+
         Ok(Quickbooks {
             company_id: company_id.to_string(),
             client: Arc::new(client),
             environment,
             http_client: Arc::new(Client::new()),
-            #[cfg(feature = "cache")] key: key.to_string()
+            #[cfg(feature = "cache")]
+            key: key.to_string(),
         })
     }
-    
+
     /// Create a new QuickBooks client struct from environment variables.
     /// We pass in the token and refresh token to the client so if you are storing
     /// it in a database, you can get it first.
     pub async fn new_from_env(
         company_id: &str,
         environment: Environment,
-        #[cfg(feature="cache")] key: &str,
+        #[cfg(feature = "cache")] key: &str,
     ) -> super::quickbooks::Result<Quickbooks<Authorized>> {
-        let client = AuthClient::new_from_env(company_id, environment)
-            .await?;
+        let client = AuthClient::new_from_env(company_id, environment).await?;
 
-        #[cfg(feature="cache")]
+        #[cfg(feature = "cache")]
         let client = client.authorize(None, key).await?;
-        #[cfg(not(feature="cache"))]
+        #[cfg(not(feature = "cache"))]
         let client = client.authorize(None).await?;
 
         Ok(Quickbooks {
@@ -64,7 +64,8 @@ impl Quickbooks<Unauthorized> {
             client: Arc::new(client),
             environment,
             http_client: Arc::new(Client::new()),
-            #[cfg(feature = "cache")] key: key.to_string()
+            #[cfg(feature = "cache")]
+            key: key.to_string(),
         })
     }
 }

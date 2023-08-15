@@ -47,7 +47,7 @@ where
 impl<T: QBItem + QBDeletable> QBDelete for T {}
 
 #[derive(Serialize, Debug)]
-#[serde(rename_all="PascalCase")]
+#[serde(rename_all = "PascalCase")]
 struct QBToDelete {
     id: String,
     sync_token: String,
@@ -57,16 +57,11 @@ struct QBToDelete {
 impl<T: QBItem> From<&T> for QBToDelete {
     fn from(value: &T) -> Self {
         match (value.id().cloned(), value.sync_token().cloned()) {
-            (Some(id), Some(sync_token)) => {
-                Self {
-                        id,
-                        sync_token
-                    }
-            }, 
-            (_, _) => panic!("Couldnt delete QBItem, no ID or SyncToken available!") // TODO Make this not possible
+            (Some(id), Some(sync_token)) => Self { id, sync_token },
+            (_, _) => panic!("Couldnt delete QBItem, no ID or SyncToken available!"), // TODO Make this not possible
         }
     }
-} 
+}
 
 #[derive(Deserialize, Debug, Default)]
 pub struct QBDeleted {
