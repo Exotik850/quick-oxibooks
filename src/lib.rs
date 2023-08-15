@@ -24,6 +24,7 @@ pub mod actions {
     pub use crate::functions::query::QBQuery;
     pub use crate::functions::read::QBRead;
     pub use crate::functions::send::QBSend;
+    pub use crate::functions::attachment::QBAttachment;
 }
 
 pub use intuit_oxi_auth::{Authorized, Environment, Unauthorized};

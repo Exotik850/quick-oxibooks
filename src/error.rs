@@ -28,6 +28,8 @@ pub enum APIError {
     NoQueryObjects(String),
     #[error("Couldn't write all the bytes of file")]
     ByteLengthMismatch,
+    #[error("Missing either Note or Filename when uploading Attachable")]
+    AttachableUploadMissingItems
 }
 
 impl Serialize for APIError {

@@ -10,7 +10,8 @@ log = "0.4.19"
 env_logger = "0.10.0"
 serde = { version = "1.0.164", features = ["derive"] }
 serde_json = "1.0.97"
-reqwest = {version = "0.11.18", features = ["json"]}
+reqwest = {version = "0.11.18", features = ["json", "multipart"]}
+base64 = "0.21.2"
 url = "2.4.0"
 chrono = {version="0.4.26", features=["serde"]}
 intuit-oxi-auth = {path="intuit-oxi-auth", features = ["async"]}
