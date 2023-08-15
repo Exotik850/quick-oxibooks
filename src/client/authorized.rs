@@ -99,3 +99,11 @@ impl Quickbooks<Authorized> {
         Ok(request)
     }
 }
+
+#[cfg(feature = "cache")]
+impl Quickbooks<Authorized> {
+    pub async fn cleanup(&self) {
+        self.client.cleanup(&self.key).await;
+        log::info!("Cleaned up Quickbooks client");
+    }
+}

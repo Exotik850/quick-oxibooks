@@ -14,15 +14,5 @@ pub struct Quickbooks<T> {
     pub environment: Environment,
     pub(crate) client: Arc<AuthClient<T>>,
     pub(crate) http_client: Arc<Client>,
-}
-
-#[cfg(feature = "cache")]
-use intuit_oxi_auth::Authorized;
-
-#[cfg(feature = "cache")]
-impl Quickbooks<Authorized> {
-    pub async fn cleanup(&self, key: &str) {
-        self.client.cleanup(key).await;
-        log::info!("Cleaned up Quickbooks client");
-    }
+    #[cfg(feature="cache")] pub(crate) key: String,
 }

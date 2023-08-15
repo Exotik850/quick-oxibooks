@@ -27,7 +27,11 @@ impl Quickbooks<Unauthorized> {
         )
         .await?;
 
+        #[cfg(feature="cache")]
         let client = client.authorize(None, key).await?;
+        #[cfg(not(feature="cache"))]
+        let client = client.authorize(None).await?;
+
         log::info!("Authorized Quickbooks Client in {:?}", environment);
         
         Ok(Quickbooks {
@@ -35,6 +39,7 @@ impl Quickbooks<Unauthorized> {
             client: Arc::new(client),
             environment,
             http_client: Arc::new(Client::new()),
+            #[cfg(feature = "cache")] key: key.to_string()
         })
     }
     
@@ -47,15 +52,19 @@ impl Quickbooks<Unauthorized> {
         #[cfg(feature="cache")] key: &str,
     ) -> super::quickbooks::Result<Quickbooks<Authorized>> {
         let client = AuthClient::new_from_env(company_id, environment)
-            .await?
-            .authorize(None, key)
             .await?;
+
+        #[cfg(feature="cache")]
+        let client = client.authorize(None, key).await?;
+        #[cfg(not(feature="cache"))]
+        let client = client.authorize(None).await?;
 
         Ok(Quickbooks {
             company_id: company_id.to_string(),
             client: Arc::new(client),
             environment,
             http_client: Arc::new(Client::new()),
+            #[cfg(feature = "cache")] key: key.to_string()
         })
     }
 }
