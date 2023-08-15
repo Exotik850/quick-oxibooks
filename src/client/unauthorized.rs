@@ -18,10 +18,10 @@ impl Quickbooks<Unauthorized> {
         environment: Environment,
     ) -> super::quickbooks::Result<Quickbooks<Authorized>> {
         let client = AuthClient::new(
-            &client_id,
-            &client_secret,
-            &redirect_uri,
-            &company_id,
+            client_id,
+            client_secret,
+            redirect_uri,
+            company_id,
             environment,
         )
         .await?;
@@ -44,7 +44,7 @@ impl Quickbooks<Unauthorized> {
         company_id: &str,
         environment: Environment,
     ) -> super::quickbooks::Result<Quickbooks<Authorized>> {
-        let client = AuthClient::new_from_env(&company_id, environment)
+        let client = AuthClient::new_from_env(company_id, environment)
             .await?
             .authorize(None)
             .await?;

@@ -2,10 +2,10 @@
 Quickbooks + Rust (oxi)
 
 ## Features:
- - Simple to use API for querying, sending, creating, and more with Quickbooks API
+ - Simple to use API for querying, sending, creating, and more with Quickbooks Online API
  - Fully featured types with all the fields for your accounting needs
  - Async runtime by default (blocking client soon)
- - Error handling from thiserror
+ - Error handling from `thiserror`
 
 Very early in development, expect bugs and issues and changes
 
@@ -29,11 +29,11 @@ or
 let qb = Quickbooks::new_from_env(company_id, Environment::PRODUCTION)
 ```
 
-As long as the values that you pass implement `std::fmt::Display` (which implements `ToString`) you can pass them into the object.
-
 ### Querying
 
 ```rust
-let customers = Customer::query(&qb, "where _ = _").await?; //Vec<Customer>
-let customer = Customer::query_single(&qb, "where _ = _").await?; //Customer
+let customers: Vec<Customer> = Customer::query(&qb, "where _ = _").await?;
+
+// Same as above, just with the maxresults already set to 1
+let customer: Customer = Customer::query_single(&qb, "where _ = _").await?;
 ```
