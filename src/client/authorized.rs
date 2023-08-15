@@ -29,7 +29,6 @@ impl Quickbooks<Authorized> {
     pub(crate) async fn build_headers(
         &self,
         content_type: &str,
-        accept_type: &str,
     ) -> Result<HeaderMap, InvalidHeaderValue> {
         let bt = format!("Bearer {}", self.client.secret().await);
         let bearer =
@@ -40,7 +39,7 @@ impl Quickbooks<Authorized> {
             header::CONTENT_TYPE,
             header::HeaderValue::from_str(content_type)?,
         );
-        headers.append(header::ACCEPT, header::HeaderValue::from_str(accept_type)?);
+        headers.append(header::ACCEPT, header::HeaderValue::from_str(content_type)?);
         Ok(headers)
     }
 
@@ -83,7 +82,7 @@ impl Quickbooks<Authorized> {
 
         let url = self.build_url(path, &query)?;
         let headers = self
-            .build_headers("application/json", "application/json")
+            .build_headers("application/json")
             .await?;
         let request = self.build_request(&method, url, headers, &body)?;
 
