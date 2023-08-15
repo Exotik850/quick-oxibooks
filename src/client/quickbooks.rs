@@ -21,8 +21,8 @@ use intuit_oxi_auth::Authorized;
 
 #[cfg(feature = "cache")]
 impl Quickbooks<Authorized> {
-    pub async fn cleanup(&self) {
-        self.client.cleanup().await;
+    pub async fn cleanup(&self, key: &str) {
+        self.client.cleanup(key).await;
         log::info!("Cleaned up Quickbooks client");
     }
 }

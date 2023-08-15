@@ -16,6 +16,7 @@ impl Quickbooks<Unauthorized> {
         company_id: &str,
         redirect_uri: &str,
         environment: Environment,
+        #[cfg(feature="cache")] key: &str,
     ) -> super::quickbooks::Result<Quickbooks<Authorized>> {
         let client = AuthClient::new(
             client_id,
@@ -26,9 +27,9 @@ impl Quickbooks<Unauthorized> {
         )
         .await?;
 
-        let client = client.authorize(None).await?;
+        let client = client.authorize(None, key).await?;
         log::info!("Authorized Quickbooks Client in {:?}", environment);
-
+        
         Ok(Quickbooks {
             company_id: company_id.to_string(),
             client: Arc::new(client),
@@ -36,17 +37,18 @@ impl Quickbooks<Unauthorized> {
             http_client: Arc::new(Client::new()),
         })
     }
-
+    
     /// Create a new QuickBooks client struct from environment variables.
     /// We pass in the token and refresh token to the client so if you are storing
     /// it in a database, you can get it first.
     pub async fn new_from_env(
         company_id: &str,
         environment: Environment,
+        #[cfg(feature="cache")] key: &str,
     ) -> super::quickbooks::Result<Quickbooks<Authorized>> {
         let client = AuthClient::new_from_env(company_id, environment)
             .await?
-            .authorize(None)
+            .authorize(None, key)
             .await?;
 
         Ok(Quickbooks {
