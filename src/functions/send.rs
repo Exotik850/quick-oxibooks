@@ -29,7 +29,7 @@ where
 
         let resp: QBResponse<Self> = request.json().await?;
 
-        log::info!("Successfully Sent {} object : {resp:?}", Self::name());
+        log::info!("Successfully Sent {} object with ID : {}", Self::name(), id);
         Ok(resp.object)
     }
 }

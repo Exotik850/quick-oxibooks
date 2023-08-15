@@ -28,7 +28,11 @@ where
 
         let resp: QBResponse<Self> = response.json().await?;
 
-        log::info!("Successfully Read {} object : {resp:?}", Self::name());
+        log::info!(
+            "Successfully Read {} object with ID : {}",
+            Self::name(),
+            self.id().expect("No ID after reading QB Object")
+        );
         *self = resp.object.clone();
         Ok(resp.object)
     }
