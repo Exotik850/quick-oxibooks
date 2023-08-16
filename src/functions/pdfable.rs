@@ -17,9 +17,7 @@ pub trait QBPDF: QBPDFable + QBItem {
 
         let path = &format!("company/{}/{}/{}/pdf", qb.company_id, Self::qb_id(), id);
         let url = qb.build_url(path, &None)?;
-        let headers = qb
-            .build_headers("application/pdf")
-            .await?;
+        let headers = qb.build_headers("application/pdf").await?;
         let request = qb.build_request(&Method::GET, url, headers, &None::<Self>)?;
 
         let resp = qb.http_client.execute(request).await?;

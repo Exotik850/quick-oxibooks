@@ -35,11 +35,16 @@ impl Quickbooks<Authorized> {
             header::HeaderValue::from_str(&bt).expect("Invalid access token in Authorized Client");
         let mut headers = header::HeaderMap::new();
         headers.append(header::AUTHORIZATION, bearer);
+        if content_type != "multipart/form-data" {
+            headers.append(
+                header::CONTENT_TYPE,
+                header::HeaderValue::from_str(content_type)?,
+            );
+        }
         headers.append(
-            header::CONTENT_TYPE,
-            header::HeaderValue::from_str(content_type)?,
+            header::ACCEPT,
+            header::HeaderValue::from_str("application/json")?,
         );
-        headers.append(header::ACCEPT, header::HeaderValue::from_str(content_type)?);
         Ok(headers)
     }
 
@@ -81,9 +86,7 @@ impl Quickbooks<Authorized> {
         }
 
         let url = self.build_url(path, &query)?;
-        let headers = self
-            .build_headers("application/json")
-            .await?;
+        let headers = self.build_headers("application/json").await?;
         let request = self.build_request(&method, url, headers, &body)?;
 
         log::info!(

@@ -4,3 +4,4 @@ refresh.txt
 .idea
 intuit-oauth/
 src/main.rs
+test.*
