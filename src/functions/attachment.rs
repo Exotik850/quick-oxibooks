@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use base64::Engine;
 use chrono::{DateTime, Utc};
 use intuit_oxi_auth::Authorized;
-use quickbooks_types::{Attachable, QBAttachable, QBItem};
+use quickbooks_types::{content_type_from_ext, Attachable, QBAttachable, QBItem};
 use reqwest::header::{self, HeaderValue};
 use reqwest::multipart::Form;
 use reqwest::multipart::Part;
@@ -14,28 +14,6 @@ use std::path::PathBuf;
 pub trait QBAttachment: QBItem + QBAttachable {
     async fn upload(&self, qb: &Quickbooks<Authorized>) -> Result<Self, APIError>;
     async fn make_upload_request(&self, qb: &Quickbooks<Authorized>) -> Result<Request, APIError>;
-}
-
-fn content_type_from_ext(ext: &str) -> &'static str {
-    match ext {
-        "ai" | "eps" => "application/postscript",
-        "csv" => "text/csv",
-        "doc" => "application/msword",
-        "docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "gif" => "image/gif",
-        "jpeg" => "image/jpeg",
-        "jpg" => "image/jpg",
-        "png" => "image/png",
-        "rtf" => "text/rtf",
-        "txt" => "text/plain",
-        "tif" => "image/tiff",
-        "ods" => "application/vnd.oasis.opendocument.spreadsheet",
-        "pdf" => "application/pdf",
-        "xls" => "application/vnd.ms-excel",
-        "xml" => "text/xml",
-        "xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        _ => panic!("Unsupported Format!"),
-    }
 }
 
 async fn _make_file_part(file_name: &str) -> Result<Part, APIError> {
@@ -51,8 +29,9 @@ async fn _make_file_part(file_name: &str) -> Result<Part, APIError> {
         headers
     };
 
+    // Would've returned an error already if it was directory, safe to unwrap
     let ext: &PathBuf = &file_name.into();
-    let ct = content_type_from_ext(ext.extension().unwrap().to_str().unwrap());
+    let ct = content_type_from_ext(&ext.extension().unwrap().to_string_lossy());
 
     let file_part = Part::bytes(encoded.into_bytes())
         .mime_str(ct)?
