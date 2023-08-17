@@ -1,3 +1,4 @@
+use quickbooks_types::QBError;
 use serde::Serialize;
 #[allow(dead_code)]
 #[derive(Debug, thiserror::Error)]
@@ -14,6 +15,8 @@ pub enum APIError {
     TokioIoError(#[from] tokio::io::Error),
     #[error(transparent)]
     InvalidHeaderValue(#[from] reqwest::header::InvalidHeaderValue),
+    #[error(transparent)]
+    QBError(#[from] QBError),
     #[error("Trying to update an object when it doesn't have an ID set")]
     NoIdOnRead,
     #[error("Trying to send object email when it doesn't have an ID set")]
