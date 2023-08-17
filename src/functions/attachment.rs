@@ -93,6 +93,7 @@ impl QBAttachment for Attachable {
 struct AttachableResponseExt {
     #[serde(rename = "AttachableResponse")]
     ar: Vec<AttachableResponse>,
+    #[allow(dead_code)]
     time: DateTime<Utc>,
 }
 
