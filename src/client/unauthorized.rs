@@ -36,7 +36,7 @@ impl Quickbooks<Unauthorized> {
 
         Ok(Quickbooks {
             company_id: company_id.to_string(),
-            client: Arc::new(client),
+            client,
             environment,
             http_client: Arc::new(Client::new()),
             #[cfg(feature = "cache")]
@@ -61,7 +61,7 @@ impl Quickbooks<Unauthorized> {
 
         Ok(Quickbooks {
             company_id: company_id.to_string(),
-            client: Arc::new(client),
+            client,
             environment,
             http_client: Arc::new(Client::new()),
             #[cfg(feature = "cache")]
