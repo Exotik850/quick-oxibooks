@@ -106,9 +106,12 @@ impl Quickbooks<Authorized> {
 }
 
 #[cfg(feature = "cache")]
+use intuit_oxi_auth::AuthError;
+#[cfg(feature = "cache")]
 impl Quickbooks<Authorized> {
-    pub async fn cleanup(&self) {
-        self.client.cleanup(&self.key).await;
+    pub async fn cleanup(&self) -> Result<(), AuthError> {
+        self.client.cleanup(&self.key).await?;
         log::info!("Cleaned up Quickbooks client");
+        Ok(())
     }
 }
