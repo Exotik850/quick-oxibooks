@@ -1,4 +1,4 @@
-pub use const_str::{convert_ascii_case, concat};
+pub use const_str::{concat, convert_ascii_case};
 
 #[macro_export]
 macro_rules! qb_where_clause {
@@ -35,7 +35,7 @@ macro_rules! qb_where_clause {
             .trim_end_matches(" AND ")
         }
     };
-    
+
     ($struct_name:ident | $($field:ident : $value:expr),+ ; $($addon:literal),+) => {
         {
             $crate::qb_where_clause!(_TYPECHECK $struct_name, $($field),+);
