@@ -8,6 +8,7 @@
  * LICENSED UNDER APACHE 2.0
  *
  */
+#![warn(clippy::pedantic)]
 
 pub mod client;
 pub mod error;

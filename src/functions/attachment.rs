@@ -48,7 +48,7 @@ impl QBAttachment for Attachable {
             return Err(APIError::AttachableUploadMissingItems);
         }
 
-        let request = self.make_upload_request(&qb).await?;
+        let request = self.make_upload_request(qb).await?;
 
         let response = qb.http_client.execute(request).await?;
 
