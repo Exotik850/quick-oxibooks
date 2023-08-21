@@ -20,21 +20,21 @@ macro_rules! qb_where_clause {
                 "where ",
                 $(
                     $crate::macros::convert_ascii_case!(upper_camel, stringify!($field)),
-                    " = '",
+                    " like '",
                     $value,
                     "' AND ",
                 )+
             ).trim_end_matches(" AND ")
         }
     };
-    
+
     (_CLAUSE $($field:ident: $value:expr),+) => {
         {
             let mut _values = String::new();
             $(
                 _values.push_str("WHERE ");
                 _values.push_str($crate::macros::convert_ascii_case!(upper_camel, stringify!($field)));
-                _values.push_str(" = '");
+                _values.push_str(" like '");
                 _values += &($value).to_string();
                 _values.push_str("' AND ".into());
             )+
