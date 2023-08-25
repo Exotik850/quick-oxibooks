@@ -38,8 +38,8 @@ macro_rules! qb_where_clause {
     (_CLAUSE $($field:ident $op:tt $value:expr),+) => {
         {
             let mut _values = String::new();
+            _values += "WHERE ";
             $(
-                _values += "WHERE ";
                 _values += $crate::macros::convert_ascii_case!(upper_camel, stringify!($field));
                 _values += " ";
                 _values += stringify!($op);
@@ -73,10 +73,16 @@ macro_rules! qb_where_clause {
 #[macro_export]
 macro_rules! qb_query {
     ($qb:expr, $struct_name:ident | $($field:ident $op:tt $value:expr),+) => {
-        $struct_name::query_single($qb, &$crate::qb_where_clause!($struct_name | $($field $op $value)+)).await
+        $struct_name::query_single($qb, &$crate::qb_where_clause!($struct_name | $($field $op $value),+)).await
     };
 
     ($qb:expr, $struct_name:ident | $($field:ident $op:tt $value:expr),+ ; $($addon:literal),+) => {
-        $struct_name::query_single($qb, &$crate::qb_where_clause!($struct_name | $($field $op $value)+ ; $($addon)+)).await
+        $struct_name::query_single($qb, &$crate::qb_where_clause!($struct_name | $($field $op $value),+ ; $($addon),+)).await
     };
 }
+
+// async fn _test() -> Result<Customer, String> {
+//     let qb = Quickbooks::new_from_env("", intuit_oxi_auth::Environment::PRODUCTION, "").await?;
+//     let cust = qb_query!(&qb, Customer | first_name = "Tom", last_name = "Hanks").map_err(|e| e.to_string())?;
+//     cust
+// }
