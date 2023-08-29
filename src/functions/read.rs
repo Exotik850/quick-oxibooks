@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use intuit_oxi_auth::Authorized;
+
 use quickbooks_types::QBItem;
 use reqwest::Method;
 
@@ -12,7 +12,7 @@ pub trait QBRead
 where
     Self: QBItem,
 {
-    async fn read(&mut self, qb: &Quickbooks<Authorized>) -> Result<(), APIError> {
+    async fn read(&mut self, qb: &Quickbooks) -> Result<(), APIError> {
         let Some(id) = self.id() else {
             return Err(APIError::NoIdOnRead);
         };
@@ -38,7 +38,7 @@ where
         Ok(())
     }
 
-    async fn get(id: &str, qb: &Quickbooks<Authorized>) -> Result<Self, APIError> {
+    async fn get(id: &str, qb: &Quickbooks) -> Result<Self, APIError> {
         let response = qb_request!(
             qb,
             Method::GET,

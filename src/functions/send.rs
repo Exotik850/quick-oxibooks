@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use intuit_oxi_auth::Authorized;
 use quickbooks_types::{QBItem, QBSendable};
 
 use crate::client::Quickbooks;
@@ -13,7 +12,7 @@ pub trait QBSend
 where
     Self: QBItem + QBSendable,
 {
-    async fn send_email(&self, email: &str, qb: &Quickbooks<Authorized>) -> Result<Self, APIError> {
+    async fn send_email(&self, email: &str, qb: &Quickbooks) -> Result<Self, APIError> {
         let Some(id) = self.id() else {
             return Err(APIError::NoIdOnSend);
         };

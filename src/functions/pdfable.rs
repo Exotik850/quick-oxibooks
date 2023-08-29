@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use intuit_oxi_auth::Authorized;
+
 use quickbooks_types::{QBItem, QBPDFable};
 use reqwest::Method;
 use tokio::io::AsyncWriteExt;
@@ -9,7 +9,7 @@ use crate::error::APIError;
 
 #[async_trait]
 pub trait QBPDF: QBPDFable + QBItem {
-    async fn get_pdf_bytes(&self, qb: &Quickbooks<Authorized>) -> Result<Vec<u8>, APIError> {
+    async fn get_pdf_bytes(&self, qb: &Quickbooks) -> Result<Vec<u8>, APIError> {
         let Some(id) = self.id() else {
             return Err(APIError::NoIdOnGetPDF);
         };
@@ -34,11 +34,7 @@ pub trait QBPDF: QBPDFable + QBItem {
         Ok(resp.bytes().await?.into())
     }
 
-    async fn save_pdf_to_file(
-        &self,
-        file_name: &str,
-        qb: &Quickbooks<Authorized>,
-    ) -> Result<(), APIError> {
+    async fn save_pdf_to_file(&self, file_name: &str, qb: &Quickbooks) -> Result<(), APIError> {
         let bytes = self.get_pdf_bytes(qb).await?;
         let mut file = tokio::fs::OpenOptions::new()
             .create(true)

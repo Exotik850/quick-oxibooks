@@ -2,7 +2,7 @@ use crate::{client::Quickbooks, error::APIError};
 use async_trait::async_trait;
 use base64::Engine;
 use chrono::{DateTime, Utc};
-use intuit_oxi_auth::Authorized;
+
 use quickbooks_types::{content_type_from_ext, Attachable, QBAttachable, QBItem};
 use reqwest::header::{self, HeaderValue};
 use reqwest::multipart::Form;
@@ -12,8 +12,8 @@ use std::path::PathBuf;
 
 #[async_trait]
 pub trait QBAttachment: QBItem + QBAttachable {
-    async fn upload(&self, qb: &Quickbooks<Authorized>) -> Result<Self, APIError>;
-    async fn make_upload_request(&self, qb: &Quickbooks<Authorized>) -> Result<Request, APIError>;
+    async fn upload(&self, qb: &Quickbooks) -> Result<Self, APIError>;
+    async fn make_upload_request(&self, qb: &Quickbooks) -> Result<Request, APIError>;
 }
 
 async fn _make_file_part(file_name: &str) -> Result<Part, APIError> {
@@ -43,7 +43,7 @@ async fn _make_file_part(file_name: &str) -> Result<Part, APIError> {
 
 #[async_trait]
 impl QBAttachment for Attachable {
-    async fn upload(&self, qb: &Quickbooks<Authorized>) -> Result<Self, APIError> {
+    async fn upload(&self, qb: &Quickbooks) -> Result<Self, APIError> {
         if !self.can_upload() {
             return Err(APIError::AttachableUploadMissingItems);
         }
@@ -64,7 +64,7 @@ impl QBAttachment for Attachable {
         Ok(obj)
     }
 
-    async fn make_upload_request(&self, qb: &Quickbooks<Authorized>) -> Result<Request, APIError> {
+    async fn make_upload_request(&self, qb: &Quickbooks) -> Result<Request, APIError> {
         let file_name = self
             .file_name
             .as_ref()

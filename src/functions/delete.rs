@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use intuit_oxi_auth::Authorized;
+
 use quickbooks_types::{QBDeletable, QBItem};
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
@@ -13,7 +13,7 @@ pub trait QBDelete
 where
     Self: QBItem,
 {
-    async fn delete(&self, qb: &Quickbooks<Authorized>) -> Result<QBDeleted, APIError> {
+    async fn delete(&self, qb: &Quickbooks) -> Result<QBDeleted, APIError> {
         let (Some(_), Some(id)) = (self.sync_token(), self.id()) else {
             return  Err(APIError::DeleteMissingItems);
         };
@@ -34,13 +34,8 @@ where
 
         let resp: QBResponse<QBDeleted> = response.json().await?;
 
-        log::info!(
-            "Successfully deleted {} with ID of {}",
-            Self::name(),
-            id
-        );
+        log::info!("Successfully deleted {} with ID of {}", Self::name(), id);
         Ok(resp.object)
-
     }
 }
 

@@ -1,4 +1,3 @@
-use intuit_oxi_auth::Authorized;
 use reqwest::{
     header::{self, HeaderMap, InvalidHeaderValue},
     Method, Request,
@@ -10,7 +9,7 @@ use crate::error::APIError;
 
 use super::quickbooks::Quickbooks;
 
-impl Quickbooks<Authorized> {
+impl Quickbooks {
     pub(crate) fn build_url(
         &self,
         path: &str,
@@ -82,7 +81,7 @@ impl Quickbooks<Authorized> {
         B: Serialize,
     {
         if self.client.is_expired().await {
-            self.client.refresh_access_token().await?;
+            self.client.refresh_access_token_async().await?;
         }
 
         let url = self.build_url(path, query)?;
@@ -108,9 +107,9 @@ impl Quickbooks<Authorized> {
 #[cfg(feature = "cache")]
 use intuit_oxi_auth::AuthError;
 #[cfg(feature = "cache")]
-impl Quickbooks<Authorized> {
+impl Quickbooks {
     pub async fn cleanup(&self) -> Result<(), AuthError> {
-        self.client.cleanup(&self.key).await?;
+        self.client.cleanup_async(&self.key).await?;
         log::info!("Cleaned up Quickbooks client");
         Ok(())
     }
