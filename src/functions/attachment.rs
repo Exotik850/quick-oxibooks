@@ -65,10 +65,13 @@ impl QBAttachment for Attachable {
     }
 
     async fn make_upload_request(&self, qb: &Quickbooks<Authorized>) -> Result<Request, APIError> {
-        let file_name = self.file_name.as_ref().unwrap();
+        let file_name = self
+            .file_name
+            .as_ref()
+            .ok_or(APIError::AttachableUploadMissingItems)?;
 
         let path = format!("company/{}/upload", qb.company_id);
-        let url = qb.build_url(&path, &Some(&[]))?;
+        let url = qb.build_url(&path, Some(&[]))?;
         let request_headers = qb.build_headers("multipart/form-data").await?;
 
         let json_body = serde_json::to_string(self).expect("Couldn't Serialize Attachment");
