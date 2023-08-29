@@ -33,6 +33,8 @@ pub enum APIError {
     ByteLengthMismatch,
     #[error("Missing either Note or Filename when uploading Attachable")]
     AttachableUploadMissingItems,
+    #[error("Missing Attachable object on upload response")]
+    NoAttachableObjects,
 }
 
 impl Serialize for APIError {

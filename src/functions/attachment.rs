@@ -57,7 +57,11 @@ impl QBAttachment for Attachable {
         }
 
         let mut qb_response: AttachableResponseExt = response.json().await?;
-        let obj = qb_response.ar.remove(0).attachable;
+        let Some(_) = qb_response.ar.get(0) else {
+            return Err(APIError::NoAttachableObjects)
+        };
+
+        let obj = qb_response.ar.swap_remove(0).attachable;
 
         log::info!("Sent attachment : {:?}", obj.file_name.as_ref().unwrap());
 

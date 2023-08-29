@@ -29,7 +29,7 @@ impl Quickbooks {
         &self,
         content_type: &str,
     ) -> Result<HeaderMap, InvalidHeaderValue> {
-        let bt = format!("Bearer {}", self.client.secret().await);
+        let bt = format!("Bearer {}", self.client.secret());
         let bearer =
             header::HeaderValue::from_str(&bt).expect("Invalid access token in Authorized Client");
         let mut headers = header::HeaderMap::new();
@@ -80,7 +80,7 @@ impl Quickbooks {
     where
         B: Serialize,
     {
-        if self.client.is_expired().await {
+        if self.client.is_expired() {
             self.client.refresh_access_token_async().await?;
         }
 
