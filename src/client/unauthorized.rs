@@ -6,7 +6,7 @@ use reqwest::Client;
 use super::quickbooks::Quickbooks;
 
 impl Quickbooks<Unauthorized> {
-    /// Create a new QuickBooks client struct. It takes a type that can convert into
+    /// Create a new `QuickBooks` client struct. It takes a type that can convert into
     /// an &str (`String` or `Vec<u8>` for example). As long as the function is
     /// given a valid API key your requests will work.
     #[allow(unused)]
@@ -22,7 +22,7 @@ impl Quickbooks<Unauthorized> {
             client_id,
             client_secret,
             redirect_uri,
-            company_id,
+            company_id.into(),
             environment,
         )
         .await?;
@@ -44,7 +44,7 @@ impl Quickbooks<Unauthorized> {
         })
     }
 
-    /// Create a new QuickBooks client struct from environment variables.
+    /// Create a new `QuickBooks` client struct from environment variables.
     /// We pass in the token and refresh token to the client so if you are storing
     /// it in a database, you can get it first.
     pub async fn new_from_env(

@@ -14,33 +14,33 @@ where
     Self: QBItem,
 {
     async fn delete(&self, qb: &Quickbooks<Authorized>) -> Result<QBDeleted, APIError> {
-        match (self.sync_token(), self.id()) {
-            (Some(_), Some(_)) => {
-                let delete_object: QBToDelete = self.into();
+        let (Some(_), Some(id)) = (self.sync_token(), self.id()) else {
+            return  Err(APIError::DeleteMissingItems);
+        };
 
-                let response = qb_request!(
-                    qb,
-                    Method::POST,
-                    &format!(
-                        "company/{}/{}?operation=delete",
-                        qb.company_id,
-                        Self::qb_id()
-                    ),
-                    Some(delete_object),
-                    None
-                );
+        let delete_object: QBToDelete = self.into();
 
-                let resp: QBResponse<QBDeleted> = response.json().await?;
+        let response = qb_request!(
+            qb,
+            Method::POST,
+            &format!(
+                "company/{}/{}?operation=delete",
+                qb.company_id,
+                Self::qb_id()
+            ),
+            Some(delete_object),
+            None
+        );
 
-                log::info!(
-                    "Successfully deleted {} with ID of {}",
-                    Self::name(),
-                    &resp.object.id
-                );
-                Ok(resp.object)
-            }
-            _ => Err(APIError::DeleteMissingItems),
-        }
+        let resp: QBResponse<QBDeleted> = response.json().await?;
+
+        log::info!(
+            "Successfully deleted {} with ID of {}",
+            Self::name(),
+            id
+        );
+        Ok(resp.object)
+
     }
 }
 

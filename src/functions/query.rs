@@ -35,28 +35,21 @@ where
 
         let resp: QueryResponseExt<Self> = response.json().await?;
 
-        match resp.query_response.items.is_empty() {
-            false => {
-                log::info!(
-                    "Successfully Queried {} {}(s) for query string : {query_str}",
-                    resp.query_response.items.len(),
-                    Self::name()
-                );
-                Ok(resp.query_response.items)
-            }
-            true => {
-                log::warn!("Queried no items for query : {query_str}");
-                Err(APIError::NoQueryObjects(query_str.into()))
-            }
+        if resp.query_response.items.is_empty() {
+            log::warn!("Queried no items for query : {query_str}");
+            Err(APIError::NoQueryObjects(query_str.into()))
+        } else {
+            log::info!(
+                "Successfully Queried {} {}(s) for query string : {query_str}",
+                resp.query_response.items.len(),
+                Self::name()
+            );
+            Ok(resp.query_response.items)
         }
     }
 
     async fn query_single(qb: &Quickbooks<Authorized>, query_str: &str) -> Result<Self, APIError> {
-        let mut query_results = Self::query(qb, query_str, 1).await?;
-        match query_results.is_empty() {
-            false => Ok(query_results.remove(0)),
-            true => Err(APIError::NoQueryObjects(query_str.into())),
-        }
+        Ok(Self::query(qb, query_str, 1).await?.remove(0))
     }
 }
 

@@ -7,7 +7,7 @@ use crate::error::APIError;
 
 pub type Result<T> = std::result::Result<T, APIError>;
 
-/// Entrypoint for interacting with the QuickBooks API.
+/// Entrypoint for interacting with the `QuickBooks` API.
 #[derive(Debug)]
 pub struct Quickbooks<T> {
     pub(crate) company_id: String,

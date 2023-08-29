@@ -17,6 +17,8 @@ pub enum APIError {
     InvalidHeaderValue(#[from] reqwest::header::InvalidHeaderValue),
     #[error(transparent)]
     QBError(#[from] QBError),
+    #[error("No query objects returned for query_str : {0}")]
+    NoQueryObjects(String),
     #[error("Trying to update an object when it doesn't have an ID set")]
     NoIdOnRead,
     #[error("Trying to send object email when it doesn't have an ID set")]
@@ -27,8 +29,6 @@ pub enum APIError {
     DeleteMissingItems,
     #[error("Missing ID when trying to get PDF of object")]
     NoIdOnGetPDF,
-    #[error("No query objects returned for query_str : {0}")]
-    NoQueryObjects(String),
     #[error("Couldn't write all the bytes of file")]
     ByteLengthMismatch,
     #[error("Missing either Note or Filename when uploading Attachable")]
@@ -40,6 +40,6 @@ impl Serialize for APIError {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(self.to_string().as_ref())
+        serializer.serialize_str(self.to_string().as_str())
     }
 }

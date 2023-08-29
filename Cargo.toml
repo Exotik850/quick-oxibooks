@@ -26,4 +26,8 @@ cache = ["intuit-oxi-auth/cache"]
 macros = ["dep:const-str"]
 
 
-[dev-dependencies]
+[workspace]
+members = [
+    "quickbooks-types",
+    "intuit-oxi-auth"
+]

@@ -12,10 +12,9 @@ pub trait QBRead
 where
     Self: QBItem,
 {
-    async fn read(&mut self, qb: &Quickbooks<Authorized>) -> Result<Self, APIError> {
-        let id = match self.id() {
-            Some(id) => id,
-            None => return Err(APIError::NoIdOnRead),
+    async fn read(&mut self, qb: &Quickbooks<Authorized>) -> Result<(), APIError> {
+        let Some(id) = self.id() else {
+            return Err(APIError::NoIdOnRead);
         };
 
         let response = qb_request!(
@@ -31,10 +30,12 @@ where
         log::info!(
             "Successfully Read {} object with ID : {}",
             Self::name(),
-            self.id().expect("No ID after reading QB Object")
+            resp.object.id().expect("No ID after reading QB Object")
         );
-        *self = resp.object.clone();
-        Ok(resp.object)
+
+        *self = resp.object;
+
+        Ok(())
     }
 
     async fn get(id: &str, qb: &Quickbooks<Authorized>) -> Result<Self, APIError> {

@@ -10,13 +10,12 @@ use crate::error::APIError;
 #[async_trait]
 pub trait QBPDF: QBPDFable + QBItem {
     async fn get_pdf_bytes(&self, qb: &Quickbooks<Authorized>) -> Result<Vec<u8>, APIError> {
-        let id = match self.id() {
-            Some(id) => id,
-            None => return Err(APIError::NoIdOnGetPDF),
+        let Some(id) = self.id() else {
+            return Err(APIError::NoIdOnGetPDF);
         };
 
         let path = &format!("company/{}/{}/{}/pdf", qb.company_id, Self::qb_id(), id);
-        let url = qb.build_url(path, &None)?;
+        let url = qb.build_url(path, None)?;
         let headers = qb.build_headers("application/pdf").await?;
         let request = qb.build_request(&Method::GET, url, headers, &None::<Self>)?;
 
@@ -54,9 +53,10 @@ pub trait QBPDF: QBPDFable + QBItem {
         }
 
         log::info!(
-            "Successfully saved {} with ID : {}",
+            "Successfully saved PDF of {} #{} to {}",
             Self::name(),
-            self.id().unwrap()
+            self.id().unwrap(),
+            file_name
         );
         Ok(())
     }

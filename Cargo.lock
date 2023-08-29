@@ -713,6 +713,7 @@ dependencies = [
 name = "intuit-oxi-auth"
 version = "0.1.0"
 dependencies = [
+ "cfg-if",
  "chrono",
  "directories",
  "log",

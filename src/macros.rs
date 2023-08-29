@@ -29,9 +29,9 @@ macro_rules! qb_where_clause {
                     stringify!($op),
                     " '",
                     $value,
-                    "' AND ",
+                    "' and ",
                 )+
-            ).trim_end_matches(" AND ")
+            ).trim_end_matches(" and ")
         }
     };
 

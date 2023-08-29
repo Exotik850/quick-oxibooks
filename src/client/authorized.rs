@@ -14,7 +14,7 @@ impl Quickbooks<Authorized> {
     pub(crate) fn build_url(
         &self,
         path: &str,
-        query: &Option<&[(&str, &str)]>,
+        query: Option<&[(&str, &str)]>,
     ) -> Result<Url, url::ParseError> {
         let base = Url::parse(self.environment.endpoint_url())?;
         let mut url = base.join(path)?;
@@ -85,7 +85,7 @@ impl Quickbooks<Authorized> {
             self.client.refresh_access_token().await?;
         }
 
-        let url = self.build_url(path, &query)?;
+        let url = self.build_url(path, query)?;
         let headers = self.build_headers("application/json").await?;
         let request = self.build_request(&method, url, headers, &body)?;
 
