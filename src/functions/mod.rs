@@ -16,7 +16,7 @@ macro_rules! qb_request {
         let resp = $qb.http_client.execute(request).await?;
 
         if !resp.status().is_success() {
-            return Err(APIError::BadRequest(resp.text().await.unwrap()));
+            return Err(APIError::BadRequest(resp.text().await?));
         }
 
         resp

@@ -28,7 +28,7 @@ pub trait QBPDF: QBPDFable + QBItem {
         log::info!(
             "Successfully got PDF of {} with ID : {}",
             Self::name(),
-            self.id().expect("No ID on QBObject when getting PDF")
+            self.id().ok_or(APIError::NoIdOnGetPDF)?
         );
 
         Ok(resp.bytes().await?.into())
@@ -51,7 +51,7 @@ pub trait QBPDF: QBPDFable + QBItem {
         log::info!(
             "Successfully saved PDF of {} #{} to {}",
             Self::name(),
-            self.id().unwrap(),
+            self.id().ok_or(APIError::NoIdOnGetPDF)?,
             file_name
         );
         Ok(())
