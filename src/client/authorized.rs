@@ -25,7 +25,7 @@ impl Quickbooks {
         Ok(url)
     }
 
-    pub(crate) async fn build_headers(
+    pub(crate) fn build_headers(
         &self,
         content_type: &str,
     ) -> Result<HeaderMap, InvalidHeaderValue> {
@@ -85,7 +85,7 @@ impl Quickbooks {
         }
 
         let url = self.build_url(path, query)?;
-        let headers = self.build_headers("application/json").await?;
+        let headers = self.build_headers("application/json")?;
         let request = self.build_request(&method, url, headers, &body)?;
 
         log::info!(

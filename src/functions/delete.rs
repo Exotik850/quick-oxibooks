@@ -15,7 +15,7 @@ where
 {
     async fn delete(&self, qb: &Quickbooks) -> Result<QBDeleted, APIError> {
         let (Some(_), Some(id)) = (self.sync_token(), self.id()) else {
-            return  Err(APIError::DeleteMissingItems);
+            return Err(APIError::DeleteMissingItems);
         };
 
         let delete_object: QBToDelete = self.into();

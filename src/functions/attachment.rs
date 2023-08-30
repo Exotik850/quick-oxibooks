@@ -58,7 +58,7 @@ impl QBAttachment for Attachable {
 
         let mut qb_response: AttachableResponseExt = response.json().await?;
         let Some(_) = qb_response.ar.get(0) else {
-            return Err(APIError::NoAttachableObjects)
+            return Err(APIError::NoAttachableObjects);
         };
 
         let obj = qb_response.ar.swap_remove(0).attachable;
@@ -76,7 +76,7 @@ impl QBAttachment for Attachable {
 
         let path = format!("company/{}/upload", qb.company_id);
         let url = qb.build_url(&path, Some(&[]))?;
-        let request_headers = qb.build_headers("multipart/form-data").await?;
+        let request_headers = qb.build_headers("multipart/form-data")?;
 
         let json_body = serde_json::to_string(self).expect("Couldn't Serialize Attachment");
         let json_part = Part::text(json_body).mime_str("application/json")?;
