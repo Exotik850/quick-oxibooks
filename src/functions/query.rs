@@ -4,8 +4,7 @@ use reqwest::Method;
 use serde::Deserialize;
 
 use super::qb_request;
-use crate::client::Quickbooks;
-use crate::error::APIError;
+use crate::{client::Quickbooks, error::APIError};
 
 #[async_trait]
 pub trait QBQuery

@@ -1,13 +1,11 @@
 use reqwest::{
-    header::{self, HeaderMap, InvalidHeaderValue},
-    Method, Request,
+    header::{self, HeaderMap, InvalidHeaderValue}, Method, Request
 };
 use serde::Serialize;
 use url::Url;
 
-use crate::error::APIError;
-
 use super::quickbooks::Quickbooks;
+use crate::error::APIError;
 
 impl Quickbooks {
     pub(crate) fn build_url(

@@ -1,11 +1,9 @@
 use async_trait::async_trait;
-
 use quickbooks_types::{QBItem, QBPDFable};
 use reqwest::Method;
 use tokio::io::AsyncWriteExt;
 
-use crate::client::Quickbooks;
-use crate::error::APIError;
+use crate::{client::Quickbooks, error::APIError};
 
 #[async_trait]
 pub trait QBPDF: QBPDFable + QBItem {

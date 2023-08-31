@@ -1,11 +1,8 @@
 use async_trait::async_trait;
 use quickbooks_types::{QBItem, QBSendable};
 
-use crate::client::Quickbooks;
-use crate::error::APIError;
-use crate::functions::qb_request;
-
 use super::QBResponse;
+use crate::{client::Quickbooks, error::APIError, functions::qb_request};
 
 #[async_trait]
 pub trait QBSend

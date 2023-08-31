@@ -1,12 +1,10 @@
 use async_trait::async_trait;
-
 use quickbooks_types::{QBDeletable, QBItem};
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 
 use super::{qb_request, QBResponse};
-use crate::client::Quickbooks;
-use crate::error::APIError;
+use crate::{client::Quickbooks, error::APIError};
 
 #[async_trait]
 pub trait QBDelete

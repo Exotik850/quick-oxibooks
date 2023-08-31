@@ -1,12 +1,13 @@
-use crate::{client::Quickbooks, error::APIError};
+use std::path::PathBuf;
+
 use async_trait::async_trait;
 use base64::Engine;
-
 use quickbooks_types::{content_type_from_ext, Attachable, QBAttachable, QBItem};
-use reqwest::header::{self, HeaderValue};
-use reqwest::multipart::{Form, Part};
-use reqwest::{Method, Request};
-use std::path::PathBuf;
+use reqwest::{
+    header::{self, HeaderValue}, multipart::{Form, Part}, Method, Request
+};
+
+use crate::{client::Quickbooks, error::APIError};
 
 #[async_trait]
 pub trait QBAttachment: QBItem + QBAttachable {
