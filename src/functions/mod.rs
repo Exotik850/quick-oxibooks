@@ -1,9 +1,10 @@
-use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
+#[cfg(feature = "attachments")]
 pub mod attachment;
 pub mod create;
 pub mod delete;
+#[cfg(feature = "pdf")]
 pub mod pdfable;
 pub mod query;
 pub mod read;
@@ -44,5 +45,5 @@ pub struct QBResponse<T> {
         alias = "Vendor"
     )]
     object: T,
-    time: DateTime<Utc>,
+    time: String,
 }

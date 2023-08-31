@@ -3,6 +3,9 @@ use serde::Serialize;
 #[allow(dead_code)]
 #[derive(Debug, thiserror::Error)]
 pub enum APIError {
+    #[cfg(any(feature = "attachment", feature = "pdf"))]
+    #[error(transparent)]
+    TokioIoError(#[from] tokio::io::Error),
     #[error(transparent)]
     ReqwestError(#[from] reqwest::Error),
     #[error(transparent)]
@@ -11,8 +14,6 @@ pub enum APIError {
     UrlParseError(#[from] url::ParseError),
     #[error("Bad request: {0}")]
     BadRequest(String),
-    #[error(transparent)]
-    TokioIoError(#[from] tokio::io::Error),
     #[error(transparent)]
     InvalidHeaderValue(#[from] reqwest::header::InvalidHeaderValue),
     #[error(transparent)]

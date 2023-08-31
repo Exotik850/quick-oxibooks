@@ -1,12 +1,10 @@
 use crate::{client::Quickbooks, error::APIError};
 use async_trait::async_trait;
 use base64::Engine;
-use chrono::{DateTime, Utc};
 
 use quickbooks_types::{content_type_from_ext, Attachable, QBAttachable, QBItem};
 use reqwest::header::{self, HeaderValue};
-use reqwest::multipart::Form;
-use reqwest::multipart::Part;
+use reqwest::multipart::{Form, Part};
 use reqwest::{Method, Request};
 use std::path::PathBuf;
 
@@ -101,7 +99,7 @@ struct AttachableResponseExt {
     #[serde(rename = "AttachableResponse")]
     ar: Vec<AttachableResponse>,
     #[allow(dead_code)]
-    time: DateTime<Utc>,
+    time: String,
 }
 
 #[derive(serde::Deserialize, Debug)]

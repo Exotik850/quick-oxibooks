@@ -1,6 +1,4 @@
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
-
 use quickbooks_types::QBItem;
 use reqwest::Method;
 use serde::Deserialize;
@@ -82,5 +80,5 @@ pub struct QueryResponse<T> {
 pub struct QueryResponseExt<T> {
     #[serde(default, rename = "QueryResponse")]
     pub query_response: QueryResponse<T>,
-    pub time: DateTime<Utc>,
+    pub time: String,
 }
