@@ -100,6 +100,10 @@ impl Quickbooks {
 
         Ok(request)
     }
+
+    pub fn set_refresh_token(&self, refresh_token: String) -> Result<(), AuthError> {
+        self.client.replace_tokens(refresh_token)
+    }
 }
 
 #[cfg(feature = "cache")]

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use intuit_oxi_auth::{AuthClient, Environment};
+use intuit_oxi_auth::{AuthClient, Environment, TokenSession};
 use reqwest::Client;
 
 use super::quickbooks::Quickbooks;
@@ -70,6 +70,25 @@ impl Quickbooks {
         #[cfg(feature = "cache")] key: &str,
     ) -> super::quickbooks::Result<Self> {
         let client = AuthClient::new_from_token_async(refresh_token.into(), environment).await?;
+        Ok(Quickbooks {
+            company_id: company_id.to_string(),
+            client,
+            environment,
+            http_client: Arc::new(Client::new()),
+            #[cfg(feature = "cache")]
+            key: key.to_string(),
+        })
+    }
+    
+    pub async fn new_from_session(
+        session: TokenSession,
+        company_id: &str,
+        environment: Environment,
+        #[cfg(feature = "cache")]
+        key: &str
+    ) -> super::quickbooks::Result<Self> {
+        let client = AuthClient::new_from_token_async("".into(), environment).await?;
+        client.replace_session(session)?;
         Ok(Quickbooks {
             company_id: company_id.to_string(),
             client,
