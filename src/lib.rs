@@ -20,9 +20,14 @@ pub mod types {
 mod functions;
 pub mod actions {
     pub use crate::functions::{
-        attachment::QBAttachment, create::QBCreate, delete::QBDelete, pdfable::QBPDF, query::QBQuery, read::QBRead, send::QBSend
+        create::QBCreate, delete::QBDelete, query::QBQuery, read::QBRead, send::QBSend
     };
 }
+
+#[cfg(feature = "attachments")]
+pub use crate::functions::attachment::QBAttachment;
+#[cfg(feature = "pdf")]
+pub use crate::functions::pdfable::QBPDF;
 
 pub use intuit_oxi_auth::{Authorized, Environment, Unauthorized};
 
