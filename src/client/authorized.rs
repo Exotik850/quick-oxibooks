@@ -3,6 +3,7 @@ use reqwest::{
 };
 use serde::Serialize;
 use url::Url;
+use intuit_oxi_auth::AuthError;
 
 use super::quickbooks::Quickbooks;
 use crate::error::APIError;
@@ -106,8 +107,6 @@ impl Quickbooks {
     }
 }
 
-#[cfg(feature = "cache")]
-use intuit_oxi_auth::AuthError;
 #[cfg(feature = "cache")]
 impl Quickbooks {
     pub async fn cleanup(&self) -> Result<(), AuthError> {
