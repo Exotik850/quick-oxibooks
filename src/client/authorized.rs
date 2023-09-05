@@ -1,9 +1,9 @@
+use intuit_oxi_auth::AuthError;
 use reqwest::{
     header::{self, HeaderMap, InvalidHeaderValue}, Method, Request
 };
 use serde::Serialize;
 use url::Url;
-use intuit_oxi_auth::AuthError;
 
 use super::quickbooks::Quickbooks;
 use crate::error::APIError;

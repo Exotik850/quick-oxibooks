@@ -24,12 +24,12 @@ pub mod actions {
     };
 }
 
+pub use intuit_oxi_auth::{Authorized, Environment, Unauthorized};
+
 #[cfg(feature = "attachments")]
 pub use crate::functions::attachment::QBAttachment;
 #[cfg(feature = "pdf")]
 pub use crate::functions::pdfable::QBPDF;
-
-pub use intuit_oxi_auth::{Authorized, Environment, Unauthorized};
 
 #[cfg(feature = "macros")]
 pub mod macros;

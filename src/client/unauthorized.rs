@@ -79,16 +79,14 @@ impl Quickbooks {
             key: key.to_string(),
         })
     }
-    
+
     pub async fn new_from_session(
         session: TokenSession,
         company_id: &str,
         environment: Environment,
-        #[cfg(feature = "cache")]
-        key: &str
+        #[cfg(feature = "cache")] key: &str,
     ) -> super::quickbooks::Result<Self> {
-        let client = AuthClient::new_from_token_async("".into(), environment).await?;
-        client.replace_session(session)?;
+        let client = AuthClient::new_from_session_async(session, environment).await?;
         Ok(Quickbooks {
             company_id: company_id.to_string(),
             client,
