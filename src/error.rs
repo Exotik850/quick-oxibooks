@@ -3,7 +3,7 @@ use serde::Serialize;
 #[allow(dead_code)]
 #[derive(Debug, thiserror::Error)]
 pub enum APIError {
-    #[cfg(any(feature = "attachment", feature = "pdf"))]
+    #[cfg(any(feature = "attachments", feature = "pdf"))]
     #[error(transparent)]
     TokioIoError(#[from] tokio::io::Error),
     #[error(transparent)]
