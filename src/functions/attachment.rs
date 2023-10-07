@@ -56,7 +56,7 @@ impl QBAttachment for Attachable {
         }
 
         let mut qb_response: AttachableResponseExt = response.json().await?;
-        let Some(_) = qb_response.ar.get(0) else {
+        if qb_response.ar.is_empty() {
             return Err(APIError::NoAttachableObjects);
         };
 
