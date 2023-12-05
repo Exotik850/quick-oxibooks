@@ -10,6 +10,7 @@
  */
 #![warn(clippy::pedantic)]
 
+pub mod batch;
 pub mod client;
 pub mod error;
 

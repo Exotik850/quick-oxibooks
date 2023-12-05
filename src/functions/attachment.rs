@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
 use base64::Engine;
@@ -15,7 +15,7 @@ pub trait QBAttachment: QBItem + QBAttachable {
     async fn make_upload_request(&self, qb: &Quickbooks) -> Result<Request, APIError>;
 }
 
-async fn _make_file_part(file_name: &str) -> Result<Part, APIError> {
+async fn _make_file_part(file_name: impl AsRef<Path>) -> Result<Part, APIError> {
     let buf = tokio::fs::read(&file_name).await?;
     let encoded = base64::engine::general_purpose::STANDARD_NO_PAD.encode(buf);
 
@@ -29,12 +29,19 @@ async fn _make_file_part(file_name: &str) -> Result<Part, APIError> {
     };
 
     // Would've returned an error already if it was directory, safe to unwrap
-    let ext: &PathBuf = &file_name.into();
-    let ct = content_type_from_ext(&ext.extension().unwrap().to_string_lossy());
+    let ext: PathBuf = file_name.as_ref().to_path_buf();
+    let ct = content_type_from_ext(ext.extension().unwrap().to_str().unwrap());
 
     let file_part = Part::bytes(encoded.into_bytes())
         .mime_str(ct)?
-        .file_name(file_name.to_string())
+        .file_name(
+            file_name
+                .as_ref()
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .to_string(),
+        )
         .headers(file_headers);
 
     Ok(file_part)
