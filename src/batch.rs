@@ -1,57 +1,12 @@
-use quickbooks_types::{QBItem, *};
+// Currently doesn't support batch voiding,
+// not going to be used so will implement when needed
+
+use quickbooks_types::{Invoice, QBItem, SalesReceipt, Vendor};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     client::{Quickbooks, Result}, error::APIError, functions::qb_request
 };
-
-// Currently doesn't support batch voiding,
-// not going to be used so will implement when needed
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum BatchItem {
-    Invoice(Invoice),
-    SalesReceipt(SalesReceipt),
-    Vendor(Vendor), // Will add more when necessary
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct BatchItemResponse {
-  #[serde(rename = "BatchItemResponse")]
-    pub items: Vec<BatchItemData<BatchItemResp>>,
-}
-#[derive(Debug, Serialize, Deserialize)]
-pub enum BatchItemResp {
-    QueryResponse(Vec<BatchItem>),
-    Fault(BatchFault),
-    #[serde(untagged)]
-    Resource(BatchItem),
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct BatchFault {
-    r#type: String,
-    #[serde(rename = "Error")]
-    error: Vec<BatchFaultError>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct BatchFaultError {
-  #[serde(rename="Message")]
-    message: String,
-    code: String,
-    #[serde(rename="Detail")]
-    detail: String,
-    element: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct BatchItemRequest {
-    #[serde(rename = "BatchItemRequest")]
-    pub items: Vec<BatchItemData<BatchOption>>,
-    #[serde(skip)]
-    pub current_id: usize,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BatchItemData<T> {
@@ -61,31 +16,12 @@ pub struct BatchItemData<T> {
     item: T,
 }
 
-impl BatchItemRequest {
-    pub fn add_command<T: QBItem>(&mut self, operation: BatchOperation, resource: BatchItem) {
-        if self.items.len() >= 30 {
-            return;
-        }
-        self.current_id += 1;
-        self.items.push(BatchItemData {
-            b_id: format!("bid{}", self.current_id),
-            item: BatchOption::BatchCommand {
-                operation,
-                resource,
-            },
-        });
-    }
-
-    pub async fn execute(self, qb: &Quickbooks) -> Result<BatchItemResponse> {
-        let response = qb_request!(
-            qb,
-            reqwest::Method::POST,
-            &format!("company/{}/batch", qb.company_id),
-            Some(self),
-            None
-        );
-        Ok(response.json().await?)
-    }
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct BatchItemRequest {
+    #[serde(rename = "BatchItemRequest")]
+    pub items: Vec<BatchItemData<BatchOption>>,
+    #[serde(skip)]
+    pub current_id: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -105,6 +41,74 @@ pub enum BatchOperation {
     Create,
     Update,
     Delete,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum BatchItem {
+    Invoice(Invoice),
+    SalesReceipt(SalesReceipt),
+    Vendor(Vendor), // Will add more when necessary
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct BatchItemResponse {
+    #[serde(rename = "BatchItemResponse")]
+    pub items: Vec<BatchItemData<BatchItemResp>>,
+}
+#[derive(Debug, Serialize, Deserialize)]
+pub enum BatchItemResp {
+    QueryResponse(Vec<BatchItem>),
+    Fault(BatchFault),
+    #[serde(untagged)]
+    Resource(BatchItem),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BatchFault {
+    r#type: String,
+    #[serde(rename = "Error")]
+    error: Vec<BatchFaultError>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BatchFaultError {
+    #[serde(rename = "Message")]
+    message: String,
+    code: String,
+    #[serde(rename = "Detail")]
+    detail: String,
+    element: String,
+}
+
+impl BatchItemRequest {
+    pub fn add_command<T: QBItem>(&mut self, item: BatchOption) -> Option<usize> {
+        if self.items.len() >= 30 {
+            return None;
+        }
+        self.current_id += 1;
+        self.items.push(BatchItemData {
+            b_id: format!("bid{}", self.current_id),
+            item,
+        });
+        Some(self.current_id)
+    }
+
+    pub async fn execute(self, qb: &Quickbooks) -> Result<BatchItemResponse> {
+        let response = qb_request!(
+            qb,
+            reqwest::Method::POST,
+            &format!("company/{}/batch", qb.company_id),
+            Some(self),
+            None
+        );
+        Ok(response.json().await?)
+    }
+}
+impl std::ops::Index<usize> for BatchItemRequest {
+    type Output = BatchItemData<BatchOption>;
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.items[index]
+    }
 }
 
 #[test]
@@ -146,7 +150,7 @@ fn batch_req_load() {
   }"#,
     )
     .unwrap();
-    println!("{:?}", val);
+    println!("{val:?}");
 }
 
 #[test]
@@ -235,93 +239,93 @@ fn batch_resp_load() {
   }"#;
 
     let resp: BatchItemResponse = serde_json::from_str(val).unwrap();
-    println!("{resp:?}")
+    println!("{resp:?}");
 }
 // {
-//   "bId": "bid4", 
+//   "bId": "bid4",
 //   "QueryResponse": {
 //     "SalesReceipt": [
 //       {
-//         "TxnDate": "2015-08-25", 
-//         "domain": "QBO", 
+//         "TxnDate": "2015-08-25",
+//         "domain": "QBO",
 //         "CurrencyRef": {
-//           "name": "United States Dollar", 
+//           "name": "United States Dollar",
 //           "value": "USD"
-//         }, 
-//         "PrintStatus": "NotSet", 
-//         "PaymentRefNum": "10264", 
-//         "TotalAmt": 337.5, 
+//         },
+//         "PrintStatus": "NotSet",
+//         "PaymentRefNum": "10264",
+//         "TotalAmt": 337.5,
 //         "Line": [
 //           {
-//             "Description": "Custom Design", 
-//             "DetailType": "SalesItemLineDetail", 
+//             "Description": "Custom Design",
+//             "DetailType": "SalesItemLineDetail",
 //             "SalesItemLineDetail": {
 //               "TaxCodeRef": {
 //                 "value": "NON"
-//               }, 
-//               "Qty": 4.5, 
-//               "UnitPrice": 75, 
+//               },
+//               "Qty": 4.5,
+//               "UnitPrice": 75,
 //               "ItemRef": {
-//                 "name": "Design", 
+//                 "name": "Design",
 //                 "value": "4"
 //               }
-//             }, 
-//             "LineNum": 1, 
-//             "Amount": 337.5, 
+//             },
+//             "LineNum": 1,
+//             "Amount": 337.5,
 //             "Id": "1"
-//           }, 
+//           },
 //           {
-//             "DetailType": "SubTotalLineDetail", 
-//             "Amount": 337.5, 
+//             "DetailType": "SubTotalLineDetail",
+//             "Amount": 337.5,
 //             "SubTotalLineDetail": {}
 //           }
-//         ], 
-//         "ApplyTaxAfterDiscount": false, 
-//         "DocNumber": "1003", 
-//         "PrivateNote": "A private note.", 
-//         "sparse": false, 
+//         ],
+//         "ApplyTaxAfterDiscount": false,
+//         "DocNumber": "1003",
+//         "PrivateNote": "A private note.",
+//         "sparse": false,
 //         "DepositToAccountRef": {
-//           "name": "Checking", 
+//           "name": "Checking",
 //           "value": "35"
-//         }, 
+//         },
 //         "CustomerMemo": {
 //           "value": "Thank you for your business and have a great day!"
-//         }, 
-//         "Balance": 0, 
+//         },
+//         "Balance": 0,
 //         "CustomerRef": {
-//           "name": "Dylan Sollfrank", 
+//           "name": "Dylan Sollfrank",
 //           "value": "6"
-//         }, 
+//         },
 //         "TxnTaxDetail": {
 //           "TotalTax": 0
-//         }, 
-//         "SyncToken": "1", 
+//         },
+//         "SyncToken": "1",
 //         "PaymentMethodRef": {
-//           "name": "Check", 
+//           "name": "Check",
 //           "value": "2"
-//         }, 
-//         "EmailStatus": "NotSet", 
+//         },
+//         "EmailStatus": "NotSet",
 //         "BillAddr": {
-//           "Lat": "INVALID", 
-//           "Long": "INVALID", 
-//           "Id": "49", 
+//           "Lat": "INVALID",
+//           "Long": "INVALID",
+//           "Id": "49",
 //           "Line1": "Dylan Sollfrank"
-//         }, 
+//         },
 //         "MetaData": {
-//           "CreateTime": "2015-08-27T14:59:48-07:00", 
+//           "CreateTime": "2015-08-27T14:59:48-07:00",
 //           "LastUpdatedTime": "2016-04-15T09:01:10-07:00"
-//         }, 
+//         },
 //         "CustomField": [
 //           {
-//             "DefinitionId": "1", 
-//             "Type": "StringType", 
+//             "DefinitionId": "1",
+//             "Type": "StringType",
 //             "Name": "Crew #"
 //           }
-//         ], 
+//         ],
 //         "Id": "11"
 //       }
-//     ], 
-//     "startPosition": 1, 
+//     ],
+//     "startPosition": 1,
 //     "maxResults": 1
 //   }
 // }

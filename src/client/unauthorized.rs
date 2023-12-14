@@ -64,12 +64,12 @@ impl Quickbooks {
     }
 
     pub async fn new_from_token(
-        refresh_token: &str,
+        refresh_token: String,
         company_id: &str,
         environment: Environment,
         #[cfg(feature = "cache")] key: &str,
     ) -> super::quickbooks::Result<Self> {
-        let client = AuthClient::new_from_token_async(refresh_token.into(), environment).await?;
+        let client = AuthClient::new_from_token_async(refresh_token, environment).await?;
         Ok(Quickbooks {
             company_id: company_id.to_string(),
             client,

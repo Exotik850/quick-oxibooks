@@ -25,7 +25,7 @@ async fn main() -> Result<(), APIError> {
     };
 
     let qb = Quickbooks::new_from_token(
-        &token,
+        token,
         &company_id,
         env,
         #[cfg(feature = "cache")]
