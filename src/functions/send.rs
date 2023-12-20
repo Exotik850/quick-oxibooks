@@ -9,13 +9,19 @@ pub trait QBSend
 where
     Self: QBItem + QBSendable,
 {
-    async fn send_email(&self, email: &str, qb: &Quickbooks) -> Result<Self, APIError> {
+    async fn send_email(
+        &self,
+        email: &str,
+        qb: &Quickbooks,
+        access_token: &str,
+    ) -> Result<Self, APIError> {
         let Some(id) = self.id() else {
             return Err(APIError::NoIdOnSend);
         };
 
         let request = qb_request!(
             qb,
+            access_token,
             reqwest::Method::POST,
             &format!("company/{}/{}/{}/send", qb.company_id, Self::qb_id(), id),
             None::<Self>,

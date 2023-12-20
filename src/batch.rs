@@ -93,9 +93,10 @@ impl BatchItemRequest {
         Some(self.current_id)
     }
 
-    pub async fn execute(self, qb: &Quickbooks) -> Result<BatchItemResponse> {
+    pub async fn execute(self, qb: &Quickbooks, access_token: &str) -> Result<BatchItemResponse> {
         let response = qb_request!(
             qb,
+            access_token,
             reqwest::Method::POST,
             &format!("company/{}/batch", qb.company_id),
             Some(self),

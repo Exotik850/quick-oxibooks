@@ -7,13 +7,14 @@ use crate::{client::Quickbooks, error::APIError};
 
 #[async_trait]
 pub trait QBCreate: QBCreatable + QBItem {
-    async fn create(&self, qb: &Quickbooks) -> Result<Self, APIError> {
+    async fn create(&self, qb: &Quickbooks, access_token: &str) -> Result<Self, APIError> {
         if !self.can_create() {
             return Err(APIError::CreateMissingItems);
         }
 
         let resp = qb_request!(
             qb,
+            access_token,
             Method::POST,
             &format!("company/{}/{}", qb.company_id, Self::qb_id()),
             Some(self),

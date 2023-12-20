@@ -13,11 +13,13 @@ where
 {
     async fn query(
         qb: &Quickbooks,
+        access_token: &str,
         query_str: &str,
         max_results: usize,
     ) -> Result<Vec<Self>, APIError> {
         let response = qb_request!(
             qb,
+            access_token,
             Method::GET,
             &format!("company/{}/query", qb.company_id),
             None::<Self>,
@@ -45,8 +47,12 @@ where
         }
     }
 
-    async fn query_single(qb: &Quickbooks, query_str: &str) -> Result<Self, APIError> {
-        Ok(Self::query(qb, query_str, 1).await?.remove(0))
+    async fn query_single(
+        qb: &Quickbooks,
+        access_token: &str,
+        query_str: &str,
+    ) -> Result<Self, APIError> {
+        Ok(Self::query(qb, access_token, query_str, 1).await?.remove(0))
     }
 }
 

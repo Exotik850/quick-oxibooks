@@ -11,8 +11,12 @@ use crate::{client::Quickbooks, error::APIError};
 
 #[async_trait]
 pub trait QBAttachment: QBItem + QBAttachable {
-    async fn upload(&self, qb: &Quickbooks) -> Result<Self, APIError>;
-    async fn make_upload_request(&self, qb: &Quickbooks) -> Result<Request, APIError>;
+    async fn upload(&self, qb: &Quickbooks, access_token: &str) -> Result<Self, APIError>;
+    async fn make_upload_request(
+        &self,
+        qb: &Quickbooks,
+        access_token: &str,
+    ) -> Result<Request, APIError>;
 }
 
 async fn _make_file_part(file_name: impl AsRef<Path>) -> Result<Part, APIError> {
@@ -49,12 +53,12 @@ async fn _make_file_part(file_name: impl AsRef<Path>) -> Result<Part, APIError> 
 
 #[async_trait]
 impl QBAttachment for Attachable {
-    async fn upload(&self, qb: &Quickbooks) -> Result<Self, APIError> {
+    async fn upload(&self, qb: &Quickbooks, access_token: &str) -> Result<Self, APIError> {
         if !self.can_upload() {
             return Err(APIError::AttachableUploadMissingItems);
         }
 
-        let request = self.make_upload_request(qb).await?;
+        let request = self.make_upload_request(qb, access_token).await?;
 
         let response = qb.http_client.execute(request).await?;
 
@@ -74,7 +78,11 @@ impl QBAttachment for Attachable {
         Ok(obj)
     }
 
-    async fn make_upload_request(&self, qb: &Quickbooks) -> Result<Request, APIError> {
+    async fn make_upload_request(
+        &self,
+        qb: &Quickbooks,
+        access_token: &str,
+    ) -> Result<Request, APIError> {
         let file_name = self
             .file_name
             .as_ref()
@@ -82,7 +90,7 @@ impl QBAttachment for Attachable {
 
         let path = format!("company/{}/upload", qb.company_id);
         let url = qb.build_url(&path, Some(&[]))?;
-        let request_headers = qb.build_headers("multipart/form-data")?;
+        let request_headers = Quickbooks::build_headers(&qb, "multipart/form-data", access_token)?;
 
         let json_body = serde_json::to_string(self).expect("Couldn't Serialize Attachment");
         let json_part = Part::text(json_body).mime_str("application/json")?;

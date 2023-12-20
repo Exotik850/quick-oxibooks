@@ -11,11 +11,14 @@ pub mod read;
 pub mod send;
 
 macro_rules! qb_request {
-    ($qb:expr, $method:expr, $url:expr, $body:expr, $query:expr) => {{
-        let request = $qb.request($method, $url, $body, $query).await?;
+    ($qb:expr, $token:expr, $method:expr, $url:expr, $body:expr, $query:expr) => {{
+        // Create the request
+        let request = $qb.request($token, $method, $url, $body, $query).await?;
 
+        // Send the request
         let resp = $qb.http_client.execute(request).await?;
 
+        // Return error if the request did not go through
         if !resp.status().is_success() {
             return Err(APIError::BadRequest(resp.text().await?));
         }

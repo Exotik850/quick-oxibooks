@@ -7,14 +7,18 @@ use crate::{client::Quickbooks, error::APIError};
 
 #[async_trait]
 pub trait QBPDF: QBPDFable + QBItem {
-    async fn get_pdf_bytes(&self, qb: &Quickbooks) -> Result<Vec<u8>, APIError> {
+    async fn get_pdf_bytes(
+        &self,
+        qb: &Quickbooks,
+        access_token: &str,
+    ) -> Result<Vec<u8>, APIError> {
         let Some(id) = self.id() else {
             return Err(APIError::NoIdOnGetPDF);
         };
 
         let path = &format!("company/{}/{}/{}/pdf", qb.company_id, Self::qb_id(), id);
         let url = qb.build_url(path, None)?;
-        let headers = qb.build_headers("application/pdf")?;
+        let headers = qb.build_headers("application/pdf", access_token)?;
         let request = qb.build_request(&Method::GET, url, headers, &None::<Self>)?;
 
         let resp = qb.http_client.execute(request).await?;
@@ -32,8 +36,13 @@ pub trait QBPDF: QBPDFable + QBItem {
         Ok(resp.bytes().await?.into())
     }
 
-    async fn save_pdf_to_file(&self, file_name: &str, qb: &Quickbooks) -> Result<(), APIError> {
-        let bytes = self.get_pdf_bytes(qb).await?;
+    async fn save_pdf_to_file(
+        &self,
+        file_name: &str,
+        qb: &Quickbooks,
+        access_token: &str,
+    ) -> Result<(), APIError> {
+        let bytes = self.get_pdf_bytes(qb, access_token).await?;
         let mut file = tokio::fs::OpenOptions::new()
             .create(true)
             .write(true)

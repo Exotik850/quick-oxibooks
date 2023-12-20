@@ -12,7 +12,7 @@ async fn main() -> Result<(), APIError> {
     let mut args = std::env::args().skip(1);
 
     let token = args.next().expect("Missing Token! 1st Argument");
-    let company_id = args.next().expect("Missing Token! 2nd Argument");
+    let company_id = args.next().expect("Missing Company ID! 2nd Argument");
     let env = args.next().expect("Missing Environment! 3rd Argument");
     let doc_number = args.next().expect("Missing DocNumber! 4th Argument");
     #[cfg(feature = "cache")]

@@ -10,13 +10,14 @@ pub trait QBRead
 where
     Self: QBItem,
 {
-    async fn read(&mut self, qb: &Quickbooks) -> Result<(), APIError> {
+    async fn read(&mut self, qb: &Quickbooks, access_token: &str) -> Result<(), APIError> {
         let Some(id) = self.id() else {
             return Err(APIError::NoIdOnRead);
         };
 
         let response = qb_request!(
             qb,
+            access_token,
             Method::GET,
             &format!("company/{}/{}/{}", qb.company_id, Self::qb_id(), id),
             None::<Self>,
@@ -36,9 +37,10 @@ where
         Ok(())
     }
 
-    async fn get(id: &str, qb: &Quickbooks) -> Result<Self, APIError> {
+    async fn get(id: &str, qb: &Quickbooks, access_token: &str) -> Result<Self, APIError> {
         let response = qb_request!(
             qb,
+            access_token,
             Method::GET,
             &format!("company/{}/{}/{}", qb.company_id, Self::qb_id(), id),
             None::<Self>,

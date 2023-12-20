@@ -11,7 +11,7 @@ pub trait QBDelete
 where
     Self: QBItem,
 {
-    async fn delete(&self, qb: &Quickbooks) -> Result<QBDeleted, APIError> {
+    async fn delete(&self, qb: &Quickbooks, access_token: &str) -> Result<QBDeleted, APIError> {
         let (Some(_), Some(id)) = (self.sync_token(), self.id()) else {
             return Err(APIError::DeleteMissingItems);
         };
@@ -20,6 +20,7 @@ where
 
         let response = qb_request!(
             qb,
+            access_token,
             Method::POST,
             &format!(
                 "company/{}/{}?operation=delete",

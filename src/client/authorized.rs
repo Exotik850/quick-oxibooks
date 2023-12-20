@@ -25,10 +25,10 @@ impl Quickbooks {
     }
 
     pub(crate) fn build_headers(
-        &self,
         content_type: &str,
+        access_token: &str,
     ) -> Result<HeaderMap, InvalidHeaderValue> {
-        let bt = format!("Bearer {}", self.client.secret());
+        let bt = format!("Bearer {}", access_token);
         let bearer =
             header::HeaderValue::from_str(&bt).expect("Invalid access token in Authorized Client");
         let mut headers = header::HeaderMap::new();
@@ -69,8 +69,9 @@ impl Quickbooks {
         Ok(rb.build()?)
     }
 
-    pub async fn request<B>(
+    pub fn request<B>(
         &self,
+        access_token: &str,
         method: Method,
         path: &str,
         body: Option<B>,
@@ -79,16 +80,16 @@ impl Quickbooks {
     where
         B: Serialize,
     {
-        if self.client.is_expired() {
-            self.client.refresh_access_token_async().await?;
-        }
+        // if self.client.is_expired() {
+        //     self.client.refresh_access_token_async().await?;
+        // }
 
         let url = self.build_url(path, query)?;
-        let headers = self.build_headers("application/json")?;
+        let headers = Self::build_headers("application/json", access_token)?;
         let request = self.build_request(&method, url, headers, &body)?;
 
         log::info!(
-            "Built Request with params: \n\t{}\n\t{}\n\t{}\n\t{:?}",
+            "Built Request with params: {}-{}-{}-{:?}",
             path,
             method,
             if body.is_some() {
