@@ -34,7 +34,7 @@ async fn main() -> Result<(), APIError> {
     .await?;
 
     #[cfg(feature = "macros")]
-    let inv = qb_query!(&qb, Invoice | doc_number = &doc_number)?;
+    let inv = qb_query!(&qb, "", Invoice | doc_number = &doc_number)?;
     #[cfg(not(feature = "macros"))]
     let inv = Invoice::query_single(&qb, &format!("where DocNumber = {}", doc_number)).await?;
 

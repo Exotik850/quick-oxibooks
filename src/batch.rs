@@ -4,9 +4,7 @@
 use quickbooks_types::{Invoice, QBItem, SalesReceipt, Vendor};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    client::{Quickbooks, Result}, error::APIError, functions::qb_request
-};
+use crate::{client::Quickbooks, error::APIError, functions::qb_request};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BatchItemData<T> {
@@ -93,7 +91,11 @@ impl BatchItemRequest {
         Some(self.current_id)
     }
 
-    pub async fn execute(self, qb: &Quickbooks, access_token: &str) -> Result<BatchItemResponse> {
+    pub async fn execute(
+        self,
+        qb: &Quickbooks,
+        access_token: &str,
+    ) -> Result<BatchItemResponse, APIError> {
         let response = qb_request!(
             qb,
             access_token,

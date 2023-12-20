@@ -1,14 +1,30 @@
-use intuit_oxi_auth::AuthError;
+use std::sync::Arc;
+
+use intuit_oxi_auth::Environment;
 use reqwest::{
-    header::{self, HeaderMap, InvalidHeaderValue}, Method, Request
+    header::{self, HeaderMap, InvalidHeaderValue}, Client, Method, Request
 };
-use serde::Serialize;
 use url::Url;
 
-use super::quickbooks::Quickbooks;
 use crate::error::APIError;
 
+/// Entrypoint for interacting with the `QuickBooks` API.
+#[derive(Debug)]
+pub struct Quickbooks {
+    pub(crate) company_id: String,
+    pub environment: Environment,
+    pub(crate) http_client: Arc<Client>,
+}
+
 impl Quickbooks {
+    pub fn new(company_id: String, environment: Environment) -> Self {
+        Self {
+            company_id,
+            environment,
+            http_client: Default::default(),
+        }
+    }
+
     pub(crate) fn build_url(
         &self,
         path: &str,
@@ -54,7 +70,7 @@ impl Quickbooks {
         body: &Option<B>,
     ) -> Result<Request, APIError>
     where
-        B: Serialize,
+        B: serde::Serialize,
     {
         let mut rb = self
             .http_client
@@ -76,9 +92,9 @@ impl Quickbooks {
         path: &str,
         body: Option<B>,
         query: Option<&[(&str, &str)]>,
-    ) -> super::quickbooks::Result<Request>
+    ) -> Result<Request, APIError>
     where
-        B: Serialize,
+        B: serde::Serialize,
     {
         // if self.client.is_expired() {
         //     self.client.refresh_access_token_async().await?;
@@ -101,18 +117,5 @@ impl Quickbooks {
         );
 
         Ok(request)
-    }
-
-    pub fn set_refresh_token(&self, refresh_token: String) -> Result<(), AuthError> {
-        self.client.replace_tokens(refresh_token)
-    }
-}
-
-#[cfg(feature = "cache")]
-impl Quickbooks {
-    pub async fn cleanup(&self) -> Result<(), AuthError> {
-        self.client.cleanup_async(&self.key).await?;
-        log::info!("Cleaned up Quickbooks client");
-        Ok(())
     }
 }

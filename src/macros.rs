@@ -76,8 +76,8 @@ macro_rules! qb_query {
         <$struct_name as $crate::actions::QBQuery>::query_single($qb, $token, &$crate::qb_where_clause!($struct_name | $($field $op $value),+)).await
     };
 
-    ($qb:expr, $struct_name:ident | $($field:ident $op:tt $value:expr),+ ; $($addon:literal),+) => {
-        <$struct_name as $crate::actions::QBQuery>::query_single($qb, &$crate::qb_where_clause!($struct_name | $($field $op $value),+ ; $($addon),+)).await
+    ($qb:expr, $token:expr, $struct_name:ident | $($field:ident $op:tt $value:expr),+ ; $($addon:literal),+) => {
+        <$struct_name as $crate::actions::QBQuery>::query_single($qb, $token, &$crate::qb_where_clause!($struct_name | $($field $op $value),+ ; $($addon),+)).await
     };
 }
 

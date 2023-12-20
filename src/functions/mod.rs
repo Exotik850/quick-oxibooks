@@ -13,7 +13,7 @@ pub mod send;
 macro_rules! qb_request {
     ($qb:expr, $token:expr, $method:expr, $url:expr, $body:expr, $query:expr) => {{
         // Create the request
-        let request = $qb.request($token, $method, $url, $body, $query).await?;
+        let request = $qb.request($token, $method, $url, $body, $query)?;
 
         // Send the request
         let resp = $qb.http_client.execute(request).await?;

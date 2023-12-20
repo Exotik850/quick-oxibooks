@@ -90,7 +90,7 @@ impl QBAttachment for Attachable {
 
         let path = format!("company/{}/upload", qb.company_id);
         let url = qb.build_url(&path, Some(&[]))?;
-        let request_headers = Quickbooks::build_headers(&qb, "multipart/form-data", access_token)?;
+        let request_headers = Quickbooks::build_headers("application/pdf", access_token)?;
 
         let json_body = serde_json::to_string(self).expect("Couldn't Serialize Attachment");
         let json_part = Part::text(json_body).mime_str("application/json")?;
