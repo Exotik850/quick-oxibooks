@@ -1,10 +1,6 @@
 {
     "folders": [
         {
-            "name": "intuit-oxi-auth",
-            "path": "../intuit-oxi-auth"
-        }, 
-        {
             "name": "quickbooks-types",
             "path": "../quickbooks-types"
         },

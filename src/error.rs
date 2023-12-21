@@ -9,8 +9,6 @@ pub enum APIError {
     #[error(transparent)]
     ReqwestError(#[from] reqwest::Error),
     #[error(transparent)]
-    AuthError(#[from] intuit_oxi_auth::AuthError),
-    #[error(transparent)]
     UrlParseError(#[from] url::ParseError),
     #[error("Bad request: {0}")]
     BadRequest(String),

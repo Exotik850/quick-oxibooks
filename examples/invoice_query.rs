@@ -1,8 +1,4 @@
-#[cfg(not(feature = "macros"))]
-use quick_oxibooks::actions::QBQuery;
-#[cfg(feature = "macros")]
-use quick_oxibooks::qb_query;
-use quick_oxibooks::{client::Quickbooks, error::APIError};
+use quick_oxibooks::{error::APIError, functions::qb_query_single};
 use quickbooks_types::Invoice;
 
 #[tokio::main]
@@ -19,24 +15,21 @@ async fn main() -> Result<(), APIError> {
     let key = args.next().expect("Missing Cache Key! 5th Argument");
 
     let env = match env.as_str() {
-        "production" => intuit_oxi_auth::Environment::PRODUCTION,
-        "sandbox" => intuit_oxi_auth::Environment::SANDBOX,
+        "production" => quick_oxibooks::Environment::PRODUCTION,
+        "sandbox" => quick_oxibooks::Environment::SANDBOX,
         _ => panic!("Invalid environment"),
     };
 
-    let qb = Quickbooks::new_from_token(
-        token,
-        &company_id,
+    let client = reqwest::Client::new();
+
+    let inv: Invoice = qb_query_single(
+        &format!(r"where DocNumber = '{doc_number}'"),
+        &client,
         env,
-        #[cfg(feature = "cache")]
-        &key,
+        &company_id,
+        &token,
     )
     .await?;
-
-    #[cfg(feature = "macros")]
-    let inv = qb_query!(&qb, "", Invoice | doc_number = &doc_number)?;
-    #[cfg(not(feature = "macros"))]
-    let inv = Invoice::query_single(&qb, &format!("where DocNumber = {}", doc_number)).await?;
 
     println!("{inv}");
 

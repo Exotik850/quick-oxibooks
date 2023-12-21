@@ -1,7 +1,6 @@
 {
     "rust-analyzer.linkedProjects": [
         ".\\Cargo.toml",
-        ".\\intuit-oxi-auth\\Cargo.toml",
         ".\\quickbooks-types\\Cargo.toml",
     ],
     "rust-analyzer.diagnostics.disabled": [
