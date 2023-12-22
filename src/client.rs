@@ -5,6 +5,24 @@ use url::Url;
 
 use crate::{error::APIError, Environment};
 
+pub struct QBContext {
+    pub(crate) client: Client,
+    pub environment: Environment,
+    pub(crate) company_id: String,
+    pub(crate) access_token: String,
+}
+
+impl QBContext {
+    pub fn new(environment: Environment, company_id: String, access_token: String) -> Self {
+        Self {
+            client: Client::new(),
+            environment,
+            company_id,
+            access_token,
+        }
+    }
+}
+
 pub(crate) fn build_headers(
     content_type: &str,
     access_token: &str,
@@ -64,7 +82,7 @@ pub(crate) fn build_request<B: serde::Serialize>(
     Ok(request)
 }
 
-pub fn build_url(
+pub(crate) fn build_url(
     environment: Environment,
     path: &str,
     query: Option<&[(&str, &str)]>,
