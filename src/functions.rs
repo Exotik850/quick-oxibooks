@@ -1,15 +1,13 @@
 use quickbooks_types::{QBCreatable, QBDeletable, QBItem, QBSendable};
-use reqwest::{Client, Method};
+use reqwest::Method;
 use serde::{Deserialize, Serialize};
 
-use crate::{error::APIError, Environment};
+use crate::{client::QBContext, error::APIError};
 
 /// Sends a request to the quickbooks endpoint
 /// given, internal function
 pub(crate) async fn qb_request<T, U>(
-    client: &Client,
-    environment: Environment,
-    access_token: &str,
+    qb: &QBContext,
     method: Method,
     path: &str,
     body: Option<T>,
@@ -26,11 +24,11 @@ where
         body,
         query,
         content_type.unwrap_or("application/json"),
-        environment,
-        client,
-        access_token,
+        qb.environment,
+        &qb.client,
+        &qb.access_token,
     )?;
-    let response = client.execute(request).await?;
+    let response = qb.client.execute(request).await?;
     if !response.status().is_success() {
         return Err(APIError::BadRequest(response.text().await?));
     }
@@ -63,24 +61,15 @@ pub(crate) struct QBResponse<T> {
 
 /// Creates the given item using the context given, but first
 /// checks if the item is suitable to be created.
-pub async fn qb_create<T: QBItem + QBCreatable>(
-    item: &T,
-    // TODO Make this more generic / add more adapters
-    client: &reqwest::Client,
-    environment: Environment,
-    company_id: &str,
-    access_token: &str,
-) -> Result<T, APIError> {
+pub async fn qb_create<T: QBItem + QBCreatable>(item: &T, qb: &QBContext) -> Result<T, APIError> {
     if !item.can_create() {
         return Err(APIError::CreateMissingItems);
     }
 
     let response: QBResponse<T> = qb_request(
-        client,
-        environment,
-        access_token,
+        qb,
         Method::POST,
-        &format!("company/{}/{}", company_id, T::qb_id()),
+        &format!("company/{}/{}", qb.company_id, T::qb_id()),
         Some(item),
         None,
         None,
@@ -104,10 +93,7 @@ pub async fn qb_create<T: QBItem + QBCreatable>(
 /// available or if the request itself fails
 pub async fn qb_delete<T: QBItem + QBDeletable>(
     item: &T,
-    client: &Client,
-    environment: Environment,
-    company_id: &str,
-    access_token: &str,
+    qb: &QBContext,
 ) -> Result<QBDeleted, APIError> {
     let (Some(_), Some(id)) = (item.sync_token(), item.id()) else {
         return Err(APIError::DeleteMissingItems);
@@ -116,11 +102,9 @@ pub async fn qb_delete<T: QBItem + QBDeletable>(
     let delete_object: QBToDelete = item.into();
 
     let response: QBResponse<QBDeleted> = qb_request(
-        client,
-        environment,
-        access_token,
+        qb,
         Method::POST,
-        &format!("company/{}/{}?operation=delete", company_id, T::qb_id()),
+        &format!("company/{}/{}?operation=delete", qb.company_id, T::qb_id()),
         Some(delete_object),
         None,
         None,
@@ -168,17 +152,12 @@ pub struct QBDeleted {
 pub async fn qb_query<T: QBItem>(
     query_str: &str,
     max_results: usize,
-    client: &Client,
-    environment: Environment,
-    company_id: &str,
-    access_token: &str,
+    qb: &QBContext,
 ) -> Result<Vec<T>, APIError> {
     let response: QueryResponseExt<T> = qb_request(
-        client,
-        environment,
-        access_token,
+        qb,
         Method::GET,
-        &format!("company/{}/query", company_id),
+        &format!("company/{}/query", qb.company_id),
         None::<()>,
         None,
         Some(&[(
@@ -206,18 +185,8 @@ pub async fn qb_query<T: QBItem>(
 
 /// `qb_query` with the max_results set to one
 /// for only retrieving one item
-pub async fn qb_query_single<T: QBItem>(
-    query_str: &str,
-    client: &Client,
-    environment: Environment,
-    company_id: &str,
-    access_token: &str,
-) -> Result<T, APIError> {
-    Ok(
-        qb_query(query_str, 1, client, environment, company_id, access_token)
-            .await?
-            .remove(0),
-    )
+pub async fn qb_query_single<T: QBItem>(query_str: &str, qb: &QBContext) -> Result<T, APIError> {
+    Ok(qb_query(query_str, 1, qb).await?.remove(0))
 }
 
 /// Internal struct that Quickbooks returns when querying objects
@@ -249,28 +218,21 @@ struct QueryResponse<T> {
 struct QueryResponseExt<T> {
     #[serde(default, rename = "QueryResponse")]
     query_response: QueryResponse<T>,
+    #[allow(dead_code)]
     time: String,
 }
 
 /// Read the object by ID from quickbooks context
 /// and write it to an item
-pub async fn qb_read<T: QBItem>(
-    item: &mut T,
-    client: &Client,
-    environment: Environment,
-    company_id: &str,
-    access_token: &str,
-) -> Result<(), APIError> {
+pub async fn qb_read<T: QBItem>(item: &mut T, qb: &QBContext) -> Result<(), APIError> {
     let Some(id) = item.id() else {
         return Err(APIError::NoIdOnRead);
     };
 
     let response: QBResponse<T> = qb_request(
-        client,
-        environment,
-        access_token,
+        qb,
         Method::GET,
-        &format!("company/{}/{}/{}", company_id, T::qb_id(), id),
+        &format!("company/{}/{}/{}", qb.company_id, T::qb_id(), id),
         None::<()>,
         None,
         None,
@@ -292,19 +254,11 @@ pub async fn qb_read<T: QBItem>(
 }
 
 /// Retrieves an object by ID from quickbooks context
-pub async fn qb_get_single<T: QBItem>(
-    id: &str,
-    client: &Client,
-    environment: Environment,
-    company_id: &str,
-    access_token: &str,
-) -> Result<T, APIError> {
+pub async fn qb_get_single<T: QBItem>(id: &str, qb: &QBContext) -> Result<T, APIError> {
     let response: QBResponse<T> = qb_request(
-        client,
-        environment,
-        access_token,
+        qb,
         Method::GET,
-        &format!("company/{}/{}/{}", company_id, T::qb_id(), id),
+        &format!("company/{}/{}/{}", qb.company_id, T::qb_id(), id),
         None::<()>,
         None,
         None,
@@ -317,21 +271,16 @@ pub async fn qb_get_single<T: QBItem>(
 pub async fn qb_send_email<T: QBItem + QBSendable>(
     item: &T,
     email: &str,
-    client: &Client,
-    environment: Environment,
-    company_id: &str,
-    access_token: &str,
+    qb: &QBContext,
 ) -> Result<T, APIError> {
     let Some(id) = item.id() else {
         return Err(APIError::NoIdOnSend);
     };
 
     let response: QBResponse<T> = qb_request(
-        client,
-        environment,
-        access_token,
+        qb,
         reqwest::Method::POST,
-        &format!("company/{}/{}/{}/send", company_id, T::qb_id(), id),
+        &format!("company/{}/{}/{}/send", qb.company_id, T::qb_id(), id),
         None::<()>,
         None,
         Some(&[("sendTo", email)]),

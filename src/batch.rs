@@ -2,10 +2,9 @@
 // not going to be used so will implement when needed
 
 use quickbooks_types::{Invoice, QBItem, SalesReceipt, Vendor};
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-use crate::{error::APIError, functions::qb_request, Environment};
+use crate::{client::QBContext, error::APIError, functions::qb_request};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BatchItemData<T> {
@@ -92,19 +91,11 @@ impl BatchItemRequest {
         Some(self.current_id)
     }
 
-    pub async fn execute(
-        self,
-        client: &Client,
-        environment: Environment,
-        company_id: &str,
-        access_token: &str,
-    ) -> Result<BatchItemResponse, APIError> {
+    pub async fn execute(self, qb: &QBContext) -> Result<BatchItemResponse, APIError> {
         qb_request(
-            client,
-            environment,
-            access_token,
+            qb,
             reqwest::Method::POST,
-            &format!("company/{}/batch", company_id),
+            &format!("company/{}/batch", qb.company_id),
             Some(self),
             None,
             None,
