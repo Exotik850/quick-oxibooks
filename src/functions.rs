@@ -4,7 +4,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{error::APIError, Environment};
 
-pub async fn qb_request<T, U>(
+/// Sends a request to the quickbooks endpoint
+/// given, internal function
+pub(crate) async fn qb_request<T, U>(
     client: &Client,
     environment: Environment,
     access_token: &str,
@@ -35,9 +37,11 @@ where
     Ok(response.json().await?)
 }
 
+/// Internal struct that Quickbooks returns most
+/// of the time when interacting with the API
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(default)]
-pub struct QBResponse<T> {
+pub(crate) struct QBResponse<T> {
     #[serde(
         alias = "Item",
         alias = "Account",
@@ -57,8 +61,11 @@ pub struct QBResponse<T> {
     time: String,
 }
 
+/// Creates the given item using the context given, but first
+/// checks if the item is suitable to be created.
 pub async fn qb_create<T: QBItem + QBCreatable>(
     item: &T,
+    // TODO Make this more generic / add more adapters
     client: &reqwest::Client,
     environment: Environment,
     company_id: &str,
@@ -92,6 +99,9 @@ pub async fn qb_create<T: QBItem + QBCreatable>(
     Ok(response.object)
 }
 
+/// Deletes the given item using the ID
+/// returns an error if the item has no ID and sync token
+/// available or if the request itself fails
 pub async fn qb_delete<T: QBItem + QBDeletable>(
     item: &T,
     client: &Client,
@@ -139,6 +149,7 @@ impl<T: QBItem> From<&T> for QBToDelete {
     }
 }
 
+/// Information about the deleted object from `qb_delete`
 #[derive(Deserialize, Debug, Default)]
 pub struct QBDeleted {
     pub status: String,
@@ -147,6 +158,13 @@ pub struct QBDeleted {
     pub id: String,
 }
 
+/// Query the quickbooks context using the query string,
+/// The type determines what type of quickbooks object you are
+/// querying, and the query_str parameter will be placed into the query
+/// like so:
+/// ```
+///   "select * from {type_name} {query_str} MAXRESULTS {max_results}"
+/// ```
 pub async fn qb_query<T: QBItem>(
     query_str: &str,
     max_results: usize,
@@ -186,6 +204,8 @@ pub async fn qb_query<T: QBItem>(
     }
 }
 
+/// `qb_query` with the max_results set to one
+/// for only retrieving one item
 pub async fn qb_query_single<T: QBItem>(
     query_str: &str,
     client: &Client,
@@ -200,10 +220,11 @@ pub async fn qb_query_single<T: QBItem>(
     )
 }
 
+/// Internal struct that Quickbooks returns when querying objects
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "PascalCase", default)]
-pub struct QueryResponse<T> {
-    pub total_count: i64,
+struct QueryResponse<T> {
+    total_count: i64,
     #[serde(
         alias = "Item",
         alias = "Account",
@@ -219,17 +240,20 @@ pub struct QueryResponse<T> {
         alias = "Vendor"
     )]
     items: Vec<T>,
-    pub start_position: i64,
-    pub max_results: i64,
+    start_position: i64,
+    max_results: i64,
 }
 
+/// Internal struct that Quickbooks returns when querying objects
 #[derive(Debug, Clone, Deserialize)]
-pub struct QueryResponseExt<T> {
+struct QueryResponseExt<T> {
     #[serde(default, rename = "QueryResponse")]
-    pub query_response: QueryResponse<T>,
-    pub time: String,
+    query_response: QueryResponse<T>,
+    time: String,
 }
 
+/// Read the object by ID from quickbooks context
+/// and write it to an item
 pub async fn qb_read<T: QBItem>(
     item: &mut T,
     client: &Client,
@@ -267,6 +291,7 @@ pub async fn qb_read<T: QBItem>(
     Ok(())
 }
 
+/// Retrieves an object by ID from quickbooks context
 pub async fn qb_get_single<T: QBItem>(
     id: &str,
     client: &Client,
@@ -288,6 +313,7 @@ pub async fn qb_get_single<T: QBItem>(
     Ok(response.object)
 }
 
+/// Send email of the object to the email given through quickbooks context
 pub async fn qb_send_email<T: QBItem + QBSendable>(
     item: &T,
     email: &str,
