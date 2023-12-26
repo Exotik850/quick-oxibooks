@@ -2,6 +2,7 @@
 // not going to be used so will implement when needed
 
 use quickbooks_types::{Invoice, QBItem, SalesReceipt, Vendor};
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use crate::{client::QBContext, error::APIError, functions::qb_request};
@@ -91,9 +92,14 @@ impl BatchItemRequest {
         Some(self.current_id)
     }
 
-    pub async fn execute(self, qb: &QBContext) -> Result<BatchItemResponse, APIError> {
+    pub async fn execute(
+        self,
+        qb: &QBContext,
+        client: &Client,
+    ) -> Result<BatchItemResponse, APIError> {
         qb_request(
             qb,
+            client,
             reqwest::Method::POST,
             &format!("company/{}/batch", qb.company_id),
             Some(self),

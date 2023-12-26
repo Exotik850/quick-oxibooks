@@ -34,6 +34,10 @@ pub enum APIError {
     AttachableUploadMissingItems,
     #[error("Missing Attachable object on upload response")]
     NoAttachableObjects,
+    #[error("Token Request unsuccessful : {0}")]
+    BadTokenRequest(String),
+    #[error("No refresh token in Context!")]
+    NoRefreshToken,
 }
 
 impl Serialize for APIError {

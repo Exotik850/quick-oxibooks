@@ -1,25 +1,74 @@
+use chrono::{DateTime, Utc};
 use reqwest::{
     header::{self, HeaderMap, InvalidHeaderValue}, Client, Method, Request
 };
+use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::{error::APIError, Environment};
+use crate::{error::APIError, DiscoveryDoc, Environment};
 
+#[derive(Serialize, Deserialize)]
 pub struct QBContext {
-    pub(crate) client: Client,
     pub environment: Environment,
-    pub(crate) company_id: String,
-    pub(crate) access_token: String,
+    pub company_id: String,
+    pub access_token: String,
+    pub expires_in: DateTime<Utc>,
+    // TODO Check if this should be in an option
+    pub refresh_token: Option<String>,
+    pub discovery_doc: DiscoveryDoc,
+}
+
+#[derive(Serialize, Deserialize)]
+struct AuthTokenResponse {
+    token_type: String,
+    expires_in: u64,
+    refresh_token: String,
+    x_refresh_token_expires_in: u64,
+    access_token: String,
 }
 
 impl QBContext {
-    pub fn new(environment: Environment, company_id: String, access_token: String) -> Self {
-        Self {
-            client: Client::new(),
-            environment,
-            company_id,
-            access_token,
+    /// Checks if the current context is expired
+    pub fn is_expired(&self) -> bool {
+        chrono::Utc::now() >= self.expires_in
+    }
+
+    /// Refreshes the access_token, does not check if it's expired before it does so
+    pub async fn refresh_access_token(&mut self, client: &Client) -> Result<(), APIError> {
+        // TODO Use types to prevent this from happening
+        let Some(refresh_token) = self.refresh_token.as_deref() else {
+            return Err(APIError::NoRefreshToken);
+        };
+
+        let request = client
+            .request(Method::POST, &self.discovery_doc.token_endpoint)
+            .bearer_auth(&self.access_token)
+            .header("ACCEPT", "application/json")
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(format!(
+                "grant_type=refresh_token&refresh_token={}",
+                refresh_token
+            ))
+            .build()?;
+
+        let response = client.execute(request).await?;
+
+        if !response.status().is_success() {
+            return Err(APIError::BadRequest(response.text().await?));
         }
+
+        let AuthTokenResponse {
+            access_token,
+            refresh_token,
+            expires_in,
+            ..
+        } = response.json().await?;
+
+        self.refresh_token = Some(refresh_token);
+        self.access_token = access_token;
+        self.expires_in = chrono::Utc::now() + chrono::Duration::seconds(expires_in as i64);
+
+        Ok(())
     }
 }
 

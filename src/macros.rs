@@ -72,12 +72,20 @@ macro_rules! qb_where_clause {
 
 #[macro_export]
 macro_rules! qb_query {
-    ($qb:expr, $struct_name:ident | $($field:ident $op:tt $value:expr),+) => {
-        $crate::functions::qb_query_single(&$crate::qb_where_clause!($struct_name | $($field $op $value),+), $qb).await
+    ($qb:expr, $client:expr, $struct_name:ident | $($field:ident $op:tt $value:expr),+) => {
+        $crate::functions::qb_query_single::<$struct_name>(
+          &$crate::qb_where_clause!($struct_name | $($field $op $value),+),
+          $qb,
+          $client
+        ).await
     };
 
-    ($qb:expr, $struct_name:ident | $($field:ident $op:tt $value:expr),+ ; $($addon:literal),+) => {
-        $crate::functions::qb_query_single(&$crate::qb_where_clause!($struct_name | $($field $op $value),+ ; $($addon),+), $qb).await
+    ($qb:expr, $client:expr, $struct_name:ident | $($field:ident $op:tt $value:expr),+ ; $($addon:literal),+) => {
+        $crate::functions::qb_query_single::<$struct_name>(
+          &$crate::qb_where_clause!($struct_name | $($field $op $value),+ ; $($addon),+),
+          $qb,
+          $client
+        ).await
     };
 }
 

@@ -1,13 +1,22 @@
 use quickbooks_types::{QBCreatable, QBDeletable, QBItem, QBSendable};
-use reqwest::Method;
+use reqwest::{Client, Method};
 use serde::{Deserialize, Serialize};
 
 use crate::{client::QBContext, error::APIError};
 
-/// Sends a request to the quickbooks endpoint
-/// given, internal function
+/// Sends a request to the QuickBooks API endpoint with the given parameters
+///
+/// # Arguments
+///
+/// * `qb` - The context containing authentication details
+/// * `method` - The HTTP method for the request
+/// * `path` - The path for the API request URL
+/// * `body` - Optional request body to send
+/// * `content_type` - Optional content type header value
+/// * `query` - Optional query parameters
 pub(crate) async fn qb_request<T, U>(
     qb: &QBContext,
+    client: &Client,
     method: Method,
     path: &str,
     body: Option<T>,
@@ -25,10 +34,10 @@ where
         query,
         content_type.unwrap_or("application/json"),
         qb.environment,
-        &qb.client,
+        &client,
         &qb.access_token,
     )?;
-    let response = qb.client.execute(request).await?;
+    let response = client.execute(request).await?;
     if !response.status().is_success() {
         return Err(APIError::BadRequest(response.text().await?));
     }
@@ -61,13 +70,18 @@ pub(crate) struct QBResponse<T> {
 
 /// Creates the given item using the context given, but first
 /// checks if the item is suitable to be created.
-pub async fn qb_create<T: QBItem + QBCreatable>(item: &T, qb: &QBContext) -> Result<T, APIError> {
+pub async fn qb_create<T: QBItem + QBCreatable>(
+    item: &T,
+    qb: &QBContext,
+    client: &Client,
+) -> Result<T, APIError> {
     if !item.can_create() {
         return Err(APIError::CreateMissingItems);
     }
 
     let response: QBResponse<T> = qb_request(
         qb,
+        client,
         Method::POST,
         &format!("company/{}/{}", qb.company_id, T::qb_id()),
         Some(item),
@@ -94,6 +108,7 @@ pub async fn qb_create<T: QBItem + QBCreatable>(item: &T, qb: &QBContext) -> Res
 pub async fn qb_delete<T: QBItem + QBDeletable>(
     item: &T,
     qb: &QBContext,
+    client: &Client,
 ) -> Result<QBDeleted, APIError> {
     let (Some(_), Some(id)) = (item.sync_token(), item.id()) else {
         return Err(APIError::DeleteMissingItems);
@@ -103,6 +118,7 @@ pub async fn qb_delete<T: QBItem + QBDeletable>(
 
     let response: QBResponse<QBDeleted> = qb_request(
         qb,
+        client,
         Method::POST,
         &format!("company/{}/{}?operation=delete", qb.company_id, T::qb_id()),
         Some(delete_object),
@@ -144,18 +160,25 @@ pub struct QBDeleted {
 
 /// Query the quickbooks context using the query string,
 /// The type determines what type of quickbooks object you are
-/// querying, and the query_str parameter will be placed into the query
+/// Query QuickBooks for objects matching the query string
+///
+/// Builds a query using the `query_str` and queries for objects of
+/// type `T`. Returns up to `max_results` objects in a `Vec`.
+///
+/// The `query_str` parameter will be placed into the query
 /// like so:
 /// ```
-///   "select * from {type_name} {query_str} MAXRESULTS {max_results}"
+///  "select * from {type_name} {query_str} MAXRESULTS {max_results}"
 /// ```
 pub async fn qb_query<T: QBItem>(
     query_str: &str,
     max_results: usize,
     qb: &QBContext,
+    client: &Client,
 ) -> Result<Vec<T>, APIError> {
     let response: QueryResponseExt<T> = qb_request(
         qb,
+        client,
         Method::GET,
         &format!("company/{}/query", qb.company_id),
         None::<()>,
@@ -183,10 +206,16 @@ pub async fn qb_query<T: QBItem>(
     }
 }
 
-/// `qb_query` with the max_results set to one
-/// for only retrieving one item
-pub async fn qb_query_single<T: QBItem>(query_str: &str, qb: &QBContext) -> Result<T, APIError> {
-    Ok(qb_query(query_str, 1, qb).await?.remove(0))
+/// Gets a single object by ID from the QuickBooks API
+///
+/// Handles retrieving a QBItem via query,
+/// refer to `qb_query` for more details
+pub async fn qb_query_single<T: QBItem>(
+    query_str: &str,
+    qb: &QBContext,
+    client: &Client,
+) -> Result<T, APIError> {
+    Ok(qb_query(query_str, 1, qb, client).await?.remove(0))
 }
 
 /// Internal struct that Quickbooks returns when querying objects
@@ -224,13 +253,18 @@ struct QueryResponseExt<T> {
 
 /// Read the object by ID from quickbooks context
 /// and write it to an item
-pub async fn qb_read<T: QBItem>(item: &mut T, qb: &QBContext) -> Result<(), APIError> {
+pub async fn qb_read<T: QBItem>(
+    item: &mut T,
+    qb: &QBContext,
+    client: &Client,
+) -> Result<(), APIError> {
     let Some(id) = item.id() else {
         return Err(APIError::NoIdOnRead);
     };
 
     let response: QBResponse<T> = qb_request(
         qb,
+        client,
         Method::GET,
         &format!("company/{}/{}/{}", qb.company_id, T::qb_id(), id),
         None::<()>,
@@ -254,9 +288,14 @@ pub async fn qb_read<T: QBItem>(item: &mut T, qb: &QBContext) -> Result<(), APIE
 }
 
 /// Retrieves an object by ID from quickbooks context
-pub async fn qb_get_single<T: QBItem>(id: &str, qb: &QBContext) -> Result<T, APIError> {
+pub async fn qb_get_single<T: QBItem>(
+    id: &str,
+    qb: &QBContext,
+    client: &Client,
+) -> Result<T, APIError> {
     let response: QBResponse<T> = qb_request(
         qb,
+        client,
         Method::GET,
         &format!("company/{}/{}/{}", qb.company_id, T::qb_id(), id),
         None::<()>,
@@ -272,6 +311,7 @@ pub async fn qb_send_email<T: QBItem + QBSendable>(
     item: &T,
     email: &str,
     qb: &QBContext,
+    client: &Client,
 ) -> Result<T, APIError> {
     let Some(id) = item.id() else {
         return Err(APIError::NoIdOnSend);
@@ -279,6 +319,7 @@ pub async fn qb_send_email<T: QBItem + QBSendable>(
 
     let response: QBResponse<T> = qb_request(
         qb,
+        client,
         reqwest::Method::POST,
         &format!("company/{}/{}/{}/send", qb.company_id, T::qb_id(), id),
         None::<()>,
@@ -300,7 +341,7 @@ pub mod attachment {
         header::{self, HeaderValue}, multipart::{Form, Part}, Client, Method, Request
     };
 
-    use crate::{error::APIError, Environment};
+    use crate::{error::APIError, QBContext};
 
     async fn _make_file_part(file_name: impl AsRef<Path>) -> Result<Part, APIError> {
         let buf = tokio::fs::read(&file_name).await?;
@@ -334,19 +375,21 @@ pub mod attachment {
         Ok(file_part)
     }
 
+    /// Attach a file to another Quickbooks objct
+    /// via a `Attachable` object
+    ///
+    /// Uploads the file and makes the `attachable` object
+    /// in QuickBooks.
     pub async fn qb_upload(
         attachable: &Attachable,
+        qb: &QBContext,
         client: &Client,
-        environment: Environment,
-        company_id: &str,
-        access_token: &str,
     ) -> Result<Attachable, APIError> {
         if !attachable.can_upload() {
             return Err(APIError::AttachableUploadMissingItems);
         }
 
-        let request =
-            make_upload_request(attachable, client, environment, company_id, access_token).await?;
+        let request = make_upload_request(attachable, qb, client).await?;
 
         let response = client.execute(request).await?;
 
@@ -368,19 +411,17 @@ pub mod attachment {
 
     async fn make_upload_request(
         attachable: &Attachable,
+        qb: &QBContext,
         client: &Client,
-        environment: Environment,
-        company_id: &str,
-        access_token: &str,
     ) -> Result<Request, APIError> {
         let file_name = attachable
             .file_name
             .as_ref()
             .ok_or(APIError::AttachableUploadMissingItems)?;
 
-        let path = format!("company/{}/upload", company_id);
-        let url = crate::client::build_url(environment, &path, Some(&[]))?;
-        let request_headers = crate::client::build_headers("application/pdf", access_token)?;
+        let path = format!("company/{}/upload", qb.company_id);
+        let url = crate::client::build_url(qb.environment, &path, Some(&[]))?;
+        let request_headers = crate::client::build_headers("application/pdf", &qb.access_token)?;
 
         let json_body = serde_json::to_string(attachable).expect("Couldn't Serialize Attachment");
         let json_part = Part::text(json_body).mime_str("application/json")?;
