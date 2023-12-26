@@ -110,8 +110,7 @@ impl DiscoveryDoc {
         if !resp.status().is_success() {
             return Err(APIError::BadTokenRequest(resp.text().await?));
         }
-        let out: Self = resp.json().await?;
-        Ok(out)
+        Ok(resp.json().await?)
     }
 
     pub fn get(environment: Environment) -> Result<Self, APIError> {
@@ -120,7 +119,6 @@ impl DiscoveryDoc {
         if !resp.status().is_success() {
             return Err(APIError::BadTokenRequest(resp.text()?));
         }
-        let out: Self = resp.json()?;
-        Ok(out)
+        Ok(resp.json()?)
     }
 }
