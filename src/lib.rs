@@ -14,6 +14,7 @@ pub mod batch;
 pub mod client;
 pub use client::QBContext;
 use error::APIError;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 pub mod error;
 
@@ -104,18 +105,23 @@ pub struct DiscoveryDoc {
 }
 
 impl DiscoveryDoc {
-    pub async fn get_async(environment: Environment) -> Result<Self, APIError> {
+    pub async fn get_async(environment: Environment, client: &Client) -> Result<Self, APIError> {
         let url = environment.discovery_url();
-        let resp = reqwest::get(url).await?;
+        let request = client.get(url).build()?;
+        let resp = client.execute(request).await?;
         if !resp.status().is_success() {
             return Err(APIError::BadTokenRequest(resp.text().await?));
         }
         Ok(resp.json().await?)
     }
 
-    pub fn get(environment: Environment) -> Result<Self, APIError> {
+    pub fn get(
+        environment: Environment,
+        client: &reqwest::blocking::Client,
+    ) -> Result<Self, APIError> {
         let url = environment.discovery_url();
-        let resp = reqwest::blocking::get(url)?;
+        let request = client.get(url).build()?;
+        let resp = client.execute(request)?;
         if !resp.status().is_success() {
             return Err(APIError::BadTokenRequest(resp.text()?));
         }

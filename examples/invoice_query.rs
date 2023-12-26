@@ -19,7 +19,9 @@ async fn main() -> Result<(), APIError> {
         _ => panic!("Invalid environment"),
     };
 
-    let discovery_doc = DiscoveryDoc::get_async(environment).await?;
+    let client = reqwest::Client::new();
+    let discovery_doc = DiscoveryDoc::get_async(environment, &client).await?;
+
     // let qb = QBContext::new(env, company_id, access_token, None);
     let qb = QBContext {
         environment,
@@ -29,8 +31,6 @@ async fn main() -> Result<(), APIError> {
         refresh_token: None,
         discovery_doc,
     };
-
-    let client = reqwest::Client::new();
 
     let inv: Invoice =
         qb_query_single(&format!(r"where DocNumber = '{doc_number}'"), &qb, &client).await?;
