@@ -167,7 +167,7 @@ pub struct QBDeleted {
 ///
 /// The `query_str` parameter will be placed into the query
 /// like so:
-/// ```
+/// ```ignore
 ///  "select * from {type_name} {query_str} MAXRESULTS {max_results}"
 /// ```
 pub async fn qb_query<T: QBItem>(
