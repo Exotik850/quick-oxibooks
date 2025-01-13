@@ -1,11 +1,12 @@
 // Currently doesn't support batch voiding,
 // not going to be used so will implement when needed
 
+use chrono::Utc;
 use quickbooks_types::{Invoice, QBItem, SalesReceipt, Vendor};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-use crate::{client::QBContext, error::APIError, functions::qb_request};
+use crate::{client::QBContext, error::APIError, functions::qb_request, DiscoveryDoc};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BatchItemData<T> {
@@ -26,12 +27,16 @@ pub struct BatchItemRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum BatchOption {
     Query(String),
+    // #[serde(flatten)]
     #[serde(untagged)]
-    BatchCommand {
-        operation: BatchOperation,
-        #[serde(flatten)]
-        resource: BatchItem,
-    },
+    BatchCommand(BatchCommand),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BatchCommand {
+    operation: BatchOperation,
+    #[serde(flatten)]
+    resource: BatchItem,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -46,7 +51,7 @@ pub enum BatchOperation {
 pub enum BatchItem {
     Invoice(Invoice),
     SalesReceipt(SalesReceipt),
-    Vendor(Vendor), // Will add more when necessary
+    Vendor(Vendor), // TODO Add more types
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -80,7 +85,7 @@ pub struct BatchFaultError {
 }
 
 impl BatchItemRequest {
-    pub fn add_command<T: QBItem>(&mut self, item: BatchOption) -> Option<usize> {
+    pub fn add_command(&mut self, item: BatchOption) -> Option<usize> {
         if self.items.len() >= 30 {
             return None;
         }
@@ -97,6 +102,10 @@ impl BatchItemRequest {
         qb: &QBContext,
         client: &Client,
     ) -> Result<BatchItemResponse, APIError> {
+        if self.items.is_empty() {
+            return Ok(BatchItemResponse { items: vec![] });
+        }
+
         qb_request(
             qb,
             client,
@@ -116,10 +125,14 @@ impl std::ops::Index<usize> for BatchItemRequest {
     }
 }
 
-#[test]
-fn batch_req_load() {
-    let val: BatchItemRequest = serde_json::from_str(
-        r#"{
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn batch_req_load() {
+        let val: BatchItemRequest = serde_json::from_str(
+            r#"{
     "BatchItemRequest": [
       {
         "bId": "bid1", 
@@ -153,48 +166,48 @@ fn batch_req_load() {
       }
     ]
   }"#,
-    )
-    .unwrap();
-    println!("{val:?}");
-}
+        )
+        .unwrap();
+        println!("{val:?}");
+    }
 
-#[test]
-fn batch_req_serialize() {
-    let val = BatchItemRequest {
-        items: vec![
-            BatchItemData {
-                b_id: "bId1".into(),
-                item: BatchOption::BatchCommand {
-                    operation: BatchOperation::Create,
-                    resource: serde_json::from_str(r#"{"Invoice": {"a": 1, "c": 2}}"#).unwrap(),
+    #[test]
+    fn batch_req_serialize() {
+        let val = BatchItemRequest {
+            items: vec![
+                BatchItemData {
+                    b_id: "bId1".into(),
+                    item: BatchOption::BatchCommand(BatchCommand {
+                        operation: BatchOperation::Create,
+                        resource: serde_json::from_str(r#"{"Invoice": {"a": 1, "c": 2}}"#).unwrap(),
+                    }),
                 },
-            },
-            BatchItemData {
-                b_id: "bId2".into(),
-                item: BatchOption::BatchCommand {
-                    operation: BatchOperation::Delete,
-                    resource: serde_json::from_str(r#"{"Invoice": {"a": 1, "c": 2}}"#).unwrap(),
+                BatchItemData {
+                    b_id: "bId2".into(),
+                    item: BatchOption::BatchCommand(BatchCommand {
+                        operation: BatchOperation::Delete,
+                        resource: serde_json::from_str(r#"{"Invoice": {"a": 1, "c": 2}}"#).unwrap(),
+                    }),
                 },
-            },
-            BatchItemData {
-                b_id: "bId3".into(),
-                item: BatchOption::Query("* from customer".into()),
-            },
-            BatchItemData {
-                b_id: "bId4".into(),
-                item: BatchOption::Query("* from invoice".into()),
-            },
-        ],
-        current_id: 0,
-    };
+                BatchItemData {
+                    b_id: "bId3".into(),
+                    item: BatchOption::Query("* from customer".into()),
+                },
+                BatchItemData {
+                    b_id: "bId4".into(),
+                    item: BatchOption::Query("* from invoice".into()),
+                },
+            ],
+            current_id: 0,
+        };
 
-    let value = serde_json::to_string_pretty(&val).unwrap();
-    println!("{value}");
-}
+        let value = serde_json::to_string_pretty(&val).unwrap();
+        println!("{value}");
+    }
 
-#[test]
-fn batch_resp_load() {
-    let val = r#"{
+    #[test]
+    fn batch_resp_load() {
+        let val = r#"{
     "BatchItemResponse": [
       {
         "Fault": {
@@ -243,8 +256,9 @@ fn batch_resp_load() {
     "time": "2016-04-15T09:01:18.141-07:00"
   }"#;
 
-    let resp: BatchItemResponse = serde_json::from_str(val).unwrap();
-    println!("{resp:?}");
+        let resp: BatchItemResponse = serde_json::from_str(val).unwrap();
+        println!("{resp:?}");
+    }
 }
 // {
 //   "bId": "bid4",
