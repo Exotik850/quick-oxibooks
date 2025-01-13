@@ -215,7 +215,7 @@ pub async fn qb_query_single<T: QBItem>(
     qb: &QBContext,
     client: &Client,
 ) -> Result<T, APIError> {
-    Ok(qb_query(query_str, 1, qb, client).await?.remove(0))
+    Ok(qb_query(query_str, 1, qb, client).await?.swap_remove(0))
 }
 
 /// Internal struct that Quickbooks returns when querying objects
