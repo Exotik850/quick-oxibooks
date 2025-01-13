@@ -31,11 +31,11 @@ struct AuthTokenResponse {
 
 impl QBContext {
     /// Checks if the current context is expired
-    pub fn is_expired(&self) -> bool {
+    #[must_use] pub fn is_expired(&self) -> bool {
         chrono::Utc::now() >= self.expires_in
     }
 
-    /// Refreshes the access_token, does not check if it's expired before it does so
+    /// Refreshes the `access_token`, does not check if it's expired before it does so
     pub async fn refresh_access_token(&mut self, client_id: &str, client_secret: &str, client: &Client) -> Result<(), APIError> {
         // TODO Use types to prevent this from happening
         let Some(refresh_token) = self.refresh_token.as_deref() else {
@@ -51,8 +51,7 @@ impl QBContext {
             .header("ACCEPT", "application/json")
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(format!(
-                "grant_type=refresh_token&refresh_token={}",
-                refresh_token
+                "grant_type=refresh_token&refresh_token={refresh_token}"
             ))
             .build()?;
 
@@ -99,7 +98,7 @@ pub(crate) fn build_headers(
     content_type: &str,
     access_token: &str,
 ) -> Result<HeaderMap, InvalidHeaderValue> {
-    let bt = format!("Bearer {}", access_token);
+    let bt = format!("Bearer {access_token}");
     let bearer =
         header::HeaderValue::from_str(&bt).expect("Invalid access token in Authorized Client");
     let mut headers = header::HeaderMap::new();

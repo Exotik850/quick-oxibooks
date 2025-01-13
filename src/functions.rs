@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{client::QBContext, error::APIError};
 
-/// Sends a request to the QuickBooks API endpoint with the given parameters
+/// Sends a request to the `QuickBooks` API endpoint with the given parameters
 ///
 /// # Arguments
 ///
@@ -34,7 +34,7 @@ where
         query,
         content_type.unwrap_or("application/json"),
         qb.environment,
-        &client,
+        client,
         &qb.access_token,
     )?;
     let response = client.execute(request).await?;
@@ -160,7 +160,7 @@ pub struct QBDeleted {
 
 /// Query the quickbooks context using the query string,
 /// The type determines what type of quickbooks object you are
-/// Query QuickBooks for objects matching the query string
+/// Query `QuickBooks` for objects matching the query string
 ///
 /// Builds a query using the `query_str` and queries for objects of
 /// type `T`. Returns up to `max_results` objects in a `Vec`.
@@ -206,9 +206,9 @@ pub async fn qb_query<T: QBItem>(
     }
 }
 
-/// Gets a single object by ID from the QuickBooks API
+/// Gets a single object by ID from the `QuickBooks` API
 ///
-/// Handles retrieving a QBItem via query,
+/// Handles retrieving a `QBItem` via query,
 /// refer to `qb_query` for more details
 pub async fn qb_query_single<T: QBItem>(
     query_str: &str,

@@ -1,12 +1,11 @@
 // Currently doesn't support batch voiding,
 // not going to be used so will implement when needed
 
-use chrono::Utc;
-use quickbooks_types::{Invoice, QBItem, SalesReceipt, Vendor};
+use quickbooks_types::{Invoice, SalesReceipt, Vendor};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-use crate::{client::QBContext, error::APIError, functions::qb_request, DiscoveryDoc};
+use crate::{client::QBContext, error::APIError, functions::qb_request};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BatchItemData<T> {
