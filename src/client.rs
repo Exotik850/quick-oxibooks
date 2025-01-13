@@ -1,6 +1,8 @@
+use base64::Engine;
 use chrono::{DateTime, Utc};
 use reqwest::{
-    header::{self, HeaderMap, InvalidHeaderValue}, Client, Method, Request
+    header::{self, HeaderMap, InvalidHeaderValue},
+    Client, Method, Request,
 };
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -34,15 +36,18 @@ impl QBContext {
     }
 
     /// Refreshes the access_token, does not check if it's expired before it does so
-    pub async fn refresh_access_token(&mut self, client: &Client) -> Result<(), APIError> {
+    pub async fn refresh_access_token(&mut self, client_id: &str, client_secret: &str, client: &Client) -> Result<(), APIError> {
         // TODO Use types to prevent this from happening
         let Some(refresh_token) = self.refresh_token.as_deref() else {
             return Err(APIError::NoRefreshToken);
         };
 
+        let auth_string = format!("{client_id}:{client_secret}");
+        let auth_string = base64::engine::general_purpose::STANDARD.encode(auth_string);
+
         let request = client
             .request(Method::POST, &self.discovery_doc.token_endpoint)
-            .bearer_auth(&self.access_token)
+            .bearer_auth(auth_string)
             .header("ACCEPT", "application/json")
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(format!(
@@ -69,6 +74,24 @@ impl QBContext {
         self.expires_in = chrono::Utc::now() + chrono::Duration::seconds(expires_in as i64);
 
         Ok(())
+    }
+
+    pub async fn check_authorized(&self, client: &Client) -> Result<bool, APIError> {
+        let request = client
+            .request(Method::GET, self.environment.user_info_url())
+            .bearer_auth(&self.access_token)
+            .header("ACCEPT", "application/json")
+            .build()?;
+        let response = client.execute(request).await?;
+        let status = response.status();
+        if !status.is_success() {
+            println!(
+                "Failed to check authorized status: {} - {}",
+                status,
+                response.text().await?
+            );
+        }
+        Ok(status.is_success())
     }
 }
 
