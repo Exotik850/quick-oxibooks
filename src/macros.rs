@@ -9,6 +9,8 @@ macro_rules! qb_where_clause {
 
     (_TYPECHECK $struct_name:ident, $($field:ident),+) => {
         {
+            // Compiler doesn't include this in the binary,
+            // just uses it to make sure the fields exist
             const _: () = {
                 fn dummy(v: $struct_name) {
                     $(
@@ -37,8 +39,7 @@ macro_rules! qb_where_clause {
 
     (_CLAUSE $($field:ident $op:tt $value:expr),+) => {
         {
-            let mut _values = String::new();
-            _values += "WHERE ";
+            let mut _values = String::from("WHERE ");
             $(
                 _values += $crate::macros::convert_ascii_case!(upper_camel, stringify!($field));
                 _values += " ";
@@ -47,8 +48,7 @@ macro_rules! qb_where_clause {
                 _values += &($value).to_string();
                 _values += "' AND ";
             )+
-            let _final_length = _values.len() - 5;
-            _values.truncate(_final_length);
+            _values.truncate(_values.len() - 5);
             _values
         }
     };
@@ -89,8 +89,20 @@ macro_rules! qb_query {
     };
 }
 
-// async fn _test() -> Result<Customer, String> {
-//     let qb = Quickbooks::new_from_env("", intuit_oxi_auth::Environment::PRODUCTION, "").await?;
-//     let cust = qb_query!(&qb, Customer | first_name = "Tom", last_name = "Hanks").map_err(|e| e.to_string())?;
-//     cust
+// #[cfg(test)]
+// mod test {
+//     use quickbooks_types::Customer;
+
+//     #[tokio::test]
+//     async fn test_macro_works() -> Result<(), String> {
+//         let client = reqwest::Client::new();
+//         let cust = qb_query!(
+//             &qb,
+//             &client,
+//             Customer | given_name = "Tom",
+//             family_name = "Hanks"
+//         )
+//         .map_err(|e| e.to_string())?;
+//         Ok(())
+//     }
 // }
