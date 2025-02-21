@@ -1,13 +1,3 @@
-/*
- * A rust library for interacting with the QuickBooks API.
- *
- * For more information, you can check out their documentation at:
- * https://developer.intuit.com/app/developer/qbo/docs/develop
- *
- * ORIGINIALLY FROM https://github.com/oxidecomputer/cio
- * LICENSED UNDER APACHE 2.0
- *
- */
 #![warn(clippy::pedantic)]
 
 pub mod batch;

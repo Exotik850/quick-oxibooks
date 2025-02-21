@@ -14,7 +14,7 @@ use crate::{client::QBContext, error::APIError};
 /// * `body` - Optional request body to send
 /// * `content_type` - Optional content type header value
 /// * `query` - Optional query parameters
-pub(crate) async fn qb_request<T, U>(
+pub(crate) async fn qb_request<'a, T, U>(
     qb: &QBContext,
     client: &Client,
     method: Method,
@@ -46,7 +46,7 @@ where
 
 /// Internal struct that Quickbooks returns most
 /// of the time when interacting with the API
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 #[serde(default)]
 pub(crate) struct QBResponse<T> {
     #[serde(
@@ -96,7 +96,7 @@ pub async fn qb_create<T: QBItem + QBCreatable>(
         response
             .object
             .id()
-            .unwrap_or(&"No ID on QB object after creation".into())
+            .expect("Created object has no ID")
     );
 
     Ok(response.object)

@@ -38,6 +38,12 @@ pub enum APIError {
     BadTokenRequest(String),
     #[error("No refresh token in Context!")]
     NoRefreshToken,
+    #[error("Throttle limit reached")]
+    ThrottleLimitReached,
+    #[error("Batch limit exceeded")]
+    BatchLimitExceeded,
+    #[error("Env Var error : {0}")]
+    EnvVarError(#[from] std::env::VarError),
 }
 
 impl Serialize for APIError {

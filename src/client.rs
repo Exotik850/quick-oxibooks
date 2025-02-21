@@ -5,19 +5,22 @@ use reqwest::{
     Client, Method, Request,
 };
 use serde::{Deserialize, Serialize};
+// use tokio::sync::Semaphore;
 use url::Url;
 
 use crate::{error::APIError, DiscoveryDoc, Environment};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 pub struct QBContext {
-    pub environment: Environment,
-    pub company_id: String,
-    pub access_token: String,
-    pub expires_in: DateTime<Utc>,
+    pub(crate) environment: Environment,
+    pub(crate) company_id: String,
+    pub(crate) access_token: String,
+    pub(crate) expires_in: DateTime<Utc>,
     // TODO Check if this should be in an option
-    pub refresh_token: Option<String>,
-    pub discovery_doc: DiscoveryDoc,
+    pub(crate) refresh_token: Option<String>,
+    pub(crate) discovery_doc: DiscoveryDoc,
+    // #[serde(skip)]
+    // limiter: Semaphore,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -30,13 +33,50 @@ struct AuthTokenResponse {
 }
 
 impl QBContext {
+    /// Creates a new `QBContext` with the given parameters
+    pub async fn new(
+        environment: Environment,
+        company_id: String,
+        access_token: String,
+        refresh_token: Option<String>,
+        client: &Client,
+    ) -> Result<Self, APIError> {
+        Ok(Self {
+            environment,
+            company_id,
+            access_token,
+            expires_in: Utc::now() + chrono::Duration::hours(999),
+            refresh_token,
+            discovery_doc: DiscoveryDoc::get(environment, client).await?,
+            limiter: Semaphore::new(1),
+        })
+    }
+
+    pub async fn new_from_env(
+        environment: Environment,
+        client: &Client,
+    ) -> Result<Self, APIError> {
+        let company_id = std::env::var("QB_COMPANY_ID")?;
+        let access_token = std::env::var("QB_ACCESS_TOKEN")?;
+        let refresh_token = std::env::var("QB_REFRESH_TOKEN").ok();
+        let context =
+            Self::new(environment, company_id, access_token, refresh_token, client).await?;
+        Ok(context)
+    }
+
     /// Checks if the current context is expired
-    #[must_use] pub fn is_expired(&self) -> bool {
+    #[must_use]
+    pub fn is_expired(&self) -> bool {
         chrono::Utc::now() >= self.expires_in
     }
 
     /// Refreshes the `access_token`, does not check if it's expired before it does so
-    pub async fn refresh_access_token(&mut self, client_id: &str, client_secret: &str, client: &Client) -> Result<(), APIError> {
+    pub async fn refresh_access_token(
+        &mut self,
+        client_id: &str,
+        client_secret: &str,
+        client: &Client,
+    ) -> Result<(), APIError> {
         // TODO Use types to prevent this from happening
         let Some(refresh_token) = self.refresh_token.as_deref() else {
             return Err(APIError::NoRefreshToken);
