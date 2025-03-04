@@ -1,7 +1,7 @@
 // Currently doesn't support batch voiding,
 // not going to be used so will implement when needed
 
-use quickbooks_types::{Invoice, SalesReceipt};
+use quickbooks_types::{Invoice, SalesReceipt, Vendor};
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 
@@ -21,6 +21,7 @@ pub struct BatchOperation {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "lowercase")]
 pub enum BatchCommand {
     Create,
     Update,
@@ -39,14 +40,12 @@ pub struct BatchItemRequestExt {
 #[serde(untagged)]
 pub enum BatchItemRequest {
     Operation(BatchOperation),
-    Query(BatchQueryRequest),
+    Query(String),
 }
 
 impl BatchItemRequest {
     pub fn query(query: impl std::fmt::Display) -> Self {
-        BatchItemRequest::Query(BatchQueryRequest {
-            query: query.to_string(),
-        })
+        BatchItemRequest::Query(query.to_string())
     }
 
     pub fn create(resource: BatchItemData) -> Self {
@@ -72,15 +71,10 @@ impl BatchItemRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct BatchQueryRequest {
-    #[serde(rename = "Query")]
-    pub query: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
 pub enum BatchItemData {
     SalesReceipt(SalesReceipt),
     Invoice(Invoice),
+    Vendor(Vendor),
     // TODO Add more as needed
 }
 
