@@ -20,17 +20,7 @@ async fn main() -> Result<(), APIError> {
     };
 
     let client = reqwest::Client::new();
-    let discovery_doc = DiscoveryDoc::get_async(environment, &client).await?;
-
-    // let qb = QBContext::new(env, company_id, access_token, None);
-    let qb = QBContext {
-        environment,
-        company_id,
-        access_token,
-        expires_in: Utc::now() + chrono::Duration::hours(999),
-        refresh_token: None,
-        discovery_doc,
-    };
+    let qb = QBContext::new(environment, company_id, access_token, &client).await?;
 
     let inv: Invoice =
         qb_query_single(&format!(r"where DocNumber = '{doc_number}'"), &qb, &client).await?;
