@@ -1,3 +1,9 @@
+use std::{
+    ops::Deref,
+    sync::{Arc, Weak},
+    time::Duration,
+};
+
 use base64::Engine;
 use chrono::{DateTime, Utc};
 use reqwest::{
@@ -5,10 +11,20 @@ use reqwest::{
     Client, Method, Request,
 };
 use serde::{Deserialize, Serialize};
-// use tokio::sync::Semaphore;
+use tokio::sync::Semaphore;
 use url::Url;
 
-use crate::{error::APIError, DiscoveryDoc, Environment};
+use crate::{error::APIError, limiter::RateLimiter, DiscoveryDoc, Environment};
+
+// Rate Limit:
+// Sandbox - 500 req / min
+// Production - 500 req / min, 10 req / sec
+// Batch - 30 req / batch & 40 batches / min
+// Wait 60 seconds after throttle
+
+const RATE_LIMIT: usize = 500;
+const BATCH_RATE_LIMIT: usize = 40;
+const RESET_DURATION: Duration = Duration::from_secs(60);
 
 #[derive(Serialize)]
 pub struct QBContext {
@@ -17,10 +33,17 @@ pub struct QBContext {
     pub(crate) access_token: String,
     pub(crate) expires_in: DateTime<Utc>,
     // TODO Check if this should be in an option
-    pub(crate) refresh_token: Option<String>,
+    // pub(crate) refresh_token: Option<String>,
     pub(crate) discovery_doc: DiscoveryDoc,
+    #[serde(skip)]
+    pub(crate) qbo_limiter: RateLimiter,
     // #[serde(skip)]
-    // limiter: Semaphore,
+    // pub(crate) batch_limiter: RateLimiter,
+}
+
+pub struct RefreshableQBContext {
+    pub(crate) context: QBContext,
+    pub(crate) refresh_token: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -38,7 +61,6 @@ impl QBContext {
         environment: Environment,
         company_id: String,
         access_token: String,
-        refresh_token: Option<String>,
         client: &Client,
     ) -> Result<Self, APIError> {
         Ok(Self {
@@ -46,73 +68,30 @@ impl QBContext {
             company_id,
             access_token,
             expires_in: Utc::now() + chrono::Duration::hours(999),
-            refresh_token,
             discovery_doc: DiscoveryDoc::get(environment, client).await?,
-            limiter: Semaphore::new(1),
+            qbo_limiter: RateLimiter::new(RATE_LIMIT, RESET_DURATION),
+            // batch_limiter: RateLimiter::new(BATCH_RATE_LIMIT, RESET_DURATION),
         })
     }
 
-    pub async fn new_from_env(
-        environment: Environment,
-        client: &Client,
-    ) -> Result<Self, APIError> {
+    pub async fn new_from_env(environment: Environment, client: &Client) -> Result<Self, APIError> {
         let company_id = std::env::var("QB_COMPANY_ID")?;
         let access_token = std::env::var("QB_ACCESS_TOKEN")?;
-        let refresh_token = std::env::var("QB_REFRESH_TOKEN").ok();
-        let context =
-            Self::new(environment, company_id, access_token, refresh_token, client).await?;
+        let context = Self::new(environment, company_id, access_token, client).await?;
         Ok(context)
+    }
+
+    pub fn with_refresh(self, refresh_token: String) -> RefreshableQBContext {
+        RefreshableQBContext {
+            context: self,
+            refresh_token,
+        }
     }
 
     /// Checks if the current context is expired
     #[must_use]
     pub fn is_expired(&self) -> bool {
         chrono::Utc::now() >= self.expires_in
-    }
-
-    /// Refreshes the `access_token`, does not check if it's expired before it does so
-    pub async fn refresh_access_token(
-        &mut self,
-        client_id: &str,
-        client_secret: &str,
-        client: &Client,
-    ) -> Result<(), APIError> {
-        // TODO Use types to prevent this from happening
-        let Some(refresh_token) = self.refresh_token.as_deref() else {
-            return Err(APIError::NoRefreshToken);
-        };
-
-        let auth_string = format!("{client_id}:{client_secret}");
-        let auth_string = base64::engine::general_purpose::STANDARD.encode(auth_string);
-
-        let request = client
-            .request(Method::POST, &self.discovery_doc.token_endpoint)
-            .bearer_auth(auth_string)
-            .header("ACCEPT", "application/json")
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(format!(
-                "grant_type=refresh_token&refresh_token={refresh_token}"
-            ))
-            .build()?;
-
-        let response = client.execute(request).await?;
-
-        if !response.status().is_success() {
-            return Err(APIError::BadRequest(response.text().await?));
-        }
-
-        let AuthTokenResponse {
-            access_token,
-            refresh_token,
-            expires_in,
-            ..
-        } = response.json().await?;
-
-        self.refresh_token = Some(refresh_token);
-        self.access_token = access_token;
-        self.expires_in = chrono::Utc::now() + chrono::Duration::seconds(expires_in as i64);
-
-        Ok(())
     }
 
     pub async fn check_authorized(&self, client: &Client) -> Result<bool, APIError> {
@@ -131,6 +110,55 @@ impl QBContext {
             );
         }
         Ok(status.is_success())
+    }
+}
+
+impl RefreshableQBContext {
+    pub async fn refresh_access_token(
+        &mut self,
+        client_id: &str,
+        client_secret: &str,
+        client: &Client,
+    ) -> Result<(), APIError> {
+        let auth_string = format!("{client_id}:{client_secret}");
+        let auth_string = base64::engine::general_purpose::STANDARD.encode(auth_string);
+
+        let request = client
+            .request(Method::POST, &self.context.discovery_doc.token_endpoint)
+            .bearer_auth(auth_string)
+            .header("ACCEPT", "application/json")
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(format!(
+                "grant_type=refresh_token&refresh_token={}",
+                &self.refresh_token
+            ))
+            .build()?;
+
+        let response = client.execute(request).await?;
+
+        if !response.status().is_success() {
+            return Err(APIError::BadRequest(response.text().await?));
+        }
+
+        let AuthTokenResponse {
+            access_token,
+            refresh_token,
+            expires_in,
+            ..
+        } = response.json().await?;
+
+        self.refresh_token = refresh_token;
+        self.context.access_token = access_token;
+        self.context.expires_in = chrono::Utc::now() + chrono::Duration::seconds(expires_in as i64);
+
+        Ok(())
+    }
+}
+
+impl Deref for RefreshableQBContext {
+    type Target = QBContext;
+    fn deref(&self) -> &Self::Target {
+        &self.context
     }
 }
 
@@ -202,7 +230,7 @@ pub(crate) fn build_url(
     let mut url = url.join(path)?;
     if let Some(q) = query {
         url.query_pairs_mut()
-            .extend_pairs(q.iter())
+            .extend_pairs(q)
             .extend_pairs([("minorVersion", "65")]);
     }
     Ok(url)

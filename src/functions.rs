@@ -1,10 +1,12 @@
 use quickbooks_types::{QBCreatable, QBDeletable, QBItem, QBSendable};
 use reqwest::{Client, Method};
 use serde::{Deserialize, Serialize};
+use tokio::sync::TryAcquireError;
 
 use crate::{client::QBContext, error::APIError};
 
-/// Sends a request to the `QuickBooks` API endpoint with the given parameters
+/// Sends a request to the `QuickBooks` API endpoint with the given parameters,
+/// accounts for rate limiting 
 ///
 /// # Arguments
 ///
@@ -24,9 +26,28 @@ pub(crate) async fn qb_request<'a, T, U>(
     query: Option<&[(&str, &str)]>,
 ) -> Result<U, APIError>
 where
-    T: serde::Serialize,
+    T: Serialize,
     U: serde::de::DeserializeOwned,
 {
+    let permit = qb
+        .qbo_limiter
+        .acquire()
+        .await
+        .expect("Semaphore should not be closed");
+    let response = execute_request(qb, client, method, path, body, content_type, query).await?;
+    drop(permit);
+    Ok(response.json().await?)
+}
+
+async fn execute_request<T: Serialize>(
+    qb: &QBContext,
+    client: &Client,
+    method: Method,
+    path: &str,
+    body: Option<T>,
+    content_type: Option<&str>,
+    query: Option<&[(&str, &str)]>,
+) -> Result<reqwest::Response, APIError> {
     let request = crate::client::build_request(
         method,
         path,
@@ -41,7 +62,7 @@ where
     if !response.status().is_success() {
         return Err(APIError::BadRequest(response.text().await?));
     }
-    Ok(response.json().await?)
+    Ok(response)
 }
 
 /// Internal struct that Quickbooks returns most
@@ -93,10 +114,7 @@ pub async fn qb_create<T: QBItem + QBCreatable>(
     log::info!(
         "Successfully created {} with ID of {}",
         T::name(),
-        response
-            .object
-            .id()
-            .expect("Created object has no ID")
+        response.object.id().expect("Created object has no ID")
     );
 
     Ok(response.object)
@@ -114,7 +132,7 @@ pub async fn qb_delete<T: QBItem + QBDeletable>(
         return Err(APIError::DeleteMissingItems);
     };
 
-    let delete_object: QBToDelete = item.into();
+    let delete_object: QBToDelete = item.to_delete();
 
     let response: QBResponse<QBDeleted> = qb_request(
         qb,
@@ -134,18 +152,29 @@ pub async fn qb_delete<T: QBItem + QBDeletable>(
 
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "PascalCase")]
-struct QBToDelete {
-    id: String,
-    sync_token: String,
+struct QBToDelete<'a> {
+    id: &'a str,
+    sync_token: &'a str,
 }
 
-// ! For some reason TryFrom won't compile, however it is always checked if there is an ID and SyncToken before using this atm
-impl<T: QBItem> From<&T> for QBToDelete {
-    fn from(value: &T) -> Self {
-        match (value.id().cloned(), value.sync_token().cloned()) {
-            (Some(id), Some(sync_token)) => Self { id, sync_token },
-            (_, _) => panic!("Couldnt delete QBItem, no ID or SyncToken available!"), // TODO Make this not possible
+trait QBToDeleteTrait {
+    fn id(&self) -> &str;
+    fn sync_token(&self) -> &str;
+    fn to_delete(&self) -> QBToDelete {
+        QBToDelete {
+            id: self.id(),
+            sync_token: self.sync_token(),
         }
+    }
+}
+impl<T: QBItem> QBToDeleteTrait for T {
+    fn id(&self) -> &str {
+        self.id().expect("Tried to delete an object with no ID")
+    }
+
+    fn sync_token(&self) -> &str {
+        self.sync_token()
+            .expect("Tried to delete an object with no SyncToken")
     }
 }
 
@@ -206,7 +235,7 @@ pub async fn qb_query<T: QBItem>(
     }
 }
 
-/// Gets a single object by ID from the `QuickBooks` API
+/// Gets a single object via query from the `QuickBooks` API
 ///
 /// Handles retrieving a `QBItem` via query,
 /// refer to `qb_query` for more details
@@ -338,7 +367,9 @@ pub mod attachment {
     use base64::Engine;
     use quickbooks_types::{content_type_from_ext, Attachable, QBAttachable};
     use reqwest::{
-        header::{self, HeaderValue}, multipart::{Form, Part}, Client, Method, Request
+        header::{self, HeaderValue},
+        multipart::{Form, Part},
+        Client, Method, Request,
     };
 
     use crate::{error::APIError, QBContext};
