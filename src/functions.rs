@@ -39,7 +39,7 @@ where
     Ok(response.json().await?)
 }
 
-async fn execute_request<T: Serialize>(
+pub(crate) async fn execute_request<T: Serialize>(
     qb: &QBContext,
     client: &Client,
     method: Method,
