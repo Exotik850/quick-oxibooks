@@ -1,7 +1,4 @@
-use std::{
-    ops::Deref,
-    time::Duration,
-};
+use std::{ops::Deref, time::Duration};
 
 use base64::Engine;
 use chrono::{DateTime, Utc};
@@ -79,15 +76,20 @@ impl QBContext {
         Ok(context)
     }
 
-    #[must_use] pub fn with_refresh(self, refresh_token: String) -> RefreshableQBContext {
+    #[must_use]
+    pub fn with_refresh(self, refresh_token: String) -> RefreshableQBContext {
         RefreshableQBContext {
             context: self,
             refresh_token,
         }
     }
 
-    #[must_use] pub fn with_access_token(self, access_token: String) -> Self {
-        Self { access_token, ..self }
+    #[must_use]
+    pub fn with_access_token(self, access_token: String) -> Self {
+        Self {
+            access_token,
+            ..self
+        }
     }
 
     /// Checks if the current context is expired

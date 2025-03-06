@@ -1,0 +1,34 @@
+{
+  "BatchItemRequest": [
+    {
+      "bId": "bid1", 
+      "Vendor": {
+        "DisplayName": "Smith Family Store"
+      }, 
+      "operation": "create"
+    }, 
+    {
+      "bId": "bid2", 
+      "operation": "delete", 
+      "Invoice": {
+        "SyncToken": "0", 
+        "Id": "129"
+      }
+    }, 
+    {
+      "SalesReceipt": {
+        "PrivateNote": "A private note.", 
+        "SyncToken": "0", 
+        "domain": "QBO", 
+        "Id": "11", 
+        "sparse": true
+      }, 
+      "bId": "bid3", 
+      "operation": "update"
+    }, 
+    {
+      "Query": "select * from SalesReceipt where TotalAmt > '300.00'", 
+      "bId": "bid4"
+    }
+  ]
+}
