@@ -37,10 +37,10 @@ pub struct BatchItemRequestExt {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
 pub enum BatchItemRequest {
-    Operation(BatchOperation),
     Query(String),
+    #[serde(untagged)]
+    Operation(BatchOperation),
 }
 
 impl BatchItemRequest {
