@@ -101,7 +101,7 @@ impl DiscoveryDoc {
         let request = client.get(url).build()?;
         let resp = client.execute(request).await?;
         if !resp.status().is_success() {
-            return Err(APIError::BadTokenRequest(resp.text().await?));
+            return Err(APIError::BadRequest(resp.json().await?));
         }
         Ok(resp.json().await?)
     }
@@ -114,7 +114,7 @@ impl DiscoveryDoc {
         let request = client.get(url).build()?;
         let resp = client.execute(request)?;
         if !resp.status().is_success() {
-            return Err(APIError::BadTokenRequest(resp.text().await?));
+            return Err(APIError::BadRequest(resp.json()?));
         }
         Ok(resp.json()?)
     }

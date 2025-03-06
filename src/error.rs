@@ -36,8 +36,6 @@ pub enum APIError {
     AttachableUploadMissingItems,
     #[error("Missing Attachable object on upload response")]
     NoAttachableObjects,
-    #[error("Token Request unsuccessful : {0}")]
-    BadTokenRequest(String),
     #[error("Throttle limit reached")]
     ThrottleLimitReached,
     #[error("Batch limit exceeded")]
@@ -69,6 +67,8 @@ pub struct QBError {
 #[serde(rename="UPPERCASE")]
 pub enum FaultType {
   Authentication,
+  #[serde(rename = "ValidationFault")]
+  Validation,
   // TODO Add the rest of the fault types
   Other(String),
 }
