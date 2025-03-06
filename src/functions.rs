@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{client::QBContext, error::APIError};
 
 /// Sends a request to the `QuickBooks` API endpoint with the given parameters,
-/// accounts for rate limiting 
+/// accounts for rate limiting
 ///
 /// # Arguments
 ///
@@ -421,7 +421,13 @@ pub mod attachment {
 
         let request = make_upload_request(attachable, qb, client).await?;
 
+        let permit = qb
+            .qbo_limiter
+            .acquire()
+            .await
+            .expect("Semaphore should not be closed");
         let response = client.execute(request).await?;
+        drop(permit);
 
         if !response.status().is_success() {
             return Err(APIError::BadRequest(response.json().await?));
@@ -490,14 +496,12 @@ pub mod pdf {
     use reqwest::{Client, Method};
     use tokio::io::AsyncWriteExt;
 
-    use crate::{error::APIError, Environment};
+    use crate::{error::APIError, Environment, QBContext};
 
     pub async fn qb_get_pdf_bytes<T: QBItem + QBPDFable>(
         item: &T,
+        qb: &QBContext,
         client: &Client,
-        environment: Environment,
-        company_id: &str,
-        access_token: &str,
     ) -> Result<Vec<u8>, APIError> {
         let Some(id) = item.id() else {
             return Err(APIError::NoIdOnGetPDF);
@@ -505,16 +509,22 @@ pub mod pdf {
 
         let request = crate::client::build_request(
             Method::GET,
-            &format!("company/{}/{}/{}/pdf", company_id, T::qb_id(), id),
+            &format!("company/{}/{}/{}/pdf", qb.company_id, T::qb_id(), id),
             None::<()>,
             None,
             "application/json",
-            environment,
+            qb.environment,
             client,
-            access_token,
+            &qb.access_token,
         )?;
 
+        let permit = qb
+            .qbo_limiter
+            .acquire()
+            .await
+            .expect("Semaphore should not be closed");
         let response = client.execute(request).await?;
+        drop(permit);
 
         if !response.status().is_success() {
             return Err(APIError::BadRequest(response.json().await?));
@@ -532,12 +542,10 @@ pub mod pdf {
     pub async fn qb_save_pdf_to_file<T: QBItem + QBPDFable>(
         item: &T,
         file_name: &str,
+        qb: &QBContext,
         client: &Client,
-        environment: Environment,
-        company_id: &str,
-        access_token: &str,
     ) -> Result<(), APIError> {
-        let bytes = qb_get_pdf_bytes(item, client, environment, company_id, access_token).await?;
+        let bytes = qb_get_pdf_bytes(item, qb, client).await?;
         let mut file = tokio::fs::OpenOptions::new()
             .create(true)
             .write(true)
