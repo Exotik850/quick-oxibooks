@@ -1,6 +1,5 @@
 use std::{
     ops::Deref,
-    sync::{Arc, Weak},
     time::Duration,
 };
 
@@ -11,7 +10,6 @@ use reqwest::{
     Client, Method, Request,
 };
 use serde::{Deserialize, Serialize};
-use tokio::sync::Semaphore;
 use url::Url;
 
 use crate::{error::APIError, limiter::RateLimiter, DiscoveryDoc, Environment};
@@ -81,14 +79,14 @@ impl QBContext {
         Ok(context)
     }
 
-    pub fn with_refresh(self, refresh_token: String) -> RefreshableQBContext {
+    #[must_use] pub fn with_refresh(self, refresh_token: String) -> RefreshableQBContext {
         RefreshableQBContext {
             context: self,
             refresh_token,
         }
     }
 
-    pub fn with_access_token(self, access_token: String) -> Self {
+    #[must_use] pub fn with_access_token(self, access_token: String) -> Self {
         Self { access_token, ..self }
     }
 

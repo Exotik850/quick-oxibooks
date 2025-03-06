@@ -1,5 +1,4 @@
-use chrono::Utc;
-use quick_oxibooks::{error::APIError, functions::qb_query_single, DiscoveryDoc, QBContext};
+use quick_oxibooks::{error::APIError, functions::qb_query_single, QBContext};
 use quickbooks_types::Invoice;
 
 #[tokio::main]

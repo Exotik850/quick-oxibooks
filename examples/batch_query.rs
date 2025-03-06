@@ -41,7 +41,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut qb = QBContext::new_from_env(quick_oxibooks::Environment::PRODUCTION, &client).await?;
 
     if let Some(token) = access_token {
-        qb = qb.with_access_token(token)
+        qb = qb.with_access_token(token);
     }
 
     let mut batch_items = Vec::new();
@@ -54,7 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for item in batch_resp {
         match item.item {
             quick_oxibooks::batch::QBBatchResponseData::QueryResponse(qr) => {
-                let msg = qr.data.map(|_| "Found").unwrap_or_else(|| "None");
+                let msg = qr.data.map_or_else(|| "None", |_| "Found");
                 println!("{}: {}", item.b_id, msg);
             }
             quick_oxibooks::batch::QBBatchResponseData::Fault(f) => {

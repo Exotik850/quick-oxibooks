@@ -52,21 +52,21 @@ impl QBBatchOperation {
         QBBatchOperation::Query(query.to_string())
     }
 
-    pub fn create(resource: QBResource) -> Self {
+    #[must_use] pub fn create(resource: QBResource) -> Self {
         QBBatchOperation::Operation(QBResourceOperation {
             resource,
             operation: QBOperationType::Create,
         })
     }
 
-    pub fn update(resource: QBResource) -> Self {
+    #[must_use] pub fn update(resource: QBResource) -> Self {
         QBBatchOperation::Operation(QBResourceOperation {
             resource,
             operation: QBOperationType::Update,
         })
     }
 
-    pub fn delete(resource: QBResource) -> Self {
+    #[must_use] pub fn delete(resource: QBResource) -> Self {
         QBBatchOperation::Operation(QBResourceOperation {
             resource,
             operation: QBOperationType::Delete,
@@ -137,7 +137,7 @@ where
     // let batch_resp = resp.text().await?;
     let batch_resp: BatchResponseExt = resp.json().await?;
     // return Ok(batch_resp);
-    return Ok(batch_resp.items);
+    Ok(batch_resp.items)
 }
 
 #[cfg(test)]

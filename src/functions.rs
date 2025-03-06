@@ -1,7 +1,6 @@
 use quickbooks_types::{QBCreatable, QBDeletable, QBItem, QBSendable};
 use reqwest::{Client, Method};
 use serde::{Deserialize, Serialize};
-use tokio::sync::TryAcquireError;
 
 use crate::{client::QBContext, error::APIError};
 
