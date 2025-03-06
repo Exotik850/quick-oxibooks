@@ -79,7 +79,7 @@ pub enum BatchItemData {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub enum BatchQueryData {
+pub enum BatchQueryDataItem {
     SalesReceipt(Vec<SalesReceipt>),
     Invoice(Vec<Invoice>),
     // TODO Add more as needed
@@ -88,20 +88,19 @@ pub enum BatchQueryData {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct BatchQueryResponse {
-    #[serde(rename = "startPosition")]
-    pub start_position: usize,
-    #[serde(rename = "maxResults")]
-    pub max_results: usize,
+    pub start_position: Option<usize>,
+    pub max_results: Option<usize>,
+    pub total_count: Option<usize>,
     // resource: Vec<T>,
     #[serde(flatten)]
-    pub data: BatchQueryData,
+    pub data: Option<BatchQueryDataItem>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum BatchItem {
     Item(BatchItemData),
+    Fault(Fault),
     QueryResponse(BatchQueryResponse),
-    Fault(BatchFault),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -139,7 +138,9 @@ where
     };
     let url = format!("company/{}/batch", qb.company_id);
     let resp = execute_request(qb, client, Method::POST, &url, Some(batch), None, None).await?;
+    // let batch_resp = resp.text().await?;
     let batch_resp: BatchResponseExt = resp.json().await?;
+    // return Ok(batch_resp);
     return Ok(batch_resp.items);
 }
 
@@ -284,7 +285,7 @@ mod test {
   "time": "2016-04-15T09:01:18.141-07:00"
 }"#;
         let resp: BatchResponseExt = serde_json::from_str(s).unwrap();
-        println!("{resp:?}");
+        println!("{resp:#?}");
     }
 
     #[test]
@@ -324,6 +325,6 @@ mod test {
   ]
 }"#;
         let resp: BatchRequestExt = serde_json::from_str(s).unwrap();
-        println!("{resp:?}");
+        println!("{resp:#?}");
     }
 }
