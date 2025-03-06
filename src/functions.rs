@@ -424,7 +424,7 @@ pub mod attachment {
         let response = client.execute(request).await?;
 
         if !response.status().is_success() {
-            return Err(APIError::BadRequest(response.text().await?));
+            return Err(APIError::BadRequest(response.json().await?));
         }
 
         let mut qb_response: AttachableResponseExt = response.json().await?;
@@ -517,7 +517,7 @@ pub mod pdf {
         let response = client.execute(request).await?;
 
         if !response.status().is_success() {
-            return Err(APIError::BadRequest(response.text().await?));
+            return Err(APIError::BadRequest(response.json().await?));
         }
 
         log::info!(
