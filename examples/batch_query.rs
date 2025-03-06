@@ -1,23 +1,41 @@
 use quick_oxibooks::{batch::BatchItemRequest, QBContext};
 
+enum ArgFlag {
+    AccessToken,
+    ObjectType,
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut transaction_nxrs: Vec<String> = vec![];
     let mut access_token = None;
-    let mut flag = false;
+    let mut object_type = None;
+    let mut flag = None;
     for arg in std::env::args().skip(1) {
         // transaction_nxrs.push(arg);
-        if flag {
-            access_token = Some(arg);
-            flag = false;
+        if flag.is_some() {
+            match flag.unwrap() {
+                ArgFlag::AccessToken => {
+                    access_token = Some(arg);
+                }
+                ArgFlag::ObjectType => {
+                    object_type = Some(arg);
+                }
+            }
+            flag = None;
             continue;
         }
         if arg.trim() == "--access_token" {
-            flag = true;
+            flag = Some(ArgFlag::AccessToken);
+            continue;
+        }
+        if arg.trim() == "--object_type" {
+            flag = Some(ArgFlag::ObjectType);
             continue;
         }
         transaction_nxrs.push(arg);
     }
+    let object_type = object_type.unwrap_or("SalesReceipt".to_string());
 
     let client = reqwest::Client::new();
     let mut qb = QBContext::new_from_env(quick_oxibooks::Environment::PRODUCTION, &client).await?;
@@ -29,7 +47,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut batch_items = Vec::new();
     for num in transaction_nxrs {
         batch_items.push(BatchItemRequest::query(dbg!(format!(
-            r#"select * from SalesReceipt where DocNumber = '{num}'"#
+            r#"select * from {object_type} where DocNumber = '{num}'"#
         ))));
     }
     let batch_resp = quick_oxibooks::batch::qb_batch(batch_items, &qb, &client).await?;
