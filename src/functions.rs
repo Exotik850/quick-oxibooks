@@ -60,7 +60,7 @@ pub(crate) async fn execute_request<T: Serialize>(
     )?;
     let response = client.execute(request).await?;
     if !response.status().is_success() {
-        return Err(APIError::BadRequest(response.text().await?));
+        return Err(APIError::BadRequest(response.json().await?));
     }
     Ok(response)
 }

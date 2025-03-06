@@ -5,7 +5,7 @@ use quickbooks_types::{Invoice, SalesReceipt, Vendor};
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 
-use crate::{error::APIError, functions::execute_request, QBContext};
+use crate::{error::{APIError, Fault}, functions::execute_request, QBContext};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct BatchRequestExt {
@@ -86,23 +86,7 @@ pub enum BatchQueryData {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct BatchError {
-    #[serde(rename = "Message")]
-    pub message: String,
-    pub code: String,
-    #[serde(rename = "Detail")]
-    pub detail: String,
-    pub element: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct BatchFault {
-    pub r#type: String,
-    #[serde(rename = "Error")]
-    pub error: Vec<BatchError>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct BatchQueryResponse {
     #[serde(rename = "startPosition")]
     pub start_position: usize,
