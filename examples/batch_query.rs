@@ -67,7 +67,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     );
                 }
             }
-            _ => {}
+            _ => {
+                println!("{}: {:?}", item.b_id, item.item);
+            }
         }
     }
 
