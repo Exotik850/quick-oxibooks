@@ -5,73 +5,77 @@ use quickbooks_types::{Invoice, SalesReceipt, Vendor};
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 
-use crate::{error::{APIError, Fault}, functions::execute_request, QBContext};
+use crate::{
+    error::{APIError, Fault},
+    functions::execute_request,
+    QBContext,
+};
 
 #[derive(Serialize, Deserialize, Debug)]
-struct BatchRequestExt {
+struct QBBatchRequest {
     #[serde(rename = "BatchItemRequest")]
-    items: Vec<BatchItemRequestExt>,
+    items: Vec<QBBatchItem<QBBatchOperation>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct BatchOperation {
+pub struct QBResourceOperation {
     #[serde(flatten)]
-    pub resource: BatchItemData,
-    pub operation: BatchCommand,
+    pub resource: QBResource,
+    pub operation: QBOperationType,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "lowercase")]
-pub enum BatchCommand {
+pub enum QBOperationType {
     Create,
     Update,
     Delete,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct BatchItemRequestExt {
+pub struct QBBatchItem<T> {
     #[serde(rename = "bId")]
     pub b_id: String,
     #[serde(flatten)]
-    pub item: BatchItemRequest,
+    pub item: T,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub enum BatchItemRequest {
+pub enum QBBatchOperation {
     Query(String),
     #[serde(untagged)]
-    Operation(BatchOperation),
+    Operation(QBResourceOperation),
 }
 
-impl BatchItemRequest {
+impl QBBatchOperation {
     pub fn query(query: impl std::fmt::Display) -> Self {
-        BatchItemRequest::Query(query.to_string())
+        QBBatchOperation::Query(query.to_string())
     }
 
-    pub fn create(resource: BatchItemData) -> Self {
-        BatchItemRequest::Operation(BatchOperation {
+    pub fn create(resource: QBResource) -> Self {
+        QBBatchOperation::Operation(QBResourceOperation {
             resource,
-            operation: BatchCommand::Create,
+            operation: QBOperationType::Create,
         })
     }
 
-    pub fn update(resource: BatchItemData) -> Self {
-        BatchItemRequest::Operation(BatchOperation {
+    pub fn update(resource: QBResource) -> Self {
+        QBBatchOperation::Operation(QBResourceOperation {
             resource,
-            operation: BatchCommand::Update,
+            operation: QBOperationType::Update,
         })
     }
 
-    pub fn delete(resource: BatchItemData) -> Self {
-        BatchItemRequest::Operation(BatchOperation {
+    pub fn delete(resource: QBResource) -> Self {
+        QBBatchOperation::Operation(QBResourceOperation {
             resource,
-            operation: BatchCommand::Delete,
+            operation: QBOperationType::Delete,
         })
     }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub enum BatchItemData {
+pub enum QBResource {
     SalesReceipt(SalesReceipt),
     Invoice(Invoice),
     Vendor(Vendor),
@@ -79,7 +83,7 @@ pub enum BatchItemData {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub enum BatchQueryDataItem {
+pub enum QBQueryResource {
     SalesReceipt(Vec<SalesReceipt>),
     Invoice(Vec<Invoice>),
     // TODO Add more as needed
@@ -87,50 +91,42 @@ pub enum BatchQueryDataItem {
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct BatchQueryResponse {
+pub struct QBQueryResult {
     pub start_position: Option<usize>,
     pub max_results: Option<usize>,
     pub total_count: Option<usize>,
     // resource: Vec<T>,
     #[serde(flatten)]
-    pub data: Option<BatchQueryDataItem>,
+    pub data: Option<QBQueryResource>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub enum BatchItem {
-    Item(BatchItemData),
+pub enum QBBatchResponseData {
+    Item(QBResource),
     Fault(Fault),
-    QueryResponse(BatchQueryResponse),
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct BatchResponseItem {
-    #[serde(rename = "bId")]
-    pub b_id: String,
-    #[serde(flatten)]
-    pub item: BatchItem,
+    QueryResponse(QBQueryResult),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct BatchResponseExt {
     time: String,
     #[serde(rename = "BatchItemResponse")]
-    items: Vec<BatchResponseItem>,
+    items: Vec<QBBatchItem<QBBatchResponseData>>,
 }
 
 pub async fn qb_batch<I>(
     items: I,
     qb: &QBContext,
     client: &reqwest::Client,
-) -> Result<Vec<BatchResponseItem>, APIError>
+) -> Result<Vec<QBBatchItem<QBBatchResponseData>>, APIError>
 where
-    I: IntoIterator<Item = BatchItemRequest>,
+    I: IntoIterator<Item = QBBatchOperation>,
 {
-    let batch = BatchRequestExt {
+    let batch = QBBatchRequest {
         items: items
             .into_iter()
             .enumerate()
-            .map(|(i, f)| BatchItemRequestExt {
+            .map(|(i, f)| QBBatchItem {
                 b_id: format!("bId{}", i + 1),
                 item: f,
             })
@@ -146,7 +142,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::{BatchRequestExt, BatchResponseExt};
+    use super::{BatchResponseExt, QBBatchRequest};
     #[test]
     fn test_batch_resp() {
         let s = r#"{
@@ -324,7 +320,7 @@ mod test {
     }
   ]
 }"#;
-        let resp: BatchRequestExt = serde_json::from_str(s).unwrap();
+        let resp: QBBatchRequest = serde_json::from_str(s).unwrap();
         println!("{resp:#?}");
     }
 }
