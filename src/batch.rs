@@ -136,9 +136,15 @@ where
             .collect(),
     };
     let url = format!("company/{}/batch", qb.company_id);
+    let permit = qb
+        .batch_limiter
+        .acquire()
+        .await
+        .expect("Semaphore should not be closed");
     let resp = execute_request(qb, client, Method::POST, &url, Some(batch), None, None).await?;
     // let batch_resp = resp.text().await?;
     let batch_resp: BatchResponseExt = resp.json().await?;
+    drop(permit);
     // return Ok(batch_resp);
     Ok(batch_resp.items)
 }

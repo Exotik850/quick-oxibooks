@@ -32,8 +32,8 @@ pub struct QBContext {
     pub(crate) discovery_doc: DiscoveryDoc,
     #[serde(skip)]
     pub(crate) qbo_limiter: RateLimiter,
-    // #[serde(skip)]
-    // pub(crate) batch_limiter: RateLimiter,
+    #[serde(skip)]
+    pub(crate) batch_limiter: RateLimiter, // Batch endpoints have a different rate limit
 }
 
 pub struct RefreshableQBContext {
@@ -65,7 +65,7 @@ impl QBContext {
             expires_in: Utc::now() + chrono::Duration::hours(999),
             discovery_doc: DiscoveryDoc::get_async(environment, client).await?,
             qbo_limiter: RateLimiter::new(RATE_LIMIT, RESET_DURATION),
-            // batch_limiter: RateLimiter::new(BATCH_RATE_LIMIT, RESET_DURATION),
+            batch_limiter: RateLimiter::new(BATCH_RATE_LIMIT, RESET_DURATION),
         })
     }
 
