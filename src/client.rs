@@ -66,7 +66,7 @@ impl QBContext {
             company_id,
             access_token,
             expires_in: Utc::now() + chrono::Duration::hours(999),
-            discovery_doc: DiscoveryDoc::get(environment, client).await?,
+            discovery_doc: DiscoveryDoc::get_async(environment, client).await?,
             qbo_limiter: RateLimiter::new(RATE_LIMIT, RESET_DURATION),
             // batch_limiter: RateLimiter::new(BATCH_RATE_LIMIT, RESET_DURATION),
         })

@@ -106,16 +106,16 @@ impl DiscoveryDoc {
         Ok(resp.json().await?)
     }
 
-    pub async fn get(
+    pub fn get(
         environment: Environment,
-        client: &reqwest::Client,
+        client: &reqwest::blocking::Client,
     ) -> Result<Self, APIError> {
         let url = environment.discovery_url();
         let request = client.get(url).build()?;
-        let resp = client.execute(request).await?;
+        let resp = client.execute(request)?;
         if !resp.status().is_success() {
             return Err(APIError::BadTokenRequest(resp.text().await?));
         }
-        Ok(resp.json().await?)
+        Ok(resp.json()?)
     }
 }
