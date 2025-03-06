@@ -88,6 +88,10 @@ impl QBContext {
         }
     }
 
+    pub fn with_access_token(self, access_token: String) -> Self {
+        Self { access_token, ..self }
+    }
+
     /// Checks if the current context is expired
     #[must_use]
     pub fn is_expired(&self) -> bool {
