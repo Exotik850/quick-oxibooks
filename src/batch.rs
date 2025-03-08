@@ -152,13 +152,13 @@ where
     let mut items = HashMap::new();
 
     for item in batch.items {
-        items.insert(item.b_id.clone(), item);
+        items.insert(item.b_id, item.item);
     }
 
     let mut results = Vec::new();
     for resp_item in batch_resp.items {
         if let Some(req_item) = items.remove(&resp_item.b_id) {
-            results.push((req_item.item, resp_item.item));
+            results.push((req_item, resp_item.item));
         }
     }
 
