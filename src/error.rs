@@ -64,13 +64,13 @@ pub struct QBError {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(rename="UPPERCASE")]
+#[serde(rename = "UPPERCASE")]
 pub enum FaultType {
-  Authentication,
-  #[serde(rename = "ValidationFault")]
-  Validation,
-  // TODO Add the rest of the fault types
-  Other(String),
+    Authentication,
+    #[serde(rename = "ValidationFault")]
+    Validation,
+    // TODO Add the rest of the fault types
+    Other(String),
 }
 
 #[derive(Serialize, Deserialize, Debug)]

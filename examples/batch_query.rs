@@ -55,7 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         match item {
             quick_oxibooks::batch::QBBatchResponseData::QueryResponse(qr) => {
                 let msg = qr.data.map_or_else(|| "None", |_| "Found");
-                println!("{:?}: {}", op, msg);
+                println!("{op:?}: {msg}");
             }
             quick_oxibooks::batch::QBBatchResponseData::Fault(f) => {
                 println!("Error with {:?}: {:?}, ", op, f.r#type);
@@ -68,7 +68,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             _ => {
-                println!("{:?}: {:?}", op, item);
+                println!("{op:?}: {item:?}");
             }
         }
     }
