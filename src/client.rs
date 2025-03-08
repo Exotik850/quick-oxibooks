@@ -191,7 +191,7 @@ pub(crate) fn build_headers(
 pub(crate) fn build_request<B: serde::Serialize>(
     method: Method,
     path: &str,
-    body: Option<B>,
+    body: Option<&B>,
     query: Option<&[(&str, &str)]>,
     content_type: &str,
     environment: Environment,

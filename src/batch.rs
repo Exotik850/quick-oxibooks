@@ -141,7 +141,7 @@ where
         .acquire()
         .await
         .expect("Semaphore should not be closed");
-    let resp = execute_request(qb, client, Method::POST, &url, Some(batch), None, None).await?;
+    let resp = execute_request(qb, client, Method::POST, &url, Some(&batch), None, None).await?;
     // let batch_resp = resp.text().await?;
     let batch_resp: BatchResponseExt = resp.json().await?;
     drop(permit);
