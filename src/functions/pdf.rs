@@ -16,7 +16,7 @@ pub async fn qb_get_pdf_bytes<T: QBItem + QBPDFable>(
     let request = crate::client::build_request(
         Method::GET,
         &format!("company/{}/{}/{}/pdf", qb.company_id, T::qb_id(), id),
-        None::<()>,
+        None::<&()>,
         None,
         "application/json",
         qb.environment,
