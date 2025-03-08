@@ -1,6 +1,8 @@
 // Currently doesn't support batch voiding,
 // not going to be used so will implement when needed
 
+use std::collections::HashMap;
+
 use quickbooks_types::{Invoice, SalesReceipt, Vendor};
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
@@ -121,7 +123,8 @@ pub async fn qb_batch<I>(
     items: I,
     qb: &QBContext,
     client: &reqwest::Client,
-) -> Result<Vec<QBBatchItem<QBBatchResponseData>>, APIError>
+    // ) -> Result<Vec<QBBatchItem<QBBatchResponseData>>, APIError>
+) -> Result<Vec<(QBBatchOperation, QBBatchResponseData)>, APIError>
 where
     I: IntoIterator<Item = QBBatchOperation>,
 {
@@ -129,9 +132,9 @@ where
         items: items
             .into_iter()
             .enumerate()
-            .map(|(i, f)| QBBatchItem {
-                b_id: format!("bId{}", i + 1),
-                item: f,
+            .map(|(i, item)| {
+                let b_id = format!("bId{}", i + 1);
+                QBBatchItem { b_id, item }
             })
             .collect(),
     };
@@ -146,7 +149,20 @@ where
     let batch_resp: BatchResponseExt = resp.json().await?;
     drop(permit);
     // return Ok(batch_resp);
-    Ok(batch_resp.items)
+    let mut items = HashMap::new();
+
+    for item in batch.items {
+        items.insert(item.b_id.clone(), item);
+    }
+
+    let mut results = Vec::new();
+    for resp_item in batch_resp.items {
+        if let Some(req_item) = items.remove(&resp_item.b_id) {
+            results.push((req_item.item, resp_item.item));
+        }
+    }
+
+    Ok(results)
 }
 
 #[cfg(test)]
