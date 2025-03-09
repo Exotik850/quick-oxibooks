@@ -5,13 +5,28 @@ use crate::{error::APIError, QBContext};
 
 use super::{qb_request, QBResponse};
 
+pub trait QBRead {
+    fn read(
+        &mut self,
+        qb: &QBContext,
+        client: &Client,
+    ) -> impl std::future::Future<Output = Result<(), APIError>>
+    where
+        Self: Sized;
+}
+impl<T: QBItem> QBRead for T {
+    fn read(
+        &mut self,
+        qb: &QBContext,
+        client: &Client,
+    ) -> impl std::future::Future<Output = Result<(), APIError>> {
+        qb_read(self, qb, client)
+    }
+}
+
 /// Read the object by ID from quickbooks context
 /// and write it to an item
-pub async fn qb_read<T: QBItem>(
-    item: &mut T,
-    qb: &QBContext,
-    client: &Client,
-) -> Result<(), APIError> {
+async fn qb_read<T: QBItem>(item: &mut T, qb: &QBContext, client: &Client) -> Result<(), APIError> {
     let Some(id) = item.id() else {
         return Err(APIError::NoIdOnRead);
     };

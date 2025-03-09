@@ -46,6 +46,8 @@ pub enum APIError {
     EnvVarError(#[from] std::env::VarError),
     #[error("Invalid Batch Response, Missing items for : {0}")]
     BatchRequestMissingItems(BatchMissingItemsError),
+    #[error("Invalid File extenstion : {0}")]
+    InvalidFileExtension(String),
 }
 
 #[derive(Debug, thiserror::Error)]

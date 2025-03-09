@@ -4,7 +4,38 @@ use tokio::io::AsyncWriteExt;
 
 use crate::{error::APIError, Environment, QBContext};
 
-pub async fn qb_get_pdf_bytes<T: QBItem + QBPDFable>(
+pub trait QBGetPDF {
+    fn get_pdf_bytes(
+        &self,
+        qb: &QBContext,
+        client: &Client,
+    ) -> impl std::future::Future<Output = Result<Vec<u8>, APIError>>
+    where
+        Self: Sized;
+
+    fn save_pdf_to_file(
+        &self,
+        file_name: &str,
+        qb: &QBContext,
+        client: &Client,
+    ) -> impl std::future::Future<Output = Result<(), APIError>>
+    where
+        Self: Sized + QBPDFable + QBItem,
+    {
+        qb_save_pdf_to_file(self, file_name, qb, client)
+    }
+}
+impl<T: QBItem + QBPDFable> QBGetPDF for T {
+    fn get_pdf_bytes(
+        &self,
+        qb: &QBContext,
+        client: &Client,
+    ) -> impl std::future::Future<Output = Result<Vec<u8>, APIError>> {
+        qb_get_pdf_bytes(self, qb, client)
+    }
+}
+
+async fn qb_get_pdf_bytes<T: QBItem + QBPDFable>(
     item: &T,
     qb: &QBContext,
     client: &Client,
@@ -45,7 +76,7 @@ pub async fn qb_get_pdf_bytes<T: QBItem + QBPDFable>(
     Ok(response.bytes().await?.into())
 }
 
-pub async fn qb_save_pdf_to_file<T: QBItem + QBPDFable>(
+async fn qb_save_pdf_to_file<T: QBItem + QBPDFable>(
     item: &T,
     file_name: &str,
     qb: &QBContext,

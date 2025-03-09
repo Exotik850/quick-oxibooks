@@ -6,6 +6,39 @@ use crate::{error::APIError, QBContext};
 
 use super::qb_request;
 
+pub trait QBQuery {
+    fn query(
+        query_str: &str,
+        max_results: usize,
+        qb: &QBContext,
+        client: &Client,
+    ) -> impl std::future::Future<Output = Result<Vec<Self>, APIError>>
+    where
+        Self: Sized;
+
+    fn query_single(
+        query_str: &str,
+        qb: &QBContext,
+        client: &Client,
+    ) -> impl std::future::Future<Output = Result<Self, APIError>>
+    where
+        Self: Sized,
+    {
+        async { Ok(Self::query(query_str, 1, qb, client).await?.swap_remove(0)) }
+    }
+}
+
+impl<T: QBItem> QBQuery for T {
+    fn query(
+        query_str: &str,
+        max_results: usize,
+        qb: &QBContext,
+        client: &Client,
+    ) -> impl std::future::Future<Output = Result<Vec<Self>, APIError>> {
+        qb_query(query_str, max_results, qb, client)
+    }
+}
+
 /// Query the quickbooks context using the query string,
 /// The type determines what type of quickbooks object you are
 /// Query `QuickBooks` for objects matching the query string
@@ -18,7 +51,7 @@ use super::qb_request;
 /// ```ignore
 ///  "select * from {type_name} {query_str} MAXRESULTS {max_results}"
 /// ```
-pub async fn qb_query<T: QBItem>(
+async fn qb_query<T: QBItem>(
     query_str: &str,
     max_results: usize,
     qb: &QBContext,
@@ -54,17 +87,17 @@ pub async fn qb_query<T: QBItem>(
     }
 }
 
-/// Gets a single object via query from the `QuickBooks` API
-///
-/// Handles retrieving a `QBItem` via query,
-/// refer to `qb_query` for more details
-pub async fn qb_query_single<T: QBItem>(
-    query_str: &str,
-    qb: &QBContext,
-    client: &Client,
-) -> Result<T, APIError> {
-    Ok(qb_query(query_str, 1, qb, client).await?.swap_remove(0))
-}
+// /// Gets a single object via query from the `QuickBooks` API
+// ///
+// /// Handles retrieving a `QBItem` via query,
+// /// refer to `qb_query` for more details
+// async fn qb_query_single<T: QBItem>(
+//     query_str: &str,
+//     qb: &QBContext,
+//     client: &Client,
+// ) -> Result<T, APIError> {
+//     Ok(qb_query(query_str, 1, qb, client).await?.swap_remove(0))
+// }
 
 /// Internal struct that Quickbooks returns when querying objects
 #[derive(Debug, Clone, Default, Deserialize)]

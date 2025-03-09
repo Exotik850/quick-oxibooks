@@ -8,10 +8,26 @@ use crate::{
     QBContext,
 };
 
+pub trait QBDelete {
+    fn delete(
+        &self,
+        qb: &QBContext,
+        client: &Client,
+    ) -> impl std::future::Future<Output = Result<QBDeleted, APIError>>
+    where
+        Self: Sized;
+}
+
+impl<T: QBItem + QBDeletable> QBDelete for T {
+    fn delete(&self, qb: &QBContext, client: &Client) -> impl std::future::Future<Output = Result<QBDeleted, APIError>> {
+        qb_delete(self, qb, client)
+    }
+}
+
 /// Deletes the given item using the ID
 /// returns an error if the item has no ID and sync token
 /// available or if the request itself fails
-pub async fn qb_delete<T: QBItem + QBDeletable>(
+async fn qb_delete<T: QBItem + QBDeletable>(
     item: &T,
     qb: &QBContext,
     client: &Client,

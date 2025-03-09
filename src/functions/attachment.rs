@@ -25,7 +25,10 @@ async fn _make_file_part(file_name: impl AsRef<Path>) -> Result<Part, APIError> 
 
     // Would've returned an error already if it was directory, safe to unwrap
     let ext: PathBuf = file_name.as_ref().to_path_buf();
-    let ct = content_type_from_ext(ext.extension().unwrap().to_str().unwrap());
+    let extension = ext.extension().unwrap().to_str().unwrap();
+    let Some(ct) = content_type_from_ext(extension) else {
+        return Err(APIError::InvalidFileExtension(extension.to_string()));
+    };
 
     let file_part = Part::bytes(encoded.into_bytes())
         .mime_str(ct)?
@@ -42,12 +45,32 @@ async fn _make_file_part(file_name: impl AsRef<Path>) -> Result<Part, APIError> 
     Ok(file_part)
 }
 
+pub trait QBUpload {
+    fn upload(
+        &self,
+        qb: &QBContext,
+        client: &Client,
+    ) -> impl std::future::Future<Output = Result<Self, APIError>>
+    where
+        Self: Sized;
+}
+
+impl QBUpload for Attachable {
+    fn upload(
+        &self,
+        qb: &QBContext,
+        client: &Client,
+    ) -> impl std::future::Future<Output = Result<Self, APIError>> {
+        qb_upload(self, qb, client)
+    }
+}
+
 /// Attach a file to another Quickbooks objct
 /// via a `Attachable` object
 ///
 /// Uploads the file and makes the `attachable` object
 /// in QuickBooks.
-pub async fn qb_upload(
+async fn qb_upload(
     attachable: &Attachable,
     qb: &QBContext,
     client: &Client,

@@ -7,9 +7,24 @@ use crate::{
     QBContext,
 };
 
+pub trait QBCreate {
+    fn create(
+        &self,
+        qb: &QBContext,
+        client: &Client,
+    ) -> impl std::future::Future<Output = Result<Self, APIError>> 
+    where
+        Self: Sized; 
+}
+impl<T: QBItem + QBCreatable> QBCreate for T {
+    async fn create(&self, qb: &QBContext, client: &Client) -> Result<Self, APIError> {
+        qb_create(self, qb, client).await
+    } 
+}
+
 /// Creates the given item using the context given, but first
 /// checks if the item is suitable to be created.
-pub async fn qb_create<T: QBItem + QBCreatable>(
+async fn qb_create<T: QBItem + QBCreatable>(
     item: &T,
     qb: &QBContext,
     client: &Client,
