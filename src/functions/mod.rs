@@ -37,13 +37,9 @@ where
     T: Serialize,
     U: serde::de::DeserializeOwned,
 {
-    let permit = qb
-        .qbo_limiter
-        .acquire()
-        .await
-        .expect("Semaphore should not be closed");
-    let response = execute_request(qb, client, method, path, body, content_type, query).await?;
-    drop(permit);
+    let response = qb
+        .with_permission(|qb| execute_request(qb, client, method, path, body, content_type, query))
+        .await?;
     Ok(response.json().await?)
 }
 

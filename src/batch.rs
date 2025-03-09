@@ -169,14 +169,12 @@ where
             .collect(),
     };
     let url = format!("company/{}/batch", qb.company_id);
-    let permit = qb
-        .batch_limiter
-        .acquire()
-        .await
-        .expect("Semaphore should not be closed");
-    let resp = execute_request(qb, client, Method::POST, &url, Some(&batch), None, None).await?;
+    let resp = qb
+        .with_batch_permission(|qb| {
+            execute_request(qb, client, Method::POST, &url, Some(&batch), None, None)
+        })
+        .await?;
     let batch_resp: BatchResponseExt = resp.json().await?;
-    drop(permit);
     let mut items = batch
         .items
         .into_iter()
@@ -215,5 +213,4 @@ mod test {
         let resp: QBBatchRequest = serde_json::from_str(s).unwrap();
         println!("{resp:#?}");
     }
-
 }

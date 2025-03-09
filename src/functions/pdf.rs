@@ -55,13 +55,7 @@ async fn qb_get_pdf_bytes<T: QBItem + QBPDFable>(
         &qb.access_token,
     )?;
 
-    let permit = qb
-        .qbo_limiter
-        .acquire()
-        .await
-        .expect("Semaphore should not be closed");
-    let response = client.execute(request).await?;
-    drop(permit);
+    let response = qb.with_permission(|qb| client.execute(request)).await?;
 
     if !response.status().is_success() {
         return Err(APIError::BadRequest(response.json().await?));
