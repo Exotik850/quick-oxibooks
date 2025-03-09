@@ -20,6 +20,8 @@ pub enum APIError {
     QBTypeError(#[from] QBTypeError),
     #[error("No query objects returned for query_str : {0}")]
     NoQueryObjects(String),
+    #[error("Invalid Client! Try re-authenticating")]
+    InvalidClient,
     #[error("Trying to update an object when it doesn't have an ID set")]
     NoIdOnRead,
     #[error("Trying to send object email when it doesn't have an ID set")]
