@@ -1,7 +1,7 @@
 // Currently doesn't support batch voiding,
 // not going to be used so will implement when needed
 
-use std::collections::HashMap;
+use std::{collections::HashMap, future::Future};
 
 use quickbooks_types::{Invoice, SalesReceipt, Vendor};
 use reqwest::Method;
@@ -26,7 +26,7 @@ pub struct QBResourceOperation {
     pub operation: QBOperationType,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum QBOperationType {
     Create,
@@ -55,25 +55,25 @@ impl QBBatchOperation {
     }
 
     #[must_use]
-    pub fn create(resource: QBResource) -> Self {
+    pub fn create(resource: impl Into<QBResource>) -> Self {
         QBBatchOperation::Operation(QBResourceOperation {
-            resource,
+            resource: resource.into(),
             operation: QBOperationType::Create,
         })
     }
 
     #[must_use]
-    pub fn update(resource: QBResource) -> Self {
+    pub fn update(resource: impl Into<QBResource>) -> Self {
         QBBatchOperation::Operation(QBResourceOperation {
-            resource,
+            resource: resource.into(),
             operation: QBOperationType::Update,
         })
     }
 
     #[must_use]
-    pub fn delete(resource: QBResource) -> Self {
+    pub fn delete(resource: impl Into<QBResource>) -> Self {
         QBBatchOperation::Operation(QBResourceOperation {
-            resource,
+            resource: resource.into(),
             operation: QBOperationType::Delete,
         })
     }
@@ -119,6 +119,36 @@ struct BatchResponseExt {
     items: Vec<QBBatchItem<QBBatchResponseData>>,
 }
 
+pub trait BatchIterator {
+    fn batch(
+        self,
+        qb: &QBContext,
+        client: &reqwest::Client,
+    ) -> impl Future<Output = Result<Vec<(QBBatchOperation, QBBatchResponseData)>, APIError>>;
+}
+
+impl<I> BatchIterator for I
+where
+    I: IntoIterator<Item = QBBatchOperation>,
+{
+    fn batch(
+        self,
+        qb: &QBContext,
+        client: &reqwest::Client,
+    ) -> impl Future<Output = Result<Vec<(QBBatchOperation, QBBatchResponseData)>, APIError>> {
+        qb_batch(self, qb, client)
+    }
+}
+
+/// Executes a batch request to QuickBooks Online API.
+///
+/// # Parameters
+/// - `items`: An iterator of `QBBatchOperation` items to be included in the batch request.
+/// - `client`: A reference to the `reqwest::Client` for making HTTP requests.
+///
+/// # Returns
+/// A `Result` containing a vector of tuples, where each tuple consists of a `QBBatchOperation` and its corresponding `QBBatchResponseData`.
+/// If the request fails or some items are missing in the response, an `APIError` is returned.
 pub async fn qb_batch<I>(
     items: I,
     qb: &QBContext,
@@ -145,16 +175,13 @@ where
         .await
         .expect("Semaphore should not be closed");
     let resp = execute_request(qb, client, Method::POST, &url, Some(&batch), None, None).await?;
-    // let batch_resp = resp.text().await?;
     let batch_resp: BatchResponseExt = resp.json().await?;
     drop(permit);
-    // return Ok(batch_resp);
-    let mut items = HashMap::new();
-
-    for item in batch.items {
-        items.insert(item.b_id, item.item);
-    }
-
+    let mut items = batch
+        .items
+        .into_iter()
+        .map(|item| (item.b_id, item.item))
+        .collect::<HashMap<_, _>>();
     let mut results = Vec::new();
     for resp_item in batch_resp.items {
         if let Some(req_item) = items.remove(&resp_item.b_id) {
@@ -188,4 +215,5 @@ mod test {
         let resp: QBBatchRequest = serde_json::from_str(s).unwrap();
         println!("{resp:#?}");
     }
+
 }
