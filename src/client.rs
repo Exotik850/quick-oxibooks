@@ -1,4 +1,4 @@
-use std::{ops::Deref, time::Duration};
+use std::{future::Future, ops::Deref, time::Duration};
 
 use base64::Engine;
 use chrono::{DateTime, Utc};
@@ -90,6 +90,32 @@ impl QBContext {
             access_token,
             ..self
         }
+    }
+
+    /// Acquires a permit from the rate limiter and executes the given function
+    /// with the given context
+    pub(crate) async fn with_permission<'a, F, FF, T>(&'a self, f: F) -> Result<T, APIError>
+    where
+        F: FnOnce(&'a Self) -> FF,
+        FF: Future<Output = Result<T, APIError>>,
+    {
+        let permit = self.qbo_limiter.acquire().await.expect("Semaphore should not be closed");
+        let out = f(self).await;
+        drop(permit);
+        out
+    }
+
+    /// Acquires a permit from the batch rate limiter and executes the given function
+    /// with the given context
+    pub(crate) async fn with_batch_permission<'a, F, FF, T>(&'a self, f: F) -> Result<T, APIError>
+    where
+        F: FnOnce(&'a Self) -> FF,
+        FF: Future<Output = Result<T, APIError>>,
+    {
+        let permit = self.batch_limiter.acquire().await.expect("Semaphore should not be closed");
+        let out = f(self).await;
+        drop(permit);
+        out
     }
 
     /// Checks if the current context is expired
@@ -191,7 +217,7 @@ pub(crate) fn build_headers(
 pub(crate) fn build_request<B: serde::Serialize>(
     method: Method,
     path: &str,
-    body: Option<B>,
+    body: Option<&B>,
     query: Option<&[(&str, &str)]>,
     content_type: &str,
     environment: Environment,

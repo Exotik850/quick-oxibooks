@@ -1,6 +1,8 @@
 use quickbooks_types::QBTypeError;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+
+use crate::batch::{QBBatchOperation, QBBatchResponseData};
 // #[allow(dead_code)]
 // TODO Split this into multiple error types, currently all errors are lumped into one enum
 #[derive(Debug, thiserror::Error)]
@@ -44,6 +46,26 @@ pub enum APIError {
     BatchLimitExceeded,
     #[error("Env Var error : {0}")]
     EnvVarError(#[from] std::env::VarError),
+    #[error("Invalid Batch Response, Missing items for : {0}")]
+    BatchRequestMissingItems(BatchMissingItemsError),
+    #[error("Invalid File extenstion : {0}")]
+    InvalidFileExtension(String),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub struct BatchMissingItemsError {
+    pub items: std::collections::HashMap<String, crate::batch::QBBatchOperation>,
+    pub results: Vec<(QBBatchOperation, QBBatchResponseData)>,
+}
+
+impl std::fmt::Display for BatchMissingItemsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "BatchRequestMissingItems : {{ Missing Items: {:#?}, \n Results : {:#?} }}",
+            self.items, self.results
+        )
+    }
 }
 
 impl Serialize for APIError {
@@ -66,13 +88,13 @@ pub struct QBError {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(rename="UPPERCASE")]
+#[serde(rename = "UPPERCASE")]
 pub enum FaultType {
-  Authentication,
-  #[serde(rename = "ValidationFault")]
-  Validation,
-  // TODO Add the rest of the fault types
-  Other(String),
+    Authentication,
+    #[serde(rename = "ValidationFault")]
+    Validation,
+    // TODO Add the rest of the fault types
+    Other(String),
 }
 
 #[derive(Serialize, Deserialize, Debug)]

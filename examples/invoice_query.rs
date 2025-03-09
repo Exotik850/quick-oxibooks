@@ -1,4 +1,4 @@
-use quick_oxibooks::{error::APIError, functions::qb_query_single, QBContext};
+use quick_oxibooks::{error::APIError, functions::query::QBQuery, QBContext};
 use quickbooks_types::Invoice;
 
 #[tokio::main]
@@ -21,8 +21,8 @@ async fn main() -> Result<(), APIError> {
     let client = reqwest::Client::new();
     let qb = QBContext::new(environment, company_id, access_token, &client).await?;
 
-    let inv: Invoice =
-        qb_query_single(&format!(r"where DocNumber = '{doc_number}'"), &qb, &client).await?;
+    let inv =
+        Invoice::query_single(&format!(r"where DocNumber = '{doc_number}'"), &qb, &client).await?;
 
     println!("{inv}");
 

@@ -1,4 +1,4 @@
-use quick_oxibooks::{batch::QBBatchOperation, QBContext};
+use quick_oxibooks::{batch::{BatchIterator, QBBatchOperation}, QBContext};
 
 enum ArgFlag {
     AccessToken,
@@ -50,15 +50,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             r#"select * from {object_type} where DocNumber = '{num}'"#
         ))));
     }
-    let batch_resp = quick_oxibooks::batch::qb_batch(batch_items, &qb, &client).await?;
-    for item in batch_resp {
-        match item.item {
+    let batch_resp = batch_items.batch(&qb, &client).await?;
+    for (op, item) in batch_resp {
+        match item {
             quick_oxibooks::batch::QBBatchResponseData::QueryResponse(qr) => {
                 let msg = qr.data.map_or_else(|| "None", |_| "Found");
-                println!("{}: {}", item.b_id, msg);
+                println!("{op:?}: {msg}");
             }
             quick_oxibooks::batch::QBBatchResponseData::Fault(f) => {
-                println!("Error with {}: {:?}, ", item.b_id, f.r#type);
+                println!("Error with {:?}: {:?}, ", op, f.r#type);
                 for fault in f.error {
                     println!(
                         "\t- {} : {}",
@@ -68,7 +68,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             _ => {
-                println!("{}: {:?}", item.b_id, item.item);
+                println!("{op:?}: {item:?}");
             }
         }
     }
