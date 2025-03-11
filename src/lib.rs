@@ -1,3 +1,50 @@
+//! # Quick Oxibooks Library
+//!
+//! This library provides a Rust interface for interacting with the `QuickBooks` API.
+//! It includes modules for handling various aspects of the API, such as batch operations,
+//! client management, error handling, and more.
+//!
+//! ## Modules
+//!
+//! - `batch`: Contains functionality for batch operations.
+//! - `client`: Manages the `QuickBooks` client context.
+//! - `error`: Defines error types used throughout the library.
+//! - `types`: Re-exports types from the `quickbooks_types` crate.
+//! - `functions`: Contains various utility functions for interacting with the API.
+//! - `limiter`: Provides rate limiting functionality (crate-private).
+//! - `macros`: Contains macros for use with the library (optional).
+//!
+//! ## Features
+//!
+//! - `attachments`: Enables attachment-related functions.
+//! - `pdf`: Enables PDF-related functions.
+//! - `macros`: Enables macros for use with the library.
+//!
+//! ## Enums
+//!
+//! - `Environment`: Represents the environment (production or sandbox) for the `QuickBooks` API.
+//!
+//! ## Structs
+//!
+//! - `DiscoveryDoc`: Represents the discovery document for the `QuickBooks` API.
+//!
+//! ## Usage
+//!
+//! To use this library, add it as a dependency in your `Cargo.toml`:
+//!
+//! ```toml
+//! [dependencies]
+//! quick-oxibooks = "0.1.0"
+//! ```
+//!
+//! Then, import the necessary modules and types in your code:
+//!
+//! ```rust
+//! use quick_oxibooks::client::QBContext;
+//! use quick_oxibooks::Environment;
+//! ```
+//!
+//! For more detailed usage examples, refer to the documentation for each module and type.
 #![warn(clippy::pedantic)]
 
 pub mod batch;
