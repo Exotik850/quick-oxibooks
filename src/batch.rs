@@ -1,6 +1,68 @@
-// Currently doesn't support batch voiding,
-// not going to be used so will implement when needed
-
+//! # `QuickBooks` Online Batch Request Module
+//!
+//! This module provides functionality for making batch requests to the `QuickBooks` Online API.
+//! Batch requests allow you to combine multiple operations into a single API call,
+//! which can help improve performance and reduce rate limiting issues.
+//!
+//! ## Key Features
+//!
+//! - Execute multiple `QuickBooks` operations in a single API call
+//! - Support for create, update, delete operations on various resource types
+//! - Support for query operations to fetch multiple resources at once
+//! - Type-safe API with enum-based resource handling
+//!
+//! ## Usage Example
+//!
+//! ```rust
+//! use quick_oxibooks::{
+//!     batch::{QBBatchOperation, BatchIterator},
+//!     QBContext,
+//! };
+//! use quickbooks_types::{Invoice, Vendor};
+//!
+//! async fn batch_example(qb: &QBContext, client: &reqwest::Client) -> Result<(), Box<dyn std::error::Error>> {
+//!     // Create a collection of operations
+//!     let operations = vec![
+//!         // Query for invoices
+//!         QBBatchOperation::query("SELECT * FROM Invoice WHERE TotalAmt > '100.00' MAXRESULTS 10"),
+//!         
+//!         // Create a new vendor
+//!         QBBatchOperation::create(Vendor {
+//!             display_name: Some("New Supplier Inc.".to_string()),
+//!             ..Default::default()
+//!         }),
+//!         
+//!         // Update an existing invoice
+//!         QBBatchOperation::update(Invoice {
+//!             id: Some("123".to_string()),
+//!             // ... other fields
+//!             ..Default::default()
+//!         }),
+//!     ];
+//!
+//!     // Execute the batch request
+//!     let results = operations.batch(qb, client).await?;
+//!     
+//!     // Process the results
+//!     for (operation, response) in results {
+//!         // Handle each response based on the operation type
+//!         match response {
+//!             // Handle different response types...
+//!             _ => println!("Got a response!"),
+//!         }
+//!     }
+//!     
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ## Best Practices
+//!
+//! - Combine related operations in a single batch to minimize API calls
+//! - Keep batch sizes reasonable (`QuickBooks` allows no more than 30 operations per batch, 40 req / min)
+//! - Handle potential partial failures where some operations succeed while others fail
+//! - Use the appropriate operation type (create, update, delete, query) for each task
+//!
 use std::{collections::HashMap, future::Future};
 
 use quickbooks_types::{Invoice, SalesReceipt, Vendor};
@@ -13,12 +75,16 @@ use crate::{
     QBContext,
 };
 
+/// Batch request structure for `QuickBooks` Online API
+///
+/// Internal use only, not meant to be used directly.
 #[derive(Serialize, Deserialize, Debug)]
 struct QBBatchRequest {
     #[serde(rename = "BatchItemRequest")]
     items: Vec<QBBatchItem<QBBatchOperation>>,
 }
 
+/// Represents a resource operation in a batch request
 #[derive(Serialize, Deserialize, Debug)]
 pub struct QBResourceOperation {
     #[serde(flatten)]
@@ -34,6 +100,8 @@ pub enum QBOperationType {
     Delete,
 }
 
+/// Represents a batch item in a batch request,
+/// Essentially adds a unique identifier to each item.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct QBBatchItem<T> {
     #[serde(rename = "bId")]
@@ -42,6 +110,7 @@ pub struct QBBatchItem<T> {
     pub item: T,
 }
 
+/// Represents a batch operation, which can be either a query or a resource operation.
 #[derive(Serialize, Deserialize, Debug)]
 pub enum QBBatchOperation {
     Query(String),
@@ -79,6 +148,8 @@ impl QBBatchOperation {
     }
 }
 
+/// Represents a resource in a batch request,
+/// TODO, Make this more generic as needed.
 #[derive(Serialize, Deserialize, Debug)]
 pub enum QBResource {
     SalesReceipt(SalesReceipt),
@@ -87,6 +158,8 @@ pub enum QBResource {
     // TODO Add more as needed
 }
 
+/// Represents the result of a query operation in a batch request.
+/// TODO, Make this more generic as needed.
 #[derive(Serialize, Deserialize, Debug)]
 pub enum QBQueryResource {
     SalesReceipt(Vec<SalesReceipt>),
@@ -94,6 +167,7 @@ pub enum QBQueryResource {
     // TODO Add more as needed
 }
 
+/// Represents the result of a query operation in a batch request.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct QBQueryResult {
@@ -105,6 +179,7 @@ pub struct QBQueryResult {
     pub data: Option<QBQueryResource>,
 }
 
+/// Represents the response data for a batch request item.
 #[derive(Serialize, Deserialize, Debug)]
 pub enum QBBatchResponseData {
     Item(QBResource),
@@ -112,6 +187,9 @@ pub enum QBBatchResponseData {
     QueryResponse(QBQueryResult),
 }
 
+/// Represents the response structure for a batch request.
+///
+/// Internal use only, not meant to be used directly.
 #[derive(Serialize, Deserialize, Debug)]
 struct BatchResponseExt {
     time: String,
@@ -119,7 +197,15 @@ struct BatchResponseExt {
     items: Vec<QBBatchItem<QBBatchResponseData>>,
 }
 
+/// `BatchIterator` trait for iterating over batch operations.
+///
+/// Allows for executing batch requests in a more ergonomic way.
 pub trait BatchIterator {
+    /// Executes a batch request, returning a future that resolves to the result.
+    ///
+    /// The result is a vector of tuples, where each tuple consists of a `QBBatchOperation` and its corresponding `QBBatchResponseData`.
+    ///
+    /// If the request fails or some items are missing in the response, an `APIError` is returned.
     fn batch(
         self,
         qb: &QBContext,
