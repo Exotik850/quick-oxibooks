@@ -1,5 +1,29 @@
 use std::path::{Path, PathBuf};
-
+//! Module for handling attachments in QuickBooks Online
+//! 
+//! This module provides functionality for uploading files as attachments
+//! to QuickBooks Online objects. It handles the file encoding, metadata,
+//! and multipart form upload process.
+//! 
+//! # Example
+//! 
+//! ```rust
+//! use quickbooks_types::Attachable;
+//! use quick_oxibooks::functions::attachment::QBUpload;
+//! 
+//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! # let qb_context = todo!();
+//! # let client = reqwest::Client::new();
+//! let attachment = Attachable {
+//!     file_name: Some("invoice.pdf".into()),
+//!     note: Some("Invoice attachment".into()),
+//!     ..Default::default()
+//! };
+//! 
+//! let uploaded = attachment.upload(&qb_context, &client).await?;
+//! # Ok(())
+//! # }
+//! ```
 use base64::Engine;
 use quickbooks_types::{content_type_from_ext, Attachable, QBAttachable};
 use reqwest::{
