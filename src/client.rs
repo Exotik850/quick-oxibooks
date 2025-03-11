@@ -99,7 +99,11 @@ impl QBContext {
         F: FnOnce(&'a Self) -> FF,
         FF: Future<Output = Result<T, APIError>>,
     {
-        let permit = self.qbo_limiter.acquire().await.expect("Semaphore should not be closed");
+        let permit = self
+            .qbo_limiter
+            .acquire()
+            .await
+            .expect("Semaphore should not be closed");
         let out = f(self).await;
         drop(permit);
         out
@@ -112,7 +116,11 @@ impl QBContext {
         F: FnOnce(&'a Self) -> FF,
         FF: Future<Output = Result<T, APIError>>,
     {
-        let permit = self.batch_limiter.acquire().await.expect("Semaphore should not be closed");
+        let permit = self
+            .batch_limiter
+            .acquire()
+            .await
+            .expect("Semaphore should not be closed");
         let out = f(self).await;
         drop(permit);
         out

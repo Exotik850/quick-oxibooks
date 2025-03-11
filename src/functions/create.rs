@@ -16,14 +16,14 @@ pub trait QBCreate {
         &self,
         qb: &QBContext,
         client: &Client,
-    ) -> impl std::future::Future<Output = Result<Self, APIError>> 
+    ) -> impl std::future::Future<Output = Result<Self, APIError>>
     where
-        Self: Sized; 
+        Self: Sized;
 }
 impl<T: QBItem + QBCreatable> QBCreate for T {
     async fn create(&self, qb: &QBContext, client: &Client) -> Result<Self, APIError> {
         qb_create(self, qb, client).await
-    } 
+    }
 }
 
 /// Creates the given item using the context given, but first

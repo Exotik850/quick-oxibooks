@@ -1,4 +1,7 @@
-use quick_oxibooks::{batch::{BatchIterator, QBBatchOperation}, QBContext};
+use quick_oxibooks::{
+    batch::{BatchIterator, QBBatchOperation},
+    QBContext,
+};
 
 enum ArgFlag {
     AccessToken,

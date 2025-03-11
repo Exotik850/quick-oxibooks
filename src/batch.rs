@@ -140,7 +140,7 @@ where
     }
 }
 
-/// Executes a batch request to QuickBooks Online API.
+/// Executes a batch request to `QuickBooks` Online API.
 ///
 /// # Parameters
 /// - `items`: An iterator of `QBBatchOperation` items to be included in the batch request.

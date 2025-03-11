@@ -23,7 +23,11 @@ pub trait QBDelete {
 }
 
 impl<T: QBItem + QBDeletable> QBDelete for T {
-    fn delete(&self, qb: &QBContext, client: &Client) -> impl std::future::Future<Output = Result<QBDeleted, APIError>> {
+    fn delete(
+        &self,
+        qb: &QBContext,
+        client: &Client,
+    ) -> impl std::future::Future<Output = Result<QBDeleted, APIError>> {
         qb_delete(self, qb, client)
     }
 }
