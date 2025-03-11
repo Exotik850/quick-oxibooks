@@ -1,3 +1,59 @@
+//! # QuickBooks Online API Client
+//!
+//! This module provides functionality to interact with the QuickBooks Online API.
+//!
+//! ## Usage
+//!
+//! The primary way to interact with the QuickBooks Online API is through the `QBContext` struct,
+//! which manages authentication, rate limiting, and API discovery information.
+//!
+//! ### Creating a Context
+//!
+//! There are several ways to create a `QBContext`:
+//!
+//! ```
+//! // Create from environment variables
+//! let client = reqwest::Client::new();
+//! let context = QBContext::new_from_env(Environment::Sandbox, &client).await?;
+//!
+//! // Create manually
+//! let context = QBContext::new(
+//!     Environment::Production,
+//!     "company_id".to_string(),
+//!     "access_token".to_string(),
+//!     &client
+//! ).await?;
+//!
+//! // Create with refresh token capability
+//! let refreshable_context = context.with_refresh("refresh_token".to_string());
+//! ```
+//!
+//! ### Handling Rate Limits
+//!
+//! The context automatically handles rate limiting for both regular API calls and batch operations.
+//! When making API calls, use the `with_permission` or `with_batch_permission` methods to respect rate limits:
+//!
+//! ```
+//! context.with_permission(|ctx| async {
+//!     // Your API call here that uses ctx
+//! }).await?;
+//! ```
+//!
+//! ### Refreshing Tokens
+//!
+//! If you need to refresh access tokens, use the `RefreshableQBContext`:
+//!
+//! ```
+//! refreshable_context.refresh_access_token("client_id", "client_secret", &client).await?;
+//! ```
+//!
+//! ### Rate Limits
+//!
+//! - Sandbox: 500 requests per minute
+//! - Production: 500 requests per minute, 10 requests per second
+//! - Batch operations: 30 requests per batch, 40 batches per minute
+//!
+//! After being throttled, wait 60 seconds before retrying.
 use std::{future::Future, ops::Deref, time::Duration};
 
 use base64::Engine;
@@ -9,7 +65,11 @@ use reqwest::{
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::{error::APIError, limiter::RateLimiter, DiscoveryDoc, Environment};
+use crate::{
+    error::{APIError, QBErrorResponse},
+    limiter::RateLimiter,
+    DiscoveryDoc, Environment,
+};
 
 // Rate Limit:
 // Sandbox - 500 req / min
@@ -21,18 +81,19 @@ const RATE_LIMIT: usize = 500;
 const BATCH_RATE_LIMIT: usize = 40;
 const RESET_DURATION: Duration = Duration::from_secs(60);
 
-#[derive(Serialize)]
+/// QuickBooks Online Context
+/// 
+/// This struct holds the context for interacting with the QuickBooks Online API.
+/// It includes authentication details, rate limiters, and discovery document.
+/// 
+/// Note: The `expires_in` field is set to a far future date by default and should be updated upon token refresh.
 pub struct QBContext {
     pub(crate) environment: Environment,
     pub(crate) company_id: String,
     pub(crate) access_token: String,
     pub(crate) expires_in: DateTime<Utc>,
-    // TODO Check if this should be in an option
-    // pub(crate) refresh_token: Option<String>,
     pub(crate) discovery_doc: DiscoveryDoc,
-    #[serde(skip)]
     pub(crate) qbo_limiter: RateLimiter,
-    #[serde(skip)]
     pub(crate) batch_limiter: RateLimiter, // Batch endpoints have a different rate limit
 }
 
@@ -69,6 +130,11 @@ impl QBContext {
         })
     }
 
+    /// Creates a new `QBContext` from environment variables
+    /// 
+    /// Environment variables:
+    /// - `QB_COMPANY_ID`
+    /// - `QB_ACCESS_TOKEN`
     pub async fn new_from_env(environment: Environment, client: &Client) -> Result<Self, APIError> {
         let company_id = std::env::var("QB_COMPANY_ID")?;
         let access_token = std::env::var("QB_ACCESS_TOKEN")?;
@@ -76,6 +142,7 @@ impl QBContext {
         Ok(context)
     }
 
+    /// Creates a `RefreshableQBContext` from the current context and a refresh token
     #[must_use]
     pub fn with_refresh(self, refresh_token: String) -> RefreshableQBContext {
         RefreshableQBContext {
@@ -84,6 +151,7 @@ impl QBContext {
         }
     }
 
+    /// Updates the access token in the context
     #[must_use]
     pub fn with_access_token(self, access_token: String) -> Self {
         Self {
@@ -132,6 +200,7 @@ impl QBContext {
         chrono::Utc::now() >= self.expires_in
     }
 
+    /// Checks if the current access token is authorized
     pub async fn check_authorized(&self, client: &Client) -> Result<bool, APIError> {
         let request = client
             .request(Method::GET, self.environment.user_info_url())
@@ -141,10 +210,10 @@ impl QBContext {
         let response = client.execute(request).await?;
         let status = response.status();
         if !status.is_success() {
-            println!(
+            log::error!(
                 "Failed to check authorized status: {} - {}",
                 status,
-                response.text().await?
+                response.json::<QBErrorResponse>().await?
             );
         }
         Ok(status.is_success())
@@ -152,6 +221,7 @@ impl QBContext {
 }
 
 impl RefreshableQBContext {
+    /// Refreshes the access token using the refresh token
     pub async fn refresh_access_token(
         &mut self,
         client_id: &str,
