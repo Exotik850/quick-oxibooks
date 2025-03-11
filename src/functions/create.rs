@@ -7,7 +7,11 @@ use crate::{
     QBContext,
 };
 
+/// Trait for creating an item
 pub trait QBCreate {
+    /// Creates the item
+    /// returns an error if the item is not suitable for creation
+    /// or if the request itself fails
     fn create(
         &self,
         qb: &QBContext,

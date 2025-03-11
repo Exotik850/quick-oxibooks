@@ -6,7 +6,16 @@ use crate::{error::APIError, QBContext};
 
 use super::qb_request;
 
+/// Trait for querying QuickBooks objects
 pub trait QBQuery {
+    /// Queries the QuickBooks API for objects of type T
+    /// Returns a vector of objects of type T
+    /// `max_results` limits the number of results returned
+    /// `query_str` is the query string to use,
+    ///  this will be placed into the query like so:
+    /// ```ignore
+    /// "select * from {type_name} {query_str} MAXRESULTS {max_results}"
+    /// ```
     fn query(
         query_str: &str,
         max_results: usize,
@@ -16,6 +25,13 @@ pub trait QBQuery {
     where
         Self: Sized;
 
+    /// Queries the QuickBooks API for a single object of type T
+    /// Returns the object of type T
+    /// `query_str` is the query string to use,
+    ///  this will be placed into the query like so:
+    /// ```ignore
+    /// "select * from {type_name} {query_str} MAXRESULTS {max_results}"
+    /// ```
     fn query_single(
         query_str: &str,
         qb: &QBContext,

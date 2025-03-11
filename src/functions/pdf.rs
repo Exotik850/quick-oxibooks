@@ -4,7 +4,11 @@ use tokio::io::AsyncWriteExt;
 
 use crate::{error::APIError, Environment, QBContext};
 
+/// Trait for getting a PDF of an item
 pub trait QBGetPDF {
+    /// Gets the PDF bytes
+    /// returns an error if the item has no ID
+    /// or if the request itself fails
     fn get_pdf_bytes(
         &self,
         qb: &QBContext,
@@ -13,6 +17,9 @@ pub trait QBGetPDF {
     where
         Self: Sized;
 
+    /// Saves the PDF to a file
+    /// returns an error if the item has no ID
+    /// or if the request itself fails
     fn save_pdf_to_file(
         &self,
         file_name: &str,
@@ -35,6 +42,9 @@ impl<T: QBItem + QBPDFable> QBGetPDF for T {
     }
 }
 
+/// Gets the PDF bytes of the item
+/// returns an error if the item has no ID
+/// or if the request itself fails
 async fn qb_get_pdf_bytes<T: QBItem + QBPDFable>(
     item: &T,
     qb: &QBContext,

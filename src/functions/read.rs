@@ -10,9 +10,7 @@ pub trait QBRead {
         &mut self,
         qb: &QBContext,
         client: &Client,
-    ) -> impl std::future::Future<Output = Result<(), APIError>>
-    where
-        Self: Sized;
+    ) -> impl std::future::Future<Output = Result<(), APIError>>;
 }
 impl<T: QBItem> QBRead for T {
     fn read(

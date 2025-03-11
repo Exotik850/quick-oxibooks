@@ -8,7 +8,11 @@ use crate::{
     QBContext,
 };
 
+/// Trait for deleting an item
 pub trait QBDelete {
+    /// Deletes the item
+    /// returns an error if the item has no ID and sync token
+    /// available or if the request itself fails
     fn delete(
         &self,
         qb: &QBContext,

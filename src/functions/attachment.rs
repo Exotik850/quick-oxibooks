@@ -45,7 +45,11 @@ async fn _make_file_part(file_name: impl AsRef<Path>) -> Result<Part, APIError> 
     Ok(file_part)
 }
 
+/// Trait for uploading an attachment
 pub trait QBUpload {
+    /// Uploads the attachment
+    /// returns an error if the attachment is not suitable for upload
+    /// or if the request itself fails
     fn upload(
         &self,
         qb: &QBContext,
