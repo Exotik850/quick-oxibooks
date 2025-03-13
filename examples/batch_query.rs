@@ -40,7 +40,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let object_type = object_type.unwrap_or("SalesReceipt".to_string());
 
-    let client = reqwest::Client::new();
+    // let client = reqwest::Client::new();
+    let client = http_client::h1::H1Client::new();
     let mut qb = QBContext::new_from_env(quick_oxibooks::Environment::PRODUCTION, &client).await?;
 
     if let Some(token) = access_token {

@@ -18,7 +18,7 @@ async fn main() -> Result<(), APIError> {
         _ => panic!("Invalid environment"),
     };
 
-    let client = reqwest::Client::new();
+    let client = http_client::h1::H1Client::new();
     let qb = QBContext::new(environment, company_id, access_token, &client).await?;
 
     let inv =
