@@ -1,5 +1,21 @@
+//! # Functions Module
+//!
+//! This module contains the core functionality for interacting with the QuickBooks API.
+//!
+//! ## Modules
+//!
+//! * [`attachment`](attachment) - Handles attachment operations (available with "attachments" feature)
+//! * [`create`](create) - Contains functions for creating new objects in QuickBooks
+//! * [`delete`](delete) - Provides functionality for deleting objects in QuickBooks
+//! * [`pdf`](pdf) - Handles PDF document operations (available with "pdf" feature)
+//! * [`query`](query) - Contains functions for querying objects from QuickBooks
+//! * [`read`](read) - Provides functionality for retrieving specific objects from QuickBooks
+//!
+//! This module also contains utility functions for making requests to the QuickBooks API, handling
+//! responses, and sending emails through the QuickBooks infrastructure.
+use http_client::{http_types::Method, HttpClient};
 use quickbooks_types::{QBItem, QBSendable};
-use reqwest::{Client, Method};
+// use reqwest::{Client, Method};
 use serde::{Deserialize, Serialize};
 
 use crate::{error::APIError, QBContext};
@@ -24,7 +40,7 @@ pub mod read;
 /// * `body` - Optional request body to send
 /// * `content_type` - Optional content type header value
 /// * `query` - Optional query parameters
-pub(crate) async fn qb_request<'a, T, U>(
+pub(crate) async fn qb_request<'a, T, U, Client>(
     qb: &QBContext,
     client: &Client,
     method: Method,
@@ -36,14 +52,15 @@ pub(crate) async fn qb_request<'a, T, U>(
 where
     T: Serialize,
     U: serde::de::DeserializeOwned,
+    Client: HttpClient,
 {
     let response = qb
         .with_permission(|qb| execute_request(qb, client, method, path, body, content_type, query))
         .await?;
-    Ok(response.json().await?)
+    Ok(response)
 }
 
-pub(crate) async fn execute_request<T: Serialize>(
+pub(crate) async fn execute_request<T, U, Client>(
     qb: &QBContext,
     client: &Client,
     method: Method,
@@ -51,7 +68,12 @@ pub(crate) async fn execute_request<T: Serialize>(
     body: Option<&T>,
     content_type: Option<&str>,
     query: Option<&[(&str, &str)]>,
-) -> Result<reqwest::Response, APIError> {
+) -> Result<U, APIError>
+where
+    T: Serialize,
+    U: serde::de::DeserializeOwned,
+    Client: HttpClient,
+{
     let request = crate::client::build_request(
         method,
         path,
@@ -59,14 +81,13 @@ pub(crate) async fn execute_request<T: Serialize>(
         query,
         content_type.unwrap_or("application/json"),
         qb.environment,
-        client,
         &qb.access_token,
     )?;
-    let response = client.execute(request).await?;
+    let mut response = client.send(request).await?;
     if !response.status().is_success() {
-        return Err(APIError::BadRequest(response.json().await?));
+        return Err(APIError::BadRequest(response.body_json().await?));
     }
-    Ok(response)
+    Ok(response.body_json().await?)
 }
 
 /// Internal struct that Quickbooks returns most
@@ -94,12 +115,16 @@ pub(crate) struct QBResponse<T> {
 }
 
 /// Send email of the object to the email given through quickbooks context
-pub async fn qb_send_email<T: QBItem + QBSendable>(
+pub async fn qb_send_email<T, Client>(
     item: &T,
     email: &str,
     qb: &QBContext,
     client: &Client,
-) -> Result<T, APIError> {
+) -> Result<T, APIError>
+where
+    T: QBItem + QBSendable,
+    Client: HttpClient,
+{
     let Some(id) = item.id() else {
         return Err(APIError::NoIdOnSend);
     };
@@ -107,7 +132,7 @@ pub async fn qb_send_email<T: QBItem + QBSendable>(
     let response: QBResponse<T> = qb_request(
         qb,
         client,
-        reqwest::Method::POST,
+        Method::Post,
         &format!("company/{}/{}/{}/send", qb.company_id, T::qb_id(), id),
         None::<&()>,
         None,

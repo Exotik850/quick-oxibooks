@@ -51,7 +51,7 @@ pub mod batch;
 pub mod client;
 pub use client::QBContext;
 use error::APIError;
-use reqwest::Client;
+use http_client::{HttpClient, Request};
 use serde::{Deserialize, Serialize};
 pub mod error;
 
@@ -143,26 +143,30 @@ pub struct DiscoveryDoc {
 }
 
 impl DiscoveryDoc {
-    pub async fn get_async(environment: Environment, client: &Client) -> Result<Self, APIError> {
-        let url = environment.discovery_url();
-        let request = client.get(url).build()?;
-        let resp = client.execute(request).await?;
-        if !resp.status().is_success() {
-            return Err(APIError::BadRequest(resp.json().await?));
-        }
-        Ok(resp.json().await?)
-    }
-
-    pub fn get(
+    pub async fn get_async<Client: HttpClient>(
         environment: Environment,
-        client: &reqwest::blocking::Client,
+        client: &Client,
     ) -> Result<Self, APIError> {
         let url = environment.discovery_url();
-        let request = client.get(url).build()?;
-        let resp = client.execute(request)?;
+        // let request = client.get(url).build()?;
+        let request = Request::get(url);
+        let mut resp = client.send(request).await?;
         if !resp.status().is_success() {
-            return Err(APIError::BadRequest(resp.json()?));
+            return Err(APIError::BadRequest(resp.body_json().await?));
         }
-        Ok(resp.json()?)
+        Ok(resp.body_json().await?)
     }
+
+    // pub fn get(
+    //     environment: Environment,
+    //     client: &reqwest::blocking::Client,
+    // ) -> Result<Self, APIError> {
+    //     let url = environment.discovery_url();
+    //     let request = client.get(url).build()?;
+    //     let resp = client.execute(request)?;
+    //     if !resp.status().is_success() {
+    //         return Err(APIError::BadRequest(resp.json()?));
+    //     }
+    //     Ok(resp.json()?)
+    // }
 }

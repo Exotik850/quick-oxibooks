@@ -1,5 +1,5 @@
+use http_client::{http_types::Method, HttpClient};
 use quickbooks_types::{QBDeletable, QBItem};
-use reqwest::{Client, Method};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -13,7 +13,7 @@ pub trait QBDelete {
     /// Deletes the item
     /// returns an error if the item has no ID and sync token
     /// available or if the request itself fails
-    fn delete(
+    fn delete<Client: HttpClient>(
         &self,
         qb: &QBContext,
         client: &Client,
@@ -23,7 +23,7 @@ pub trait QBDelete {
 }
 
 impl<T: QBItem + QBDeletable> QBDelete for T {
-    fn delete(
+    fn delete<Client: HttpClient>(
         &self,
         qb: &QBContext,
         client: &Client,
@@ -35,11 +35,15 @@ impl<T: QBItem + QBDeletable> QBDelete for T {
 /// Deletes the given item using the ID
 /// returns an error if the item has no ID and sync token
 /// available or if the request itself fails
-async fn qb_delete<T: QBItem + QBDeletable>(
+async fn qb_delete<T, Client>(
     item: &T,
     qb: &QBContext,
     client: &Client,
-) -> Result<QBDeleted, APIError> {
+) -> Result<QBDeleted, APIError>
+where
+    T: QBItem + QBDeletable,
+    Client: HttpClient,
+{
     let (Some(_), Some(id)) = (item.sync_token(), item.id()) else {
         return Err(APIError::DeleteMissingItems);
     };
@@ -49,7 +53,7 @@ async fn qb_delete<T: QBItem + QBDeletable>(
     let response: QBResponse<QBDeleted> = qb_request(
         qb,
         client,
-        Method::POST,
+        Method::Post,
         &format!("company/{}/{}?operation=delete", qb.company_id, T::qb_id()),
         Some(&delete_object),
         None,

@@ -229,7 +229,8 @@ mod test {
 
     #[tokio::test]
     async fn test_macro_works() -> Result<(), String> {
-        let client = reqwest::Client::new();
+        let client = http_client::h1::H1Client::new();
+        
         let qb = QBContext::new_from_env(crate::Environment::SANDBOX, &client)
             .await
             .map_err(|e| e.to_string())?;

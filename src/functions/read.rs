@@ -1,19 +1,19 @@
+use http_client::{http_types::Method, HttpClient};
 use quickbooks_types::QBItem;
-use reqwest::{Client, Method};
 
 use crate::{error::APIError, QBContext};
 
 use super::{qb_request, QBResponse};
 
 pub trait QBRead {
-    fn read(
+    fn read<Client: HttpClient>(
         &mut self,
         qb: &QBContext,
         client: &Client,
     ) -> impl std::future::Future<Output = Result<(), APIError>>;
 }
 impl<T: QBItem> QBRead for T {
-    fn read(
+    fn read<Client: HttpClient>(
         &mut self,
         qb: &QBContext,
         client: &Client,
@@ -24,7 +24,11 @@ impl<T: QBItem> QBRead for T {
 
 /// Read the object by ID from quickbooks context
 /// and write it to an item
-async fn qb_read<T: QBItem>(item: &mut T, qb: &QBContext, client: &Client) -> Result<(), APIError> {
+async fn qb_read<T, Client>(item: &mut T, qb: &QBContext, client: &Client) -> Result<(), APIError>
+where
+    T: QBItem,
+    Client: HttpClient,
+{
     let Some(id) = item.id() else {
         return Err(APIError::NoIdOnRead);
     };
@@ -32,7 +36,7 @@ async fn qb_read<T: QBItem>(item: &mut T, qb: &QBContext, client: &Client) -> Re
     let response: QBResponse<T> = qb_request(
         qb,
         client,
-        Method::GET,
+        Method::Get,
         &format!("company/{}/{}/{}", qb.company_id, T::qb_id(), id),
         None::<&()>,
         None,
@@ -55,15 +59,19 @@ async fn qb_read<T: QBItem>(item: &mut T, qb: &QBContext, client: &Client) -> Re
 }
 
 /// Retrieves an object by ID from quickbooks context
-pub async fn qb_get_single<T: QBItem>(
+pub async fn qb_get_single<T, Client>(
     id: &str,
     qb: &QBContext,
     client: &Client,
-) -> Result<T, APIError> {
+) -> Result<T, APIError>
+where
+    T: QBItem,
+    Client: HttpClient,
+{
     let response: QBResponse<T> = qb_request(
         qb,
         client,
-        Method::GET,
+        Method::Get,
         &format!("company/{}/{}/{}", qb.company_id, T::qb_id(), id),
         None::<&()>,
         None,

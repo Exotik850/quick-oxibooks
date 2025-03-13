@@ -10,14 +10,14 @@ pub enum APIError {
     #[cfg(any(feature = "attachments", feature = "pdf"))]
     #[error(transparent)]
     TokioIoError(#[from] tokio::io::Error),
-    #[error(transparent)]
-    ReqwestError(#[from] reqwest::Error),
+    #[error("Error on HTTP Request: {0}")]
+    HttpError(http_client::http_types::Error),
     #[error(transparent)]
     UrlParseError(#[from] url::ParseError),
     #[error("Bad request: {0}")]
     BadRequest(QBErrorResponse),
     #[error(transparent)]
-    InvalidHeaderValue(#[from] reqwest::header::InvalidHeaderValue),
+    JsonError(#[from] serde_json::Error),
     #[error(transparent)]
     QBTypeError(#[from] QBTypeError),
     #[error("No query objects returned for query_str : {0}")]
@@ -65,6 +65,12 @@ impl std::fmt::Display for BatchMissingItemsError {
             "BatchRequestMissingItems : {{ Missing Items: {:#?}, \n Results : {:#?} }}",
             self.items, self.results
         )
+    }
+}
+
+impl From<http_client::http_types::Error> for APIError {
+    fn from(err: http_client::http_types::Error) -> Self {
+        APIError::HttpError(err)
     }
 }
 

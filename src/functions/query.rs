@@ -1,5 +1,5 @@
+use http_client::{http_types::Method, HttpClient};
 use quickbooks_types::QBItem;
-use reqwest::{Client, Method};
 use serde::Deserialize;
 
 use crate::{error::APIError, QBContext};
@@ -16,14 +16,15 @@ pub trait QBQuery {
     /// ```ignore
     /// "select * from {type_name} {query_str} MAXRESULTS {max_results}"
     /// ```
-    fn query(
+    fn query<Client>(
         query_str: &str,
         max_results: usize,
         qb: &QBContext,
         client: &Client,
     ) -> impl std::future::Future<Output = Result<Vec<Self>, APIError>>
     where
-        Self: Sized;
+        Self: Sized,
+        Client: HttpClient;
 
     /// Queries the `QuickBooks` API for a single object of type T
     /// Returns the object of type T
@@ -33,25 +34,29 @@ pub trait QBQuery {
     /// "select * from {type_name} {query_str} MAXRESULTS {max_results}"
     /// ```
     #[must_use]
-    fn query_single(
+    fn query_single<Client>(
         query_str: &str,
         qb: &QBContext,
         client: &Client,
     ) -> impl std::future::Future<Output = Result<Self, APIError>>
     where
         Self: Sized,
+        Client: HttpClient,
     {
         async { Ok(Self::query(query_str, 1, qb, client).await?.swap_remove(0)) }
     }
 }
 
 impl<T: QBItem> QBQuery for T {
-    fn query(
+    fn query<Client>(
         query_str: &str,
         max_results: usize,
         qb: &QBContext,
         client: &Client,
-    ) -> impl std::future::Future<Output = Result<Vec<Self>, APIError>> {
+    ) -> impl std::future::Future<Output = Result<Vec<Self>, APIError>>
+    where
+        Client: HttpClient,
+    {
         qb_query(query_str, max_results, qb, client)
     }
 }
@@ -68,16 +73,20 @@ impl<T: QBItem> QBQuery for T {
 /// ```ignore
 ///  "select * from {type_name} {query_str} MAXRESULTS {max_results}"
 /// ```
-async fn qb_query<T: QBItem>(
+async fn qb_query<T, Client>(
     query_str: &str,
     max_results: usize,
     qb: &QBContext,
     client: &Client,
-) -> Result<Vec<T>, APIError> {
+) -> Result<Vec<T>, APIError>
+where
+    T: QBItem,
+    Client: HttpClient,
+{
     let response: QueryResponseExt<T> = qb_request(
         qb,
         client,
-        Method::GET,
+        Method::Get,
         &format!("company/{}/query", qb.company_id),
         None::<&()>,
         None,
