@@ -163,8 +163,7 @@ impl QBContext {
         let permit = self
             .qbo_limiter
             .acquire()
-            .await
-            .expect("Semaphore should not be closed");
+            .await;
         let out = f(self).await;
         drop(permit);
         out
@@ -180,8 +179,7 @@ impl QBContext {
         let permit = self
             .batch_limiter
             .acquire()
-            .await
-            .expect("Semaphore should not be closed");
+            .await;
         let out = f(self).await;
         drop(permit);
         out

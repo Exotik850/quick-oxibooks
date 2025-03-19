@@ -1,6 +1,6 @@
 use std::{ops::Deref, sync::Arc, time::Duration};
 
-use tokio::sync::Semaphore;
+use async_lock::Semaphore;
 
 pub(crate) struct RateLimiter {
     semaphore: Arc<Semaphore>,
@@ -10,13 +10,12 @@ impl RateLimiter {
     pub fn new(max_requests: usize, duration: Duration) -> Self {
         let semaphore = Arc::new(Semaphore::new(max_requests));
         let semaphore_clone = semaphore.clone();
-        tokio::spawn(async move {
+        std::thread::spawn(move || {
             loop {
-                let permits = semaphore_clone.available_permits();
-                if permits < max_requests {
-                    semaphore_clone.add_permits(max_requests - permits);
+                if semaphore_clone.try_acquire().is_none() {
+                  semaphore_clone.add_permits(max_requests); 
                 }
-                tokio::time::sleep(duration).await;
+                std::thread::sleep(duration);
             }
         });
         RateLimiter { semaphore }

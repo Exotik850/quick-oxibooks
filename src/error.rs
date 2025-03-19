@@ -7,9 +7,9 @@ use crate::batch::{QBBatchOperation, QBBatchResponseData};
 // TODO Split this into multiple error types, currently all errors are lumped into one enum
 #[derive(Debug, thiserror::Error)]
 pub enum APIError {
-    #[cfg(any(feature = "attachments", feature = "pdf"))]
-    #[error(transparent)]
-    TokioIoError(#[from] tokio::io::Error),
+    // #[cfg(any(feature = "attachments", feature = "pdf"))]
+    // #[error(transparent)]
+    // TokioIoError(#[from] tokio::io::Error),
     #[error("Error on HTTP Request: {0}")]
     HttpError(http_client::http_types::Error),
     #[error(transparent)]
@@ -94,8 +94,8 @@ pub struct QBError {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(rename = "UPPERCASE")]
 pub enum FaultType {
+    #[serde(alias = "AUTHENTICATION")]
     Authentication,
     #[serde(rename = "ValidationFault")]
     Validation,

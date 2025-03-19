@@ -15,10 +15,14 @@ quickbooks-types = { path = "quickbooks-types", features = ["builder"] }
 thiserror = "2.0"
 base64 = { version = "0.22.1" }
 
-tokio = { version = "1.32.0", default-features = false }
+# tokio = { version = "1.32.0", default-features = false }
 const-str = { version = "0.6.2", optional = true }
 chrono = { version = "0.4.40", features = ["serde"] }
 http-client = { version = "6.5.3", default-features = false }
+# http-client-multipart = { version = "0.1.0", optional = true }
+http-client-multipart = { path = "../http-client-multipart", optional = true }
+async-lock = "3.4.0"
+async-fs = "2.1.2"
 
 [dev-dependencies]
 http-client = { version = "6.5.3" }
@@ -27,13 +31,19 @@ env_logger = "0.11.6"
 
 [features]
 macros = ["dep:const-str"]
-# attachments = ["tokio/fs", "reqwest/multipart"]
+attachments = ["dep:http-client-multipart"]
 pdf = ["tokio/fs"]
 
 [[example]]
 name = "invoice_query"
 path = "examples/invoice_query.rs"
 required_features = ["cache", "macro"]
+
+[[example]]
+name = "attachment_test"
+path = "examples/attachment_test.rs"
+required_features = ["attachments"]
+
 
 [workspace]
 members = ["quickbooks-types"]
