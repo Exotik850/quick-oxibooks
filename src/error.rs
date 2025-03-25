@@ -111,21 +111,21 @@ pub struct Fault {
 }
 
 // TODO Make the fields more strongly typed, currently no documentation on the error types that I can find
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct QBErrorResponse {
-    warnings: Option<Value>,
-    intuit_object: Option<Value>,
-    fault: Option<Fault>,
-    report: Option<Value>,
-    sync_error_response: Option<Value>,
-    query_response: Option<Vec<Value>>,
-    batch_item_response: Vec<Value>,
-    request_id: Option<String>,
-    time: u64,
-    status: Option<String>,
+    pub(crate) warnings: Option<Value>,
+    pub(crate) intuit_object: Option<Value>,
+    pub(crate) fault: Option<Fault>,
+    pub(crate) report: Option<Value>,
+    pub(crate) sync_error_response: Option<Value>,
+    pub(crate) query_response: Option<Vec<Value>>,
+    pub(crate) batch_item_response: Vec<Value>,
+    pub(crate) request_id: Option<String>,
+    pub(crate) time: u64,
+    pub(crate) status: Option<String>,
     #[serde(rename = "cdcresponse")]
-    cdc_response: Vec<Value>,
+    pub(crate) cdc_response: Vec<Value>,
 }
 
 impl std::fmt::Display for QBErrorResponse {
