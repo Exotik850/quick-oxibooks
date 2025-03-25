@@ -34,7 +34,10 @@ use std::path::{Path, PathBuf};
 //     Client, Method, Request,
 // };
 
-use crate::{error::APIError, QBContext};
+use crate::{
+    error::{APIError, Fault, QBErrorResponse},
+    QBContext,
+};
 
 // async fn _make_file_part(file_name: impl AsRef<Path>) -> Result<Part, APIError> {
 //     let buf = async_fs::read(&file_name).await?;
@@ -115,6 +118,9 @@ async fn qb_upload<Client: HttpClient>(
         .with_permission(|_| async {
             let mut response = client.send(request).await?;
             let out = response.body_json().await?;
+            if !response.status().is_success() {
+                return Err(APIError::BadRequest(response.body_json().await?));
+            }
             Ok(out)
         })
         .await?;
@@ -128,7 +134,19 @@ async fn qb_upload<Client: HttpClient>(
         return Err(APIError::NoAttachableObjects);
     };
 
-    let obj = qb_response.ar.swap_remove(0).attachable;
+    let obj = qb_response.ar.swap_remove(0);
+
+    if let AttachableResponse::Fault(fault) = obj {
+        return Err(APIError::BadRequest(QBErrorResponse {
+            fault: Some(fault),
+            ..Default::default()
+        }));
+    }
+
+    let obj = match obj {
+        AttachableResponse::Attachable(a) => a,
+        _ => unreachable!(),
+    };
 
     log::info!("Sent attachment : {:?}", obj.file_name.as_ref().unwrap());
 
@@ -148,16 +166,16 @@ async fn make_upload_request(attachable: &Attachable, qb: &QBContext) -> Result<
     // let request_headers = crate::client::build_headers("application/pdf", &qb.access_token)?;
     let mut multipart = http_client_multipart::Multipart::new();
     let json_body = serde_json::to_string(attachable).expect("Couldn't Serialize Attachment");
-    multipart.add_text("file_metadata_01", json_body);
+    multipart.add_text_mime("file_metadata_01", json_body, "application/json")?;
     multipart
         .add_file(
             "file_content_01",
             file_name,
-            Some(http_client_multipart::ContentTransferEncoding::Base64),
+            Some(http_client_multipart::Encoding::Base64),
         )
         .await?;
 
-    multipart.set_request(&mut request).await?;
+    multipart.set_request(&mut request);
 
     Ok(request)
 }
@@ -171,7 +189,7 @@ struct AttachableResponseExt {
 }
 
 #[derive(serde::Deserialize, Debug)]
-struct AttachableResponse {
-    #[serde(rename = "Attachable")]
-    attachable: Attachable,
+enum AttachableResponse {
+    Attachable(Attachable),
+    Fault(Fault),
 }
