@@ -62,7 +62,6 @@ pub mod types {
 pub mod functions;
 pub(crate) mod limiter;
 
-#[cfg(feature = "attachments")]
 pub use crate::functions::attachment;
 #[cfg(feature = "pdf")]
 pub use crate::functions::pdf;

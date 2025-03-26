@@ -20,7 +20,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::{error::APIError, QBContext};
 
-#[cfg(feature = "attachments")]
 pub mod attachment;
 pub mod create;
 pub mod delete;

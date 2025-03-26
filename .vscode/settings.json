@@ -4,7 +4,6 @@
         ".\\quickbooks-types\\Cargo.toml",
     ],
     "rust-analyzer.cargo.features": [
-      "attachments"
     ],
     "rust-analyzer.diagnostics.disabled": [
         "unreasolved-proc-macro"

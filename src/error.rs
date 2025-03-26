@@ -13,6 +13,8 @@ pub enum APIError {
     #[error("Error on HTTP Request: {0}")]
     HttpError(http_client::http_types::Error),
     #[error(transparent)]
+    IoError(#[from] std::io::Error),
+    #[error(transparent)]
     UrlParseError(#[from] url::ParseError),
     #[error("Bad request: {0}")]
     BadRequest(QBErrorResponse),
@@ -99,6 +101,8 @@ pub enum FaultType {
     Authentication,
     #[serde(rename = "ValidationFault")]
     Validation,
+    #[serde(rename = "SystemFault")]
+    System,
     // TODO Add the rest of the fault types
     Other(String),
 }

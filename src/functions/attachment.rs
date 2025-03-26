@@ -24,20 +24,17 @@
 //! # }
 //! ```
 
+use std::path::{Path, PathBuf};
+
 use base64::Engine;
 use http_client::{HttpClient, Request};
 use quickbooks_types::{content_type_from_ext, Attachable, QBAttachable};
-use std::path::{Path, PathBuf};
-// use reqwest::{
-//     header::{self, HeaderValue},
-//     multipart::{Form, Part},
-//     Client, Method, Request,
-// };
 
 use crate::{
-    error::{APIError, Fault, QBErrorResponse},
-    QBContext,
+    error::{APIError, Fault, QBErrorResponse}, QBContext
 };
+
+const BOUNDARY: &str = "----------------quick-oxibooks"; // Multipart boundary for the request
 
 // async fn _make_file_part(file_name: impl AsRef<Path>) -> Result<Part, APIError> {
 //     let buf = async_fs::read(&file_name).await?;
@@ -117,10 +114,10 @@ async fn qb_upload<Client: HttpClient>(
     let mut qb_response: AttachableResponseExt = qb
         .with_permission(|_| async {
             let mut response = client.send(request).await?;
-            let out = response.body_json().await?;
             if !response.status().is_success() {
                 return Err(APIError::BadRequest(response.body_json().await?));
             }
+            let out = response.body_json().await?;
             Ok(out)
         })
         .await?;
@@ -154,30 +151,62 @@ async fn qb_upload<Client: HttpClient>(
 }
 
 async fn make_upload_request(attachable: &Attachable, qb: &QBContext) -> Result<Request, APIError> {
+    let path = format!("company/{}/upload", qb.company_id);
+    let url = crate::client::build_url(qb.environment, &path, Some(&[]))?;
+    let mut request = Request::post(url);
+    crate::client::set_headers("multipart/form-data", &qb.access_token, &mut request);
+    make_multipart(&mut request, attachable).await?;
+    Ok(request)
+}
+
+async fn make_multipart(req: &mut Request, attachable: &Attachable) -> Result<(), APIError> {
     let file_name = attachable
         .file_name
         .as_ref()
         .ok_or(APIError::AttachableUploadMissingItems)?;
+    let ext =
+        get_ext(file_name).ok_or_else(|| APIError::InvalidFileExtension(file_name.clone()))?;
+    let ct = content_type_from_ext(ext)
+        .ok_or_else(|| APIError::InvalidFileExtension(file_name.clone()))?;
 
-    let path = format!("company/{}/upload", qb.company_id);
-    let url = crate::client::build_url(qb.environment, &path, Some(&[]))?;
-    let mut request = Request::post(url);
-    crate::client::set_headers("application/pdf", &qb.access_token, &mut request);
-    // let request_headers = crate::client::build_headers("application/pdf", &qb.access_token)?;
-    let mut multipart = http_client_multipart::Multipart::new();
-    let json_body = serde_json::to_string(attachable).expect("Couldn't Serialize Attachment");
-    multipart.add_text_mime("file_metadata_01", json_body, "application/json")?;
-    multipart
-        .add_file(
-            "file_content_01",
-            file_name,
-            Some(http_client_multipart::Encoding::Base64),
-        )
-        .await?;
+    let mut body = String::new();
 
-    multipart.set_request(&mut request);
+    body.push_str(&format!("--{BOUNDARY}\r\n"));
 
-    Ok(request)
+    body.push_str(&format!(
+        "Content-Disposition: form-data; name=\"file_metadata_01\"\r\n"
+    ));
+    body.push_str("Content-Type: application/json\r\n\r\n");
+
+    let json_body = serde_json::to_string(attachable)?;
+    body.push_str(&json_body);
+    body.push_str("\r\n");
+
+    let file_content = async_fs::read(file_name).await?;
+    let encoded = base64::engine::general_purpose::STANDARD_NO_PAD.encode(file_content);
+    body.push_str(&format!("--{BOUNDARY}\r\n"));
+
+    body.push_str(&format!(
+        "Content-Disposition: form-data; name=\"file_content_01\"; filename=\"{file_name}\"\r\n"
+    ));
+    body.push_str(&format!("Content-Type: {ct}\r\n"));
+    body.push_str("Content-Transfer-Encoding: base64\r\n\r\n");
+    body.push_str(&encoded);
+    body.push_str("\r\n");
+
+    body.push_str(&format!("--{BOUNDARY}--\r\n"));
+
+    let content = format!("multipart/form-data; boundary={BOUNDARY}");
+    req.insert_header("Content-Type", content);
+    req.insert_header("Content-Length", body.len().to_string());
+    req.set_body(body);
+
+    Ok(())
+}
+
+fn get_ext(input: &str) -> Option<&str> {
+    let path = Path::new(input);
+    path.extension().and_then(|ext| ext.to_str())
 }
 
 #[derive(Debug, serde::Deserialize)]
