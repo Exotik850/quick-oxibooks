@@ -24,7 +24,7 @@
 //! # }
 //! ```
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use base64::Engine;
 use http_client::{HttpClient, Request};
@@ -53,7 +53,7 @@ const BOUNDARY: &str = "----------------quick-oxibooks"; // Multipart boundary f
 //     let ext: PathBuf = file_name.as_ref().to_path_buf();
 //     let extension = ext.extension().unwrap().to_str().unwrap();
 //     let Some(ct) = content_type_from_ext(extension) else {
-//         return Err(APIError::InvalidFileExtension(extension.to_string()));
+//         return Err(APIError::InvalidFile(extension.to_string()));
 //     };
 
 //     let file_part = Part::bytes(encoded.into_bytes())
@@ -105,9 +105,7 @@ async fn qb_upload<Client: HttpClient>(
     qb: &QBContext,
     client: &Client,
 ) -> Result<Attachable, APIError> {
-    if !attachable.can_upload() {
-        return Err(APIError::AttachableUploadMissingItems);
-    }
+    attachable.can_upload()?;
 
     let request = make_upload_request(attachable, qb).await?;
 
@@ -122,27 +120,18 @@ async fn qb_upload<Client: HttpClient>(
         })
         .await?;
 
-    // if !response.status().is_success() {
-    //     return Err(APIError::BadRequest(response.json().await?));
-    // }
-
-    // let mut qb_response: AttachableResponseExt = response.json().await?;
     if qb_response.ar.is_empty() {
         return Err(APIError::NoAttachableObjects);
     };
 
-    let obj = qb_response.ar.swap_remove(0);
-
-    if let AttachableResponse::Fault(fault) = obj {
-        return Err(APIError::BadRequest(QBErrorResponse {
-            fault: Some(fault),
-            ..Default::default()
-        }));
-    }
-
-    let obj = match obj {
-        AttachableResponse::Attachable(a) => a,
-        _ => unreachable!(),
+    let obj = match qb_response.ar.swap_remove(0) {
+        AttachableResponse::Fault(fault) => {
+            return Err(APIError::BadRequest(QBErrorResponse {
+                fault: Some(fault),
+                ..Default::default()
+            }))
+        }
+        AttachableResponse::Attachable(attachable) => attachable,
     };
 
     log::info!("Sent attachment : {:?}", obj.file_name.as_ref().unwrap());
@@ -160,14 +149,10 @@ async fn make_upload_request(attachable: &Attachable, qb: &QBContext) -> Result<
 }
 
 async fn make_multipart(req: &mut Request, attachable: &Attachable) -> Result<(), APIError> {
-    let file_name = attachable
-        .file_name
-        .as_ref()
-        .ok_or(APIError::AttachableUploadMissingItems)?;
-    let ext =
-        get_ext(file_name).ok_or_else(|| APIError::InvalidFileExtension(file_name.clone()))?;
-    let ct = content_type_from_ext(ext)
-        .ok_or_else(|| APIError::InvalidFileExtension(file_name.clone()))?;
+  let file_str = attachable.file_name.as_deref().unwrap();
+  let file_path = Path::new(file_str);
+    let ext = file_path.extension().ok_or_else(|| APIError::InvalidFile(file_str.into()))?;
+    let ct = content_type_from_ext(&ext.to_string_lossy()).ok_or_else(|| APIError::InvalidFile(file_str.into()))?;
 
     let mut body = String::new();
 
@@ -182,12 +167,20 @@ async fn make_multipart(req: &mut Request, attachable: &Attachable) -> Result<()
     body.push_str(&json_body);
     body.push_str("\r\n");
 
-    let file_content = async_fs::read(file_name).await?;
+    let file_content = async_fs::read(file_str).await?;
     let encoded = base64::engine::general_purpose::STANDARD_NO_PAD.encode(file_content);
     body.push_str(&format!("--{BOUNDARY}\r\n"));
 
+    // let sep = if file_path.contains('\\') { '\\' } else { '/' };
+    // let file_name = file_path.split(sep).last().unwrap_or(file_path);
+    let file_name = file_path
+        .file_name()
+        .ok_or_else(|| APIError::InvalidFile(file_str.into()))?
+        .to_string_lossy();
+
     body.push_str(&format!(
-        "Content-Disposition: form-data; name=\"file_content_01\"; filename=\"{file_name}\"\r\n"
+        "Content-Disposition: form-data; name=\"file_content_01\"; filename=\"{}\"\r\n",
+        file_name
     ));
     body.push_str(&format!("Content-Type: {ct}\r\n"));
     body.push_str("Content-Transfer-Encoding: base64\r\n\r\n");
