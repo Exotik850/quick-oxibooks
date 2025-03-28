@@ -2,9 +2,8 @@ use base64::Engine;
 use http_client::{http_types::Method, HttpClient, Request};
 use serde::{Deserialize, Serialize};
 
-use crate::error::APIError;
-
 use super::QBContext;
+use crate::error::APIError;
 
 pub struct RefreshableQBContext {
     pub(crate) context: QBContext,

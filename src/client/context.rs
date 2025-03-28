@@ -66,13 +66,10 @@ use http_client::{http_types::Method, HttpClient, Request};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::{
-    error::{APIError, QBErrorResponse},
-    limiter::RateLimiter,
-    DiscoveryDoc, Environment,
-};
-
 use super::refresh::RefreshableQBContext;
+use crate::{
+    error::{APIError, QBErrorResponse}, limiter::RateLimiter, DiscoveryDoc, Environment
+};
 
 // Rate Limit:
 // Sandbox - 500 req / min
@@ -160,10 +157,7 @@ impl QBContext {
         F: FnOnce(&'a Self) -> FF,
         FF: Future<Output = Result<T, APIError>>,
     {
-        let permit = self
-            .qbo_limiter
-            .acquire()
-            .await;
+        let permit = self.qbo_limiter.acquire().await;
         let out = f(self).await;
         drop(permit);
         out
@@ -176,10 +170,7 @@ impl QBContext {
         F: FnOnce(&'a Self) -> FF,
         FF: Future<Output = Result<T, APIError>>,
     {
-        let permit = self
-            .batch_limiter
-            .acquire()
-            .await;
+        let permit = self.batch_limiter.acquire().await;
         let out = f(self).await;
         drop(permit);
         out

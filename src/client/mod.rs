@@ -1,6 +1,4 @@
-use http_client::{
-    http_types::{Method, Request},
-};
+use http_client::http_types::{Method, Request};
 use serde::Serialize;
 use url::Url;
 
@@ -9,11 +7,7 @@ mod context;
 mod refresh;
 pub use context::QBContext;
 
-pub(crate) fn set_headers(
-    content_type: &str,
-    access_token: &str,
-    request: &mut Request,
-) {
+pub(crate) fn set_headers(content_type: &str, access_token: &str, request: &mut Request) {
     let bt = format!("Bearer {access_token}");
     request.insert_header("Authorization", bt);
     if content_type != "multipart/form-data" {

@@ -84,6 +84,8 @@ where
     )?;
     let mut response = client.send(request).await?;
     if !response.status().is_success() {
+        // panic!("Response: {}", response.body_string().await?);
+
         return Err(APIError::BadRequest(response.body_json().await?));
     }
     Ok(response.body_json().await?)

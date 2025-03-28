@@ -1,11 +1,9 @@
 use http_client::{http_types::Method, HttpClient};
 use quickbooks_types::{QBCreatable, QBItem};
-// use reqwest::{Client, Method};
 
+// use reqwest::{Client, Method};
 use crate::{
-    error::APIError,
-    functions::{qb_request, QBResponse},
-    QBContext,
+    error::APIError, functions::{qb_request, QBResponse}, QBContext
 };
 
 /// Trait for creating an item

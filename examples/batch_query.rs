@@ -1,6 +1,5 @@
 use quick_oxibooks::{
-    batch::{BatchIterator, QBBatchOperation},
-    QBContext,
+    batch::{BatchIterator, QBBatchOperation}, QBContext
 };
 
 enum ArgFlag {

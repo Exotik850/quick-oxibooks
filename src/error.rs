@@ -50,8 +50,8 @@ pub enum APIError {
     EnvVarError(#[from] std::env::VarError),
     #[error("Invalid Batch Response, Missing items for : {0}")]
     BatchRequestMissingItems(BatchMissingItemsError),
-    #[error("Invalid File extenstion : {0}")]
-    InvalidFileExtension(String),
+    #[error("Invalid File name or extenstion : {0}")]
+    InvalidFile(String),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -120,16 +120,17 @@ pub struct Fault {
 pub struct QBErrorResponse {
     pub(crate) warnings: Option<Value>,
     pub(crate) intuit_object: Option<Value>,
+    #[serde(alias = "Fault")]
     pub(crate) fault: Option<Fault>,
     pub(crate) report: Option<Value>,
     pub(crate) sync_error_response: Option<Value>,
     pub(crate) query_response: Option<Vec<Value>>,
-    pub(crate) batch_item_response: Vec<Value>,
+    pub(crate) batch_item_response: Option<Vec<Value>>,
     pub(crate) request_id: Option<String>,
-    pub(crate) time: u64,
+    pub(crate) time: String,
     pub(crate) status: Option<String>,
     #[serde(rename = "cdcresponse")]
-    pub(crate) cdc_response: Vec<Value>,
+    pub(crate) cdc_response: Option<Vec<Value>>,
 }
 
 impl std::fmt::Display for QBErrorResponse {

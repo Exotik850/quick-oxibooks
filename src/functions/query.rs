@@ -2,9 +2,8 @@ use http_client::{http_types::Method, HttpClient};
 use quickbooks_types::QBItem;
 use serde::Deserialize;
 
-use crate::{error::APIError, QBContext};
-
 use super::qb_request;
+use crate::{error::APIError, QBContext};
 
 /// Trait for querying `QuickBooks` objects
 pub trait QBQuery {

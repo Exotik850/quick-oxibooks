@@ -1,9 +1,8 @@
 use http_client::{http_types::Method, HttpClient};
 use quickbooks_types::QBItem;
 
-use crate::{error::APIError, QBContext};
-
 use super::{qb_request, QBResponse};
+use crate::{error::APIError, QBContext};
 
 pub trait QBRead {
     fn read<Client: HttpClient>(

@@ -72,9 +72,7 @@ use quickbooks_types::{Invoice, SalesReceipt, Vendor};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    error::{APIError, BatchMissingItemsError, Fault},
-    functions::execute_request,
-    QBContext,
+    error::{APIError, BatchMissingItemsError, Fault}, functions::execute_request, QBContext
 };
 
 /// Batch request structure for `QuickBooks` Online API
