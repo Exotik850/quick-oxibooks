@@ -149,11 +149,14 @@ async fn make_upload_request(attachable: &Attachable, qb: &QBContext) -> Result<
 }
 
 async fn make_multipart(req: &mut Request, attachable: &Attachable) -> Result<(), APIError> {
-  let file_str = attachable.file_name.as_deref().unwrap();
-  let file_path = Path::new(file_str);
-    let ext = file_path.extension().ok_or_else(|| APIError::InvalidFile(file_str.into()))?;
-    let ct = content_type_from_ext(&ext.to_string_lossy()).ok_or_else(|| APIError::InvalidFile(file_str.into()))?;
-
+    let file_path = attachable
+        .file_path
+        .as_deref()
+        .ok_or_else(|| APIError::AttachableUploadMissingItems("file_path"))?;
+    let ct = attachable
+        .content_type
+        .as_deref()
+        .ok_or_else(|| APIError::AttachableUploadMissingItems("content_type"))?;
     let mut body = String::new();
 
     body.push_str(&format!("--{BOUNDARY}\r\n"));
@@ -167,7 +170,7 @@ async fn make_multipart(req: &mut Request, attachable: &Attachable) -> Result<()
     body.push_str(&json_body);
     body.push_str("\r\n");
 
-    let file_content = async_fs::read(file_str).await?;
+    let file_content = async_fs::read(file_path).await?;
     let encoded = base64::engine::general_purpose::STANDARD_NO_PAD.encode(file_content);
     body.push_str(&format!("--{BOUNDARY}\r\n"));
 
@@ -175,7 +178,7 @@ async fn make_multipart(req: &mut Request, attachable: &Attachable) -> Result<()
     // let file_name = file_path.split(sep).last().unwrap_or(file_path);
     let file_name = file_path
         .file_name()
-        .ok_or_else(|| APIError::InvalidFile(file_str.into()))?
+        .ok_or_else(|| APIError::InvalidFile(file_path.to_string_lossy().to_string()))?
         .to_string_lossy();
 
     body.push_str(&format!(

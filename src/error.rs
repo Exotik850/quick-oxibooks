@@ -38,8 +38,8 @@ pub enum APIError {
     NoIdOnGetPDF,
     #[error("Couldn't write all the bytes of file")]
     ByteLengthMismatch,
-    #[error("Missing either Note or Filename when uploading Attachable")]
-    AttachableUploadMissingItems,
+    #[error("Attachable Missing '{0}' field")]
+    AttachableUploadMissingItems(&'static str),
     #[error("Missing Attachable object on upload response")]
     NoAttachableObjects,
     #[error("Throttle limit reached")]
@@ -95,7 +95,7 @@ pub struct QBError {
     pub element: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum FaultType {
     #[serde(alias = "AUTHENTICATION")]
     Authentication,
@@ -104,6 +104,7 @@ pub enum FaultType {
     #[serde(rename = "SystemFault")]
     System,
     // TODO Add the rest of the fault types
+    #[serde(untagged)]
     Other(String),
 }
 
@@ -118,19 +119,33 @@ pub struct Fault {
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct QBErrorResponse {
-    pub(crate) warnings: Option<Value>,
-    pub(crate) intuit_object: Option<Value>,
+    pub warnings: Option<Value>,
+    pub intuit_object: Option<Value>,
     #[serde(alias = "Fault")]
-    pub(crate) fault: Option<Fault>,
-    pub(crate) report: Option<Value>,
-    pub(crate) sync_error_response: Option<Value>,
-    pub(crate) query_response: Option<Vec<Value>>,
-    pub(crate) batch_item_response: Option<Vec<Value>>,
-    pub(crate) request_id: Option<String>,
-    pub(crate) time: String,
-    pub(crate) status: Option<String>,
+    pub fault: Option<Fault>,
+    pub report: Option<Value>,
+    pub sync_error_response: Option<Value>,
+    pub query_response: Option<Vec<Value>>,
+    pub batch_item_response: Option<Vec<Value>>,
+    pub request_id: Option<String>,
+    #[serde(flatten)]
+    pub time: TimeField,
+    pub status: Option<String>,
     #[serde(rename = "cdcresponse")]
-    pub(crate) cdc_response: Option<Vec<Value>>,
+    pub cdc_response: Option<Vec<Value>>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum TimeField {
+    Time(u64),
+    String(String),
+}
+
+impl Default for TimeField {
+    fn default() -> Self {
+        TimeField::Time(0)
+    }
 }
 
 impl std::fmt::Display for QBErrorResponse {
