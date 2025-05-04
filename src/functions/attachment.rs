@@ -27,7 +27,7 @@
 use std::path::Path;
 
 use base64::Engine;
-use http_client::{HttpClient, Request};
+use http_client::{http_types::StatusCode, HttpClient, Request};
 use quickbooks_types::{content_type_from_ext, Attachable, QBAttachable};
 
 use crate::{
@@ -112,6 +112,10 @@ async fn qb_upload<Client: HttpClient>(
     let mut qb_response: AttachableResponseExt = qb
         .with_permission(|_| async {
             let mut response = client.send(request).await?;
+            if response.status() == StatusCode::TooManyRequests {
+                // Handle rate limiting by QuickBooks
+                return Err(APIError::ThrottleLimitReached);
+            }
             if !response.status().is_success() {
                 return Err(APIError::BadRequest(response.body_json().await?));
             }
