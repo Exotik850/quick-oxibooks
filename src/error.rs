@@ -128,24 +128,9 @@ pub struct QBErrorResponse {
     pub query_response: Option<Vec<Value>>,
     pub batch_item_response: Option<Vec<Value>>,
     pub request_id: Option<String>,
-    #[serde(flatten)]
-    pub time: TimeField,
     pub status: Option<String>,
     #[serde(rename = "cdcresponse")]
     pub cdc_response: Option<Vec<Value>>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
-pub enum TimeField {
-    Time(u64),
-    String(String),
-}
-
-impl Default for TimeField {
-    fn default() -> Self {
-        TimeField::Time(0)
-    }
 }
 
 impl std::fmt::Display for QBErrorResponse {
