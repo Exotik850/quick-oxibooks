@@ -51,7 +51,7 @@ where
     )
     .await?;
 
-    log::info!(
+    log::debug!(
         "Successfully created {} with ID of '{:?}'",
         T::name(),
         response.object.id().into_iter().next()

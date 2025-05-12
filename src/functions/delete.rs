@@ -59,7 +59,7 @@ where
     )
     .await?;
 
-    log::info!("Successfully deleted {} with ID of {}", T::name(), id);
+    log::debug!("Successfully deleted {} with ID of {}", T::name(), id);
 
     Ok(response.object)
 }

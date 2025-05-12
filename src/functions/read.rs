@@ -43,7 +43,7 @@ where
     )
     .await?;
 
-    log::info!(
+    log::debug!(
         "Successfully Read {} object with ID : {}",
         T::name(),
         response

@@ -140,6 +140,6 @@ where
         Some(&[("sendTo", email)]),
     )
     .await?;
-    log::info!("Successfully Sent {} object with ID : {}", T::name(), id);
+    log::debug!("Successfully Sent {} object with ID : {}", T::name(), id);
     Ok(response.object)
 }

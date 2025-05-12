@@ -39,7 +39,7 @@ where
         }
     }
 
-    log::info!(
+    log::debug!(
         "Built Request with params: {}-{}-{}-{:?}",
         path,
         method,

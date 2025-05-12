@@ -138,7 +138,7 @@ async fn qb_upload<Client: HttpClient>(
         AttachableResponse::Attachable(attachable) => attachable,
     };
 
-    log::info!("Sent attachment : {:?}", obj.file_name.as_ref().unwrap());
+    log::debug!("Sent attachment : {:?}", obj.file_name.as_ref().unwrap());
 
     Ok(obj)
 }

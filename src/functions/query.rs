@@ -103,7 +103,7 @@ where
         log::warn!("Queried no items for query : {query_str}");
         Err(APIError::NoQueryObjects(query_str.into()))
     } else {
-        log::info!(
+        log::debug!(
             "Successfully Queried {} {}(s) for query string : {query_str}",
             response.query_response.items.len(),
             T::name()

@@ -115,7 +115,7 @@ async fn qb_get_pdf_bytes<T: QBItem + QBPDFable>(
         return Err(APIError::BadRequest(response.json().await?));
     }
 
-    log::info!(
+    log::debug!(
         "Successfully got PDF of {} with ID : {}",
         T::name(),
         item.id().ok_or(APIError::NoIdOnGetPDF)?
@@ -143,7 +143,7 @@ async fn qb_save_pdf_to_file<T: QBItem + QBPDFable>(
         return Err(APIError::ByteLengthMismatch);
     }
 
-    log::info!(
+    log::debug!(
         "Successfully saved PDF of {} #{} to {}",
         T::name(),
         item.id().ok_or(APIError::NoIdOnGetPDF)?,
