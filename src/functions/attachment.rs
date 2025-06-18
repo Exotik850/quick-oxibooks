@@ -31,7 +31,8 @@ use http_client::{http_types::StatusCode, HttpClient, Request};
 use quickbooks_types::{content_type_from_ext, Attachable, QBAttachable};
 
 use crate::{
-    error::{APIError, Fault, QBErrorResponse}, QBContext
+    error::{APIError, Fault, QBErrorResponse},
+    QBContext,
 };
 
 const BOUNDARY: &str = "----------------quick-oxibooks"; // Multipart boundary for the request

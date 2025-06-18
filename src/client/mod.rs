@@ -6,6 +6,7 @@ use crate::{error::APIError, Environment};
 mod context;
 mod refresh;
 pub use context::QBContext;
+pub use refresh::RefreshableQBContext;
 
 pub(crate) fn set_headers(content_type: &str, access_token: &str, request: &mut Request) {
     let bt = format!("Bearer {access_token}");

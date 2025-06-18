@@ -68,7 +68,9 @@ use url::Url;
 
 use super::refresh::RefreshableQBContext;
 use crate::{
-    error::{APIError, QBErrorResponse}, limiter::RateLimiter, DiscoveryDoc, Environment
+    error::{APIError, QBErrorResponse},
+    limiter::RateLimiter,
+    DiscoveryDoc, Environment,
 };
 
 // Rate Limit:

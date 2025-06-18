@@ -3,7 +3,9 @@ use quickbooks_types::{QBDeletable, QBItem};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    error::APIError, functions::{qb_request, QBResponse}, QBContext
+    error::APIError,
+    functions::{qb_request, QBResponse},
+    QBContext,
 };
 
 /// Trait for deleting an item
