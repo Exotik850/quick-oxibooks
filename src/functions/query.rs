@@ -3,7 +3,10 @@ use quickbooks_types::QBItem;
 use serde::Deserialize;
 
 use super::qb_request;
-use crate::{error::APIError, QBContext};
+use crate::{
+    error::{APIError, APIErrorInner},
+    APIResult, QBContext,
+};
 
 /// Trait for querying `QuickBooks` objects
 pub trait QBQuery {
@@ -37,7 +40,7 @@ pub trait QBQuery {
         query_str: &str,
         qb: &QBContext,
         client: &Client,
-    ) -> impl std::future::Future<Output = Result<Self, APIError>>
+    ) -> impl std::future::Future<Output = APIResult<Self>>
     where
         Self: Sized,
         Client: HttpClient,
@@ -101,7 +104,7 @@ where
 
     if response.query_response.items.is_empty() {
         log::warn!("Queried no items for query : {query_str}");
-        Err(APIError::NoQueryObjects(query_str.into()))
+        Err(APIErrorInner::NoQueryObjects(query_str.into()).into())
     } else {
         log::debug!(
             "Successfully Queried {} {}(s) for query string : {query_str}",
@@ -120,7 +123,7 @@ where
 //     query_str: &str,
 //     qb: &QBContext,
 //     client: &Client,
-// ) -> Result<T, APIError> {
+// ) -> APIResult<T> {
 //     Ok(qb_query(query_str, 1, qb, client).await?.swap_remove(0))
 // }
 

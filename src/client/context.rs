@@ -1,10 +1,10 @@
-//! # QuickBooks Online API Client
+//! # `QuickBooks` Online API Client
 //!
-//! This module provides functionality to interact with the QuickBooks Online API.
+//! This module provides functionality to interact with the `QuickBooks` Online API.
 //!
 //! ## Usage
 //!
-//! The primary way to interact with the QuickBooks Online API is through the `QBContext` struct,
+//! The primary way to interact with the `QuickBooks` Online API is through the `QBContext` struct,
 //! which manages authentication, rate limiting, and API discovery information.
 //!
 //! ### Creating a Context
@@ -54,23 +54,20 @@
 //! - Batch operations: 30 requests per batch, 40 batches per minute
 //!
 //! After being throttled, wait 60 seconds before retrying.
-use std::{future::Future, ops::Deref, time::Duration};
+use std::{future::Future, time::Duration};
 
-use base64::Engine;
 use chrono::{DateTime, Utc};
 use http_client::{http_types::Method, HttpClient, Request};
 // use reqwest::{
 //     header::{self, HeaderMap, InvalidHeaderValue},
 //     Client, Method, Request,
 // };
-use serde::{Deserialize, Serialize};
-use url::Url;
 
 use super::refresh::RefreshableQBContext;
 use crate::{
-    error::{APIError, QBErrorResponse},
+    error::QBErrorResponse,
     limiter::RateLimiter,
-    DiscoveryDoc, Environment,
+    APIResult, DiscoveryDoc, Environment,
 };
 
 // Rate Limit:
@@ -84,9 +81,9 @@ const RATE_LIMIT: usize = 500;
 const BATCH_RATE_LIMIT: usize = 40;
 const RESET_DURATION: Duration = Duration::from_secs(60);
 
-/// QuickBooks Online Context
+/// `QuickBooks` Online Context
 ///
-/// This struct holds the context for interacting with the QuickBooks Online API.
+/// This struct holds the context for interacting with the `QuickBooks` Online API.
 /// It includes authentication details, rate limiters, and discovery document.
 ///
 /// Note: The `expires_in` field is set to a far future date by default and should be updated upon token refresh.
@@ -107,7 +104,7 @@ impl QBContext {
         company_id: String,
         access_token: String,
         client: &Client,
-    ) -> Result<Self, APIError> {
+    ) -> APIResult<Self> {
         Ok(Self {
             environment,
             company_id,
@@ -127,7 +124,7 @@ impl QBContext {
     pub async fn new_from_env<Client: HttpClient>(
         environment: Environment,
         client: &Client,
-    ) -> Result<Self, APIError> {
+    ) -> APIResult<Self> {
         let company_id = std::env::var("QB_COMPANY_ID")?;
         let access_token = std::env::var("QB_ACCESS_TOKEN")?;
         let context = Self::new(environment, company_id, access_token, client).await?;
@@ -154,10 +151,10 @@ impl QBContext {
 
     /// Acquires a permit from the rate limiter and executes the given function
     /// with the given context
-    pub(crate) async fn with_permission<'a, F, FF, T>(&'a self, f: F) -> Result<T, APIError>
+    pub(crate) async fn with_permission<'a, F, FF, T>(&'a self, f: F) -> APIResult<T>
     where
         F: FnOnce(&'a Self) -> FF,
-        FF: Future<Output = Result<T, APIError>>,
+        FF: Future<Output = APIResult<T>>,
     {
         let permit = self.qbo_limiter.acquire().await;
         let out = f(self).await;
@@ -167,10 +164,10 @@ impl QBContext {
 
     /// Acquires a permit from the batch rate limiter and executes the given function
     /// with the given context
-    pub(crate) async fn with_batch_permission<'a, F, FF, T>(&'a self, f: F) -> Result<T, APIError>
+    pub(crate) async fn with_batch_permission<'a, F, FF, T>(&'a self, f: F) -> APIResult<T>
     where
         F: FnOnce(&'a Self) -> FF,
-        FF: Future<Output = Result<T, APIError>>,
+        FF: Future<Output = APIResult<T>>,
     {
         let permit = self.batch_limiter.acquire().await;
         let out = f(self).await;
@@ -185,10 +182,7 @@ impl QBContext {
     }
 
     /// Checks if the current access token is authorized
-    pub async fn check_authorized<Client: HttpClient>(
-        &self,
-        client: &Client,
-    ) -> Result<bool, APIError> {
+    pub async fn check_authorized<Client: HttpClient>(&self, client: &Client) -> APIResult<bool> {
         let mut request = Request::new(Method::Get, self.environment.user_info_url());
         request.insert_header("Authorization", format!("Bearer {}", &self.access_token));
         request.insert_header("Accept", "application/json");

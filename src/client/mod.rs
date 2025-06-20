@@ -2,7 +2,7 @@ use http_client::http_types::{Method, Request};
 use serde::Serialize;
 use url::Url;
 
-use crate::{error::APIError, Environment};
+use crate::{APIResult, Environment};
 mod context;
 mod refresh;
 pub use context::QBContext;
@@ -25,7 +25,7 @@ pub(crate) fn build_request<B>(
     content_type: &str,
     environment: Environment,
     access_token: &str,
-) -> Result<Request, APIError>
+) -> APIResult<Request>
 where
     B: Serialize,
 {
@@ -59,7 +59,7 @@ pub(crate) fn build_url(
     environment: Environment,
     path: &str,
     query: Option<&[(&str, &str)]>,
-) -> Result<Url, APIError> {
+) -> Result<Url, url::ParseError> {
     let url = Url::parse(environment.endpoint_url())?;
     let mut url = url.join(path)?;
     if let Some(q) = query {

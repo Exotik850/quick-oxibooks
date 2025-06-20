@@ -72,7 +72,7 @@ use quickbooks_types::{Invoice, SalesReceipt, Vendor};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    error::{APIError, BatchMissingItemsError, Fault},
+    error::{APIError, APIErrorInner, BatchMissingItemsError, Fault},
     functions::execute_request,
     QBContext,
 };
@@ -276,10 +276,10 @@ where
     }
 
     if !items.is_empty() {
-        return Err(APIError::BatchRequestMissingItems(BatchMissingItemsError {
-            items,
-            results,
-        }));
+        return Err(
+            APIErrorInner::BatchRequestMissingItems(BatchMissingItemsError { items, results })
+                .into(),
+        );
     }
 
     Ok(results)

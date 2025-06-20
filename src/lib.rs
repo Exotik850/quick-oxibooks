@@ -62,12 +62,15 @@ pub mod types {
 pub mod functions;
 pub(crate) mod limiter;
 
+use crate::error::APIErrorInner;
 pub use crate::functions::attachment;
 #[cfg(feature = "pdf")]
 pub use crate::functions::pdf;
 
 #[cfg(feature = "macros")]
 pub mod macros;
+
+pub type APIResult<T> = Result<T, APIError>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
 pub enum Environment {
@@ -145,13 +148,13 @@ impl DiscoveryDoc {
     pub async fn get_async<Client: HttpClient>(
         environment: Environment,
         client: &Client,
-    ) -> Result<Self, APIError> {
+    ) -> APIResult<Self> {
         let url = environment.discovery_url();
         // let request = client.get(url).build()?;
         let request = Request::get(url);
         let mut resp = client.send(request).await?;
         if !resp.status().is_success() {
-            return Err(APIError::BadRequest(resp.body_json().await?));
+            return Err(APIErrorInner::BadRequest(resp.body_json().await?).into());
         }
         Ok(resp.body_json().await?)
     }
@@ -159,12 +162,12 @@ impl DiscoveryDoc {
     // pub fn get(
     //     environment: Environment,
     //     client: &reqwest::blocking::Client,
-    // ) -> Result<Self, APIError> {
+    // ) -> APIResult<Self> {
     //     let url = environment.discovery_url();
     //     let request = client.get(url).build()?;
     //     let resp = client.execute(request)?;
     //     if !resp.status().is_success() {
-    //         return Err(APIError::BadRequest(resp.json()?));
+    //         return Err(APIErrorInner::BadRequest(resp.json()?));
     //     }
     //     Ok(resp.json()?)
     // }

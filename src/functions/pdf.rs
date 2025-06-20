@@ -95,7 +95,7 @@ async fn qb_get_pdf_bytes<T: QBItem + QBPDFable>(
     client: &Client,
 ) -> Result<Vec<u8>, APIError> {
     let Some(id) = item.id() else {
-        return Err(APIError::NoIdOnGetPDF);
+        return Err(APIErrorInner::NoIdOnGetPDF);
     };
 
     let request = crate::client::build_request(
@@ -112,13 +112,13 @@ async fn qb_get_pdf_bytes<T: QBItem + QBPDFable>(
     let response = qb.with_permission(|qb| client.execute(request)).await?;
 
     if !response.status().is_success() {
-        return Err(APIError::BadRequest(response.json().await?));
+        return Err(APIErrorInner::BadRequest(response.json().await?));
     }
 
     log::debug!(
         "Successfully got PDF of {} with ID : {}",
         T::name(),
-        item.id().ok_or(APIError::NoIdOnGetPDF)?
+        item.id().ok_or(APIErrorInner::NoIdOnGetPDF)?
     );
 
     Ok(response.bytes().await?.into())
@@ -140,13 +140,13 @@ async fn qb_save_pdf_to_file<T: QBItem + QBPDFable>(
 
     if bytes.len() != amt {
         log::error!("Couldn't write all the bytes of file : {}", file_name);
-        return Err(APIError::ByteLengthMismatch);
+        return Err(APIErrorInner::ByteLengthMismatch);
     }
 
     log::debug!(
         "Successfully saved PDF of {} #{} to {}",
         T::name(),
-        item.id().ok_or(APIError::NoIdOnGetPDF)?,
+        item.id().ok_or(APIErrorInner::NoIdOnGetPDF)?,
         file_name
     );
     Ok(())

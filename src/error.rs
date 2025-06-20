@@ -4,9 +4,41 @@ use serde_json::Value;
 
 use crate::batch::{QBBatchOperation, QBBatchResponseData};
 // #[allow(dead_code)]
+
+#[derive(Debug)]
+pub struct APIError(Box<APIErrorInner>);
+
+impl std::fmt::Display for APIError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::error::Error for APIError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.0.source()
+    }
+}
+
+impl std::ops::Deref for APIError {
+    type Target = APIErrorInner;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> From<T> for APIError
+where
+    T: Into<APIErrorInner>,
+{
+    fn from(err: T) -> Self {
+        APIError(Box::new(err.into()))
+    }
+}
+
 // TODO Split this into multiple error types, currently all errors are lumped into one enum
 #[derive(Debug, thiserror::Error)]
-pub enum APIError {
+pub enum APIErrorInner {
     // #[cfg(any(feature = "attachments", feature = "pdf"))]
     // #[error(transparent)]
     // TokioIoError(#[from] tokio::io::Error),
@@ -72,7 +104,7 @@ impl std::fmt::Display for BatchMissingItemsError {
 
 impl From<http_client::http_types::Error> for APIError {
     fn from(err: http_client::http_types::Error) -> Self {
-        APIError::HttpError(err)
+        APIErrorInner::HttpError(err).into()
     }
 }
 

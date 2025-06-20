@@ -1,8 +1,12 @@
+
 use http_client::{http_types::Method, HttpClient};
 use quickbooks_types::QBItem;
 
 use super::{qb_request, QBResponse};
-use crate::{error::APIError, QBContext};
+use crate::{
+    error::{APIError, APIErrorInner},
+    APIResult, QBContext,
+};
 
 pub trait QBRead {
     fn read<Client: HttpClient>(
@@ -29,7 +33,7 @@ where
     Client: HttpClient,
 {
     let Some(id) = item.id() else {
-        return Err(APIError::NoIdOnRead);
+        return Err(APIErrorInner::NoIdOnRead.into());
     };
 
     let response: QBResponse<T> = qb_request(
@@ -58,11 +62,7 @@ where
 }
 
 /// Retrieves an object by ID from quickbooks context
-pub async fn qb_get_single<T, Client>(
-    id: &str,
-    qb: &QBContext,
-    client: &Client,
-) -> Result<T, APIError>
+pub async fn qb_get_single<T, Client>(id: &str, qb: &QBContext, client: &Client) -> APIResult<T>
 where
     T: QBItem,
     Client: HttpClient,

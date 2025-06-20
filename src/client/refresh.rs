@@ -3,7 +3,7 @@ use http_client::{http_types::Method, HttpClient, Request};
 use serde::{Deserialize, Serialize};
 
 use super::QBContext;
-use crate::error::APIError;
+use crate::error::{APIError, APIErrorInner};
 
 pub struct RefreshableQBContext {
     pub(crate) context: QBContext,
@@ -47,7 +47,7 @@ impl RefreshableQBContext {
         let response = client.send(request).await?;
 
         if !response.status().is_success() {
-            return Err(APIError::InvalidClient);
+            return Err(APIErrorInner::InvalidClient.into());
         }
 
         let mut response = response;

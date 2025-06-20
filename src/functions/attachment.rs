@@ -1,7 +1,7 @@
-//! Module for handling attachments in QuickBooks Online
+//! Module for handling attachments in `QuickBooks` Online
 //!
 //! This module provides functionality for uploading files as attachments
-//! to QuickBooks Online objects. It handles the file encoding, metadata,
+//! to `QuickBooks` Online objects. It handles the file encoding, metadata,
 //! and multipart form upload process.
 //!
 //! # Example
@@ -28,16 +28,16 @@ use std::path::Path;
 
 use base64::Engine;
 use http_client::{http_types::StatusCode, HttpClient, Request};
-use quickbooks_types::{content_type_from_ext, Attachable, QBAttachable};
+use quickbooks_types::{Attachable, QBAttachable};
 
 use crate::{
-    error::{APIError, Fault, QBErrorResponse},
-    QBContext,
+    error::{APIError, APIErrorInner, Fault, QBErrorResponse},
+    APIResult, QBContext,
 };
 
 const BOUNDARY: &str = "----------------quick-oxibooks"; // Multipart boundary for the request
 
-// async fn _make_file_part(file_name: impl AsRef<Path>) -> Result<Part, APIError> {
+// async fn _make_file_part(file_name: impl AsRef<Path>) -> APIResult<Part> {
 //     let buf = async_fs::read(&file_name).await?;
 //     let encoded = base64::engine::general_purpose::STANDARD_NO_PAD.encode(buf);
 
@@ -54,7 +54,7 @@ const BOUNDARY: &str = "----------------quick-oxibooks"; // Multipart boundary f
 //     let ext: PathBuf = file_name.as_ref().to_path_buf();
 //     let extension = ext.extension().unwrap().to_str().unwrap();
 //     let Some(ct) = content_type_from_ext(extension) else {
-//         return Err(APIError::InvalidFile(extension.to_string()));
+//         return Err(APIErrorInner::InvalidFile(extension.to_string()));
 //     };
 
 //     let file_part = Part::bytes(encoded.into_bytes())
@@ -81,7 +81,7 @@ pub trait QBUpload {
         &self,
         qb: &QBContext,
         client: &Client,
-    ) -> impl std::future::Future<Output = Result<Self, APIError>>
+    ) -> impl std::future::Future<Output = APIResult<Self>>
     where
         Self: Sized;
 }
@@ -91,7 +91,7 @@ impl QBUpload for Attachable {
         &self,
         qb: &QBContext,
         client: &Client,
-    ) -> impl std::future::Future<Output = Result<Self, APIError>> {
+    ) -> impl std::future::Future<Output = APIResult<Self>> {
         qb_upload(self, qb, client)
     }
 }
@@ -100,12 +100,12 @@ impl QBUpload for Attachable {
 /// via a `Attachable` object
 ///
 /// Uploads the file and makes the `attachable` object
-/// in QuickBooks.
+/// in `QuickBooks`.
 async fn qb_upload<Client: HttpClient>(
     attachable: &Attachable,
     qb: &QBContext,
     client: &Client,
-) -> Result<Attachable, APIError> {
+) -> APIResult<Attachable> {
     attachable.can_upload()?;
 
     let request = make_upload_request(attachable, qb).await?;
@@ -115,10 +115,10 @@ async fn qb_upload<Client: HttpClient>(
             let mut response = client.send(request).await?;
             if response.status() == StatusCode::TooManyRequests {
                 // Handle rate limiting by QuickBooks
-                return Err(APIError::ThrottleLimitReached);
+                return Err(APIErrorInner::ThrottleLimitReached.into());
             }
             if !response.status().is_success() {
-                return Err(APIError::BadRequest(response.body_json().await?));
+                return Err(APIErrorInner::BadRequest(response.body_json().await?).into());
             }
             let out = response.body_json().await?;
             Ok(out)
@@ -126,15 +126,16 @@ async fn qb_upload<Client: HttpClient>(
         .await?;
 
     if qb_response.ar.is_empty() {
-        return Err(APIError::NoAttachableObjects);
-    };
+        return Err(APIErrorInner::NoAttachableObjects.into());
+    }
 
     let obj = match qb_response.ar.swap_remove(0) {
         AttachableResponse::Fault(fault) => {
-            return Err(APIError::BadRequest(QBErrorResponse {
+            return Err(APIErrorInner::BadRequest(QBErrorResponse {
                 fault: Some(fault),
                 ..Default::default()
-            }))
+            })
+            .into())
         }
         AttachableResponse::Attachable(attachable) => attachable,
     };
@@ -144,7 +145,7 @@ async fn qb_upload<Client: HttpClient>(
     Ok(obj)
 }
 
-async fn make_upload_request(attachable: &Attachable, qb: &QBContext) -> Result<Request, APIError> {
+async fn make_upload_request(attachable: &Attachable, qb: &QBContext) -> APIResult<Request> {
     let path = format!("company/{}/upload", qb.company_id);
     let url = crate::client::build_url(qb.environment, &path, Some(&[]))?;
     let mut request = Request::post(url);
@@ -157,18 +158,16 @@ async fn make_multipart(req: &mut Request, attachable: &Attachable) -> Result<()
     let file_path = attachable
         .file_path
         .as_deref()
-        .ok_or_else(|| APIError::AttachableUploadMissingItems("file_path"))?;
+        .ok_or_else(|| APIErrorInner::AttachableUploadMissingItems("file_path"))?;
     let ct = attachable
         .content_type
         .as_deref()
-        .ok_or_else(|| APIError::AttachableUploadMissingItems("content_type"))?;
+        .ok_or_else(|| APIErrorInner::AttachableUploadMissingItems("content_type"))?;
     let mut body = String::new();
 
     body.push_str(&format!("--{BOUNDARY}\r\n"));
 
-    body.push_str(&format!(
-        "Content-Disposition: form-data; name=\"file_metadata_01\"\r\n"
-    ));
+    body.push_str("Content-Disposition: form-data; name=\"file_metadata_01\"\r\n");
     body.push_str("Content-Type: application/json\r\n\r\n");
 
     let json_body = serde_json::to_string(attachable)?;
@@ -183,12 +182,11 @@ async fn make_multipart(req: &mut Request, attachable: &Attachable) -> Result<()
     // let file_name = file_path.split(sep).last().unwrap_or(file_path);
     let file_name = file_path
         .file_name()
-        .ok_or_else(|| APIError::InvalidFile(file_path.to_string_lossy().to_string()))?
+        .ok_or_else(|| APIErrorInner::InvalidFile(file_path.to_string_lossy().to_string()))?
         .to_string_lossy();
 
     body.push_str(&format!(
-        "Content-Disposition: form-data; name=\"file_content_01\"; filename=\"{}\"\r\n",
-        file_name
+        "Content-Disposition: form-data; name=\"file_content_01\"; filename=\"{file_name}\"\r\n"
     ));
     body.push_str(&format!("Content-Type: {ct}\r\n"));
     body.push_str("Content-Transfer-Encoding: base64\r\n\r\n");

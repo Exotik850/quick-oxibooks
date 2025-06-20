@@ -3,9 +3,9 @@ use quickbooks_types::{QBCreatable, QBItem};
 
 // use reqwest::{Client, Method};
 use crate::{
-    error::APIError,
+    error::APIErrorInner,
     functions::{qb_request, QBResponse},
-    QBContext,
+    APIResult, QBContext,
 };
 
 /// Trait for creating an item
@@ -17,29 +17,25 @@ pub trait QBCreate {
         &self,
         qb: &QBContext,
         client: &Client,
-    ) -> impl std::future::Future<Output = Result<Self, APIError>>
+    ) -> impl std::future::Future<Output = APIResult<Self>>
     where
         Self: Sized;
 }
 impl<T: QBItem + QBCreatable> QBCreate for T {
-    async fn create<Client: HttpClient>(
-        &self,
-        qb: &QBContext,
-        client: &Client,
-    ) -> Result<Self, APIError> {
+    async fn create<Client: HttpClient>(&self, qb: &QBContext, client: &Client) -> APIResult<Self> {
         qb_create(self, qb, client).await
     }
 }
 
 /// Creates the given item using the context given, but first
 /// checks if the item is suitable to be created.
-async fn qb_create<T, Client>(item: &T, qb: &QBContext, client: &Client) -> Result<T, APIError>
+async fn qb_create<T, Client>(item: &T, qb: &QBContext, client: &Client) -> APIResult<T>
 where
     T: QBItem + QBCreatable,
     Client: HttpClient,
 {
     if !item.can_create() {
-        return Err(APIError::CreateMissingItems);
+        return Err(APIErrorInner::CreateMissingItems.into());
     }
 
     let response: QBResponse<T> = qb_request(
