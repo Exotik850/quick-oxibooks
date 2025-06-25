@@ -20,7 +20,7 @@
 //! };
 //! use quickbooks_types::{Invoice, Vendor};
 //!
-//! async fn batch_example(qb: &QBContext, client: &reqwest::Client) -> Result<(), Box<dyn std::error::Error>> {
+//! fn batch_example(qb: &QBContext, client: &ureq::Agent) -> Result<(), Box<dyn std::error::Error>> {
 //!     // Create a collection of operations
 //!     let operations = vec![
 //!         // Query for invoices
@@ -41,7 +41,7 @@
 //!     ];
 //!
 //!     // Execute the batch request
-//!     let results = operations.batch(qb, client).await?;
+//!     let results = operations.batch(qb, client)?;
 //!     
 //!     // Process the results
 //!     for (operation, response) in results {
@@ -63,14 +63,14 @@
 //! - Handle potential partial failures where some operations succeed while others fail
 //! - Use the appropriate operation type (create, update, delete, query) for each task
 //!
-use std::{collections::HashMap, future::Future};
+use std::collections::HashMap;
 
 use quickbooks_types::{Invoice, SalesReceipt, Vendor};
-use reqwest::Method;
 use serde::{Deserialize, Serialize};
+use ureq::{http::Method, Agent};
 
 use crate::{
-    error::{APIError, BatchMissingItemsError, Fault},
+    error::{APIError, APIErrorInner, BatchMissingItemsError, Fault},
     functions::execute_request,
     QBContext,
 };
@@ -209,8 +209,8 @@ pub trait BatchIterator {
     fn batch(
         self,
         qb: &QBContext,
-        client: &reqwest::Client,
-    ) -> impl Future<Output = Result<Vec<(QBBatchOperation, QBBatchResponseData)>, APIError>>;
+        client: &Agent,
+    ) -> Result<Vec<(QBBatchOperation, QBBatchResponseData)>, APIError>;
 }
 
 impl<I> BatchIterator for I
@@ -220,8 +220,8 @@ where
     fn batch(
         self,
         qb: &QBContext,
-        client: &reqwest::Client,
-    ) -> impl Future<Output = Result<Vec<(QBBatchOperation, QBBatchResponseData)>, APIError>> {
+        client: &Agent,
+    ) -> Result<Vec<(QBBatchOperation, QBBatchResponseData)>, APIError> {
         qb_batch(self, qb, client)
     }
 }
@@ -235,10 +235,10 @@ where
 /// # Returns
 /// A `Result` containing a vector of tuples, where each tuple consists of a `QBBatchOperation` and its corresponding `QBBatchResponseData`.
 /// If the request fails or some items are missing in the response, an `APIError` is returned.
-pub async fn qb_batch<I>(
+pub fn qb_batch<I>(
     items: I,
     qb: &QBContext,
-    client: &reqwest::Client,
+    client: &ureq::Agent,
     // ) -> Result<Vec<QBBatchItem<QBBatchResponseData>>, APIError>
 ) -> Result<Vec<(QBBatchOperation, QBBatchResponseData)>, APIError>
 where
@@ -255,12 +255,10 @@ where
             .collect(),
     };
     let url = format!("company/{}/batch", qb.company_id);
-    let resp = qb
-        .with_batch_permission(|qb| {
-            execute_request(qb, client, Method::POST, &url, Some(&batch), None, None)
-        })
-        .await?;
-    let batch_resp: BatchResponseExt = resp.json().await?;
+    let resp = qb.with_batch_permission(|qb| {
+        execute_request(qb, client, Method::POST, &url, Some(&batch), None, None)
+    })?;
+    let batch_resp: BatchResponseExt = resp.into_body().read_json()?;
     let mut items = batch
         .items
         .into_iter()
@@ -274,10 +272,10 @@ where
     }
 
     if !items.is_empty() {
-        return Err(APIError::BatchRequestMissingItems(BatchMissingItemsError {
-            items,
-            results,
-        }));
+        return Err(
+            APIErrorInner::BatchRequestMissingItems(BatchMissingItemsError { items, results })
+                .into(),
+        );
     }
 
     Ok(results)

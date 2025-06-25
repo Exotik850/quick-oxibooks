@@ -1,58 +1,58 @@
 pub use const_str::{concat, convert_ascii_case};
 
 /// # qb_where_clause
-/// 
+///
 /// Creates a SQL-like WHERE clause string for QuickBooks API queries with compile-time field validation.
-/// 
+///
 /// This macro generates properly formatted WHERE clauses for QuickBooks Online API, converting
 /// field names from snake_case to UpperCamelCase automatically, joining multiple conditions
 /// with "AND", and properly escaping values.
-/// 
+///
 /// ## Features
-/// 
+///
 /// - **Compile-time field validation**: Ensures all fields exist on the specified struct
 /// - **Case conversion**: Automatically converts field names to QuickBooks API format (UpperCamelCase)
 /// - **Memory optimization**: Uses compile-time string building for literals and capacity hints for expressions
 /// - **Additional clause support**: Allows appending raw SQL-like conditions
-/// 
+///
 /// ## Usage
-/// 
+///
 /// ### Basic WHERE clause:
 /// ```rust
 /// qb_where_clause!(Customer | given_name = "John", family_name = "Doe")
 /// // Expands to: "WHERE GivenName = 'John' AND FamilyName = 'Doe'"
 /// ```
-/// 
+///
 /// ### Using dynamic values:
 /// ```rust
 /// let name = get_name();
 /// qb_where_clause!(Customer | given_name = name, active = true)
 /// // Expands to: "WHERE GivenName = '[name value]' AND Active = 'true'"
 /// ```
-/// 
+///
 /// ### With additional conditions:
 /// ```rust
 /// qb_where_clause!(Customer | created_at = today ; "ORDER BY Id DESC")
 /// // Expands to: "WHERE CreatedAt = '[today value]' ORDER BY Id DESC"
 /// ```
-/// 
+///
 /// ## Supported operators
-/// 
+///
 /// The macro supports the following operators:
 /// - `=` (equals)
 /// - `like` (pattern matching)
 /// - `in` (value in set)
-/// 
+///
 /// ## Expansion
-/// 
+///
 /// For the pattern `qb_where_clause!(Struct | field1 = value1, field2 = value2)`:
-/// 
+///
 /// 1. Validates that `field1` and `field2` exist on `Struct` (compile-time check)
 /// 2. Converts field names to UpperCamelCase: `field1` → `Field1`
 /// 3. Builds a WHERE clause string with proper formatting
 /// 4. For literal values, builds strings at compile time
 /// 5. For expression values, builds strings at runtime with capacity optimization
-/// 
+///
 /// The `;` separator allows adding raw SQL fragments like `ORDER BY`, `LIMIT`, etc.
 #[macro_export]
 macro_rules! qb_where_clause {
@@ -139,32 +139,32 @@ macro_rules! qb_where_clause {
 }
 
 /// # qb_query
-/// 
+///
 /// Executes a QuickBooks API query for a specific entity type with compile-time field validation.
-/// 
+///
 /// This macro provides a convenient and type-safe way to query QuickBooks Online API
 /// for entity records. It builds upon the `qb_where_clause` macro to generate properly
 /// formatted query conditions and executes the query against the QuickBooks API.
-/// 
+///
 /// ## Features
-/// 
+///
 /// - **Compile-time field validation**: Ensures all fields exist on the specified struct
 /// - **Case conversion**: Automatically converts field names to QuickBooks API format
 /// - **Type safety**: Returns properly typed entity objects
 /// - **Additional clause support**: Allows appending raw SQL-like conditions like ORDER BY, LIMIT, etc.
-/// 
+///
 /// ## Usage
-/// 
+///
 /// ### Basic query:
 /// ```rust
 /// let customer = qb_query!(
 ///     &qb_context,
 ///     &http_client,
 ///     Customer | given_name = "John", family_name = "Doe"
-/// ).await?;
+/// )?;
 /// // Executes a query to find Customer where GivenName = 'John' AND FamilyName = 'Doe'
 /// ```
-/// 
+///
 /// ### With dynamic values:
 /// ```rust
 /// let name = get_name();
@@ -172,36 +172,36 @@ macro_rules! qb_where_clause {
 ///     &qb_context,
 ///     &http_client,
 ///     Customer | given_name = name, active = true
-/// ).await?;
+/// )?;
 /// // Executes a query with runtime values
 /// ```
-/// 
+///
 /// ### With additional query options:
 /// ```rust
 /// let customers = qb_query!(
 ///     &qb_context,
 ///     &http_client,
 ///     Customer | created_at = today ; "ORDER BY Id DESC MAXRESULTS 10"
-/// ).await?;
+/// )?;
 /// // Adds ordering and result limits to the query
 /// ```
-/// 
+///
 /// ## Supported operators
-/// 
+///
 /// The macro supports the same operators as `qb_where_clause`:
 /// - `=` (equals)
 /// - `like` (pattern matching)
 /// - `in` (value in set)
-/// 
+///
 /// ## Expansion
-/// 
+///
 /// For the pattern `qb_query!($qb, $client, Struct | field1 = value1, field2 = value2)`:
-/// 
+///
 /// 1. Generates a WHERE clause using `qb_where_clause!`
 /// 2. Calls `<Struct as QBQuery>::query_single()` with the generated WHERE clause
 /// 3. Passes the QuickBooks context and HTTP client to handle the API request
 /// 4. Returns the result of the query as a `Result<Struct, Error>`
-/// 
+///
 /// When additional clauses are provided after `;`, they are appended to the query string.
 #[macro_export]
 macro_rules! qb_query {
@@ -210,7 +210,7 @@ macro_rules! qb_query {
       &$crate::qb_where_clause!($struct_name | $($field $op $value),+),
       $qb,
       $client
-    ).await
+    )
   };
 
   ($qb:expr, $client:expr, $struct_name:ident | $($field:ident $op:tt $value:expr),+ ; $($addon:literal),+) => {
@@ -218,20 +218,18 @@ macro_rules! qb_query {
       &$crate::qb_where_clause!($struct_name | $($field $op $value),+ ; $($addon),+),
       $qb,
       $client
-    ).await
+    )
   };
 }
 
 #[cfg(test)]
 mod test {
-    use quickbooks_types::Customer;
     use crate::QBContext;
+    use quickbooks_types::Customer;
 
-    #[tokio::test]
-    async fn test_macro_works() -> Result<(), String> {
+    fn test_macro_works() -> Result<(), String> {
         let client = reqwest::Client::new();
         let qb = QBContext::new_from_env(crate::Environment::SANDBOX, &client)
-            .await
             .map_err(|e| e.to_string())?;
         let cust = qb_query!(
             &qb,

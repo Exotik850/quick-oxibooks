@@ -1,32 +1,27 @@
 use quickbooks_types::QBItem;
-use reqwest::{Client, Method};
+use ureq::{http::Method, Agent};
 
-use crate::{error::APIError, QBContext};
+use crate::{
+    error::{APIError, APIErrorInner},
+    QBContext,
+};
 
 use super::{qb_request, QBResponse};
 
 pub trait QBRead {
-    fn read(
-        &mut self,
-        qb: &QBContext,
-        client: &Client,
-    ) -> impl std::future::Future<Output = Result<(), APIError>>;
+    fn read(&mut self, qb: &QBContext, client: &Agent) -> Result<(), APIError>;
 }
 impl<T: QBItem> QBRead for T {
-    fn read(
-        &mut self,
-        qb: &QBContext,
-        client: &Client,
-    ) -> impl std::future::Future<Output = Result<(), APIError>> {
+    fn read(&mut self, qb: &QBContext, client: &Agent) -> Result<(), APIError> {
         qb_read(self, qb, client)
     }
 }
 
 /// Read the object by ID from quickbooks context
 /// and write it to an item
-async fn qb_read<T: QBItem>(item: &mut T, qb: &QBContext, client: &Client) -> Result<(), APIError> {
+fn qb_read<T: QBItem>(item: &mut T, qb: &QBContext, client: &Agent) -> Result<(), APIError> {
     let Some(id) = item.id() else {
-        return Err(APIError::NoIdOnRead);
+        return Err(APIErrorInner::NoIdOnRead.into());
     };
 
     let response: QBResponse<T> = qb_request(
@@ -37,8 +32,7 @@ async fn qb_read<T: QBItem>(item: &mut T, qb: &QBContext, client: &Client) -> Re
         None::<&()>,
         None,
         None,
-    )
-    .await?;
+    )?;
 
     log::info!(
         "Successfully Read {} object with ID : {}",
@@ -55,11 +49,7 @@ async fn qb_read<T: QBItem>(item: &mut T, qb: &QBContext, client: &Client) -> Re
 }
 
 /// Retrieves an object by ID from quickbooks context
-pub async fn qb_get_single<T: QBItem>(
-    id: &str,
-    qb: &QBContext,
-    client: &Client,
-) -> Result<T, APIError> {
+pub fn qb_get_single<T: QBItem>(id: &str, qb: &QBContext, client: &Agent) -> Result<T, APIError> {
     let response: QBResponse<T> = qb_request(
         qb,
         client,
@@ -68,7 +58,6 @@ pub async fn qb_get_single<T: QBItem>(
         None::<&()>,
         None,
         None,
-    )
-    .await?;
+    )?;
     Ok(response.object)
 }

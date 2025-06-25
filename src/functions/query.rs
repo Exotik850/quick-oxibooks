@@ -1,8 +1,11 @@
 use quickbooks_types::QBItem;
-use reqwest::{Client, Method};
 use serde::Deserialize;
+use ureq::{http::Method, Agent};
 
-use crate::{error::APIError, QBContext};
+use crate::{
+    error::{APIError, APIErrorInner},
+    APIResult, QBContext,
+};
 
 use super::qb_request;
 
@@ -20,8 +23,8 @@ pub trait QBQuery {
         query_str: &str,
         max_results: usize,
         qb: &QBContext,
-        client: &Client,
-    ) -> impl std::future::Future<Output = Result<Vec<Self>, APIError>>
+        client: &Agent,
+    ) -> APIResult<Vec<Self>>
     where
         Self: Sized;
 
@@ -33,15 +36,11 @@ pub trait QBQuery {
     /// "select * from {type_name} {query_str} MAXRESULTS {max_results}"
     /// ```
     #[must_use]
-    fn query_single(
-        query_str: &str,
-        qb: &QBContext,
-        client: &Client,
-    ) -> impl std::future::Future<Output = Result<Self, APIError>>
+    fn query_single(query_str: &str, qb: &QBContext, client: &Agent) -> APIResult<Self>
     where
         Self: Sized,
     {
-        async { Ok(Self::query(query_str, 1, qb, client).await?.swap_remove(0)) }
+        Ok(Self::query(query_str, 1, qb, client)?.swap_remove(0))
     }
 }
 
@@ -50,8 +49,8 @@ impl<T: QBItem> QBQuery for T {
         query_str: &str,
         max_results: usize,
         qb: &QBContext,
-        client: &Client,
-    ) -> impl std::future::Future<Output = Result<Vec<Self>, APIError>> {
+        client: &Agent,
+    ) -> APIResult<Vec<Self>> {
         qb_query(query_str, max_results, qb, client)
     }
 }
@@ -68,11 +67,11 @@ impl<T: QBItem> QBQuery for T {
 /// ```ignore
 ///  "select * from {type_name} {query_str} MAXRESULTS {max_results}"
 /// ```
-async fn qb_query<T: QBItem>(
+fn qb_query<T: QBItem>(
     query_str: &str,
     max_results: usize,
     qb: &QBContext,
-    client: &Client,
+    client: &Agent,
 ) -> Result<Vec<T>, APIError> {
     let response: QueryResponseExt<T> = qb_request(
         qb,
@@ -88,12 +87,11 @@ async fn qb_query<T: QBItem>(
                 T::name()
             ),
         )]),
-    )
-    .await?;
+    )?;
 
     if response.query_response.items.is_empty() {
         log::warn!("Queried no items for query : {query_str}");
-        Err(APIError::NoQueryObjects(query_str.into()))
+        Err(APIErrorInner::NoQueryObjects(query_str.into()).into())
     } else {
         log::info!(
             "Successfully Queried {} {}(s) for query string : {query_str}",
@@ -108,12 +106,12 @@ async fn qb_query<T: QBItem>(
 // ///
 // /// Handles retrieving a `QBItem` via query,
 // /// refer to `qb_query` for more details
-// async fn qb_query_single<T: QBItem>(
+// fn qb_query_single<T: QBItem>(
 //     query_str: &str,
 //     qb: &QBContext,
-//     client: &Client,
+//     client: &Agent,
 // ) -> Result<T, APIError> {
-//     Ok(qb_query(query_str, 1, qb, client).await?.swap_remove(0))
+//     Ok(qb_query(query_str, 1, qb, client)?.swap_remove(0))
 // }
 
 /// Internal struct that Quickbooks returns when querying objects

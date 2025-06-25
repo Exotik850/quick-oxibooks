@@ -1,8 +1,8 @@
 use quick_oxibooks::{error::APIError, functions::query::QBQuery, QBContext};
 use quickbooks_types::Invoice;
 
-#[tokio::main]
-async fn main() -> Result<(), APIError> {
+// #[tokio::main]
+fn main() -> Result<(), APIError> {
     env_logger::init();
 
     let mut args = std::env::args().skip(1);
@@ -12,17 +12,16 @@ async fn main() -> Result<(), APIError> {
     let env = args.next().expect("Missing Environment! 3rd Argument");
     let doc_number = args.next().expect("Missing DocNumber! 4th Argument");
 
-    let environment = match env.as_str() {
+    let environment = match env.to_lowercase().as_str() {
         "production" => quick_oxibooks::Environment::PRODUCTION,
         "sandbox" => quick_oxibooks::Environment::SANDBOX,
         _ => panic!("Invalid environment"),
     };
 
-    let client = reqwest::Client::new();
-    let qb = QBContext::new(environment, company_id, access_token, &client).await?;
+    let client = ureq::Agent::new_with_defaults();
+    let qb = QBContext::new(environment, company_id, access_token, &client)?;
 
-    let inv =
-        Invoice::query_single(&format!(r"where DocNumber = '{doc_number}'"), &qb, &client).await?;
+    let inv = Invoice::query_single(&format!(r"where DocNumber = '{doc_number}'"), &qb, &client)?;
 
     println!("{inv}");
 
