@@ -51,8 +51,8 @@ pub mod batch;
 pub mod client;
 pub use client::QBContext;
 use error::APIError;
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use ureq::Agent;
 pub mod error;
 
 pub mod types {
@@ -62,13 +62,15 @@ pub mod types {
 pub mod functions;
 pub(crate) mod limiter;
 
+use crate::error::APIErrorInner;
 #[cfg(feature = "attachments")]
 pub use crate::functions::attachment;
 #[cfg(feature = "pdf")]
 pub use crate::functions::pdf;
-
 #[cfg(feature = "macros")]
 pub mod macros;
+
+pub type APIResult<T> = Result<T, APIError>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
 pub enum Environment {
@@ -143,26 +145,12 @@ pub struct DiscoveryDoc {
 }
 
 impl DiscoveryDoc {
-    pub async fn get_async(environment: Environment, client: &Client) -> Result<Self, APIError> {
+    pub fn get(environment: Environment, client: &Agent) -> APIResult<Self> {
         let url = environment.discovery_url();
-        let request = client.get(url).build()?;
-        let resp = client.execute(request).await?;
-        if !resp.status().is_success() {
-            return Err(APIError::BadRequest(resp.json().await?));
+        let request = client.get(url).call()?;
+        if !request.status().is_success() {
+            return Err(APIErrorInner::BadRequest(request.into_body().read_json()?).into());
         }
-        Ok(resp.json().await?)
-    }
-
-    pub fn get(
-        environment: Environment,
-        client: &reqwest::blocking::Client,
-    ) -> Result<Self, APIError> {
-        let url = environment.discovery_url();
-        let request = client.get(url).build()?;
-        let resp = client.execute(request)?;
-        if !resp.status().is_success() {
-            return Err(APIError::BadRequest(resp.json()?));
-        }
-        Ok(resp.json()?)
+        Ok(request.into_body().read_json()?)
     }
 }

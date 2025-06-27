@@ -5,5 +5,9 @@
     ],
     "rust-analyzer.diagnostics.disabled": [
         "unreasolved-proc-macro"
+    ],
+    "rust-analyzer.cargo.features": [
+      "attachments",
+      "pdf"
     ]
 }

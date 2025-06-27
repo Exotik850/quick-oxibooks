@@ -8,8 +8,8 @@ enum ArgFlag {
     ObjectType,
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+// #[tokio::main]
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut transaction_nxrs: Vec<String> = vec![];
     let mut access_token = None;
     let mut object_type = None;
@@ -40,8 +40,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let object_type = object_type.unwrap_or("SalesReceipt".to_string());
 
-    let client = reqwest::Client::new();
-    let mut qb = QBContext::new_from_env(quick_oxibooks::Environment::PRODUCTION, &client).await?;
+    let client = ureq::Agent::new_with_defaults();
+    let mut qb = QBContext::new_from_env(quick_oxibooks::Environment::PRODUCTION, &client)?;
 
     if let Some(token) = access_token {
         qb = qb.with_access_token(token);
@@ -53,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             r#"select * from {object_type} where DocNumber = '{num}'"#
         ))));
     }
-    let batch_resp = batch_items.batch(&qb, &client).await?;
+    let batch_resp = batch_items.batch(&qb, &client)?;
     for (op, item) in batch_resp {
         match item {
             quick_oxibooks::batch::QBBatchResponseData::QueryResponse(qr) => {

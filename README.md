@@ -11,7 +11,7 @@
 ## Features
 
 - **Full QuickBooks API Coverage**: Supports all major QuickBooks entities and operations.
-- **Async-First**: Built with `async`/`await` for seamless integration into async Rust applications.
+- **Async-First**: Built with `async`/` for seamless integration into async Rust applications.
 - **Type-Safe**: Strongly-typed API responses and requests to prevent runtime errors.
 - **Authentication**: Handles OAuth2 authentication and token management.
 - **Batch Processing**: Supports batch operations for efficient bulk data handling.

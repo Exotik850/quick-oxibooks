@@ -4,20 +4,56 @@ use serde_json::Value;
 
 use crate::batch::{QBBatchOperation, QBBatchResponseData};
 // #[allow(dead_code)]
+
+#[derive(Debug)]
+pub struct APIError(Box<APIErrorInner>);
+
+impl std::fmt::Display for APIError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::error::Error for APIError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.0.source()
+    }
+}
+
+impl std::ops::Deref for APIError {
+    type Target = APIErrorInner;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> From<T> for APIError
+where
+    T: Into<APIErrorInner>,
+{
+    fn from(err: T) -> Self {
+        APIError(Box::new(err.into()))
+    }
+}
+
 // TODO Split this into multiple error types, currently all errors are lumped into one enum
 #[derive(Debug, thiserror::Error)]
-pub enum APIError {
-    #[cfg(any(feature = "attachments", feature = "pdf"))]
+pub enum APIErrorInner {
+    // #[cfg(any(feature = "attachments", feature = "pdf"))]
+    // #[error(transparent)]
+    // TokioIoError(#[from] tokio::io::Error),
+    #[error("Error on Ureq Request: {0}")]
+    UreqError(#[from] ureq::Error),
+    #[error("HTTP Error: {0}")]
+    HttpError(#[from] ureq::http::Error),
     #[error(transparent)]
-    TokioIoError(#[from] tokio::io::Error),
-    #[error(transparent)]
-    ReqwestError(#[from] reqwest::Error),
+    IoError(#[from] std::io::Error),
     #[error(transparent)]
     UrlParseError(#[from] url::ParseError),
     #[error("Bad request: {0}")]
     BadRequest(QBErrorResponse),
     #[error(transparent)]
-    InvalidHeaderValue(#[from] reqwest::header::InvalidHeaderValue),
+    JsonError(#[from] serde_json::Error),
     #[error(transparent)]
     QBTypeError(#[from] QBTypeError),
     #[error("No query objects returned for query_str : {0}")]
@@ -36,8 +72,8 @@ pub enum APIError {
     NoIdOnGetPDF,
     #[error("Couldn't write all the bytes of file")]
     ByteLengthMismatch,
-    #[error("Missing either Note or Filename when uploading Attachable")]
-    AttachableUploadMissingItems,
+    #[error("Attachable Missing '{0}' field")]
+    AttachableUploadMissingItems(&'static str),
     #[error("Missing Attachable object on upload response")]
     NoAttachableObjects,
     #[error("Throttle limit reached")]
@@ -48,8 +84,8 @@ pub enum APIError {
     EnvVarError(#[from] std::env::VarError),
     #[error("Invalid Batch Response, Missing items for : {0}")]
     BatchRequestMissingItems(BatchMissingItemsError),
-    #[error("Invalid File extenstion : {0}")]
-    InvalidFileExtension(String),
+    #[error("Invalid File name or extenstion : {0}")]
+    InvalidFile(String),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -67,6 +103,12 @@ impl std::fmt::Display for BatchMissingItemsError {
         )
     }
 }
+
+// impl From<http_client::http_types::Error> for APIError {
+//     fn from(err: http_client::http_types::Error) -> Self {
+//         APIErrorInner::HttpError(err).into()
+//     }
+// }
 
 impl Serialize for APIError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -87,13 +129,16 @@ pub struct QBError {
     pub element: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename = "UPPERCASE")]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum FaultType {
+    #[serde(alias = "AUTHENTICATION")]
     Authentication,
     #[serde(rename = "ValidationFault")]
     Validation,
+    #[serde(rename = "SystemFault")]
+    System,
     // TODO Add the rest of the fault types
+    #[serde(untagged)]
     Other(String),
 }
 
@@ -105,21 +150,21 @@ pub struct Fault {
 }
 
 // TODO Make the fields more strongly typed, currently no documentation on the error types that I can find
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct QBErrorResponse {
-    warnings: Option<Value>,
-    intuit_object: Option<Value>,
-    fault: Option<Fault>,
-    report: Option<Value>,
-    sync_error_response: Option<Value>,
-    query_response: Option<Vec<Value>>,
-    batch_item_response: Vec<Value>,
-    request_id: Option<String>,
-    time: u64,
-    status: Option<String>,
+    pub warnings: Option<Value>,
+    pub intuit_object: Option<Value>,
+    #[serde(alias = "Fault")]
+    pub fault: Option<Fault>,
+    pub report: Option<Value>,
+    pub sync_error_response: Option<Value>,
+    pub query_response: Option<Vec<Value>>,
+    pub batch_item_response: Option<Vec<Value>>,
+    pub request_id: Option<String>,
+    pub status: Option<String>,
     #[serde(rename = "cdcresponse")]
-    cdc_response: Vec<Value>,
+    pub cdc_response: Option<Vec<Value>>,
 }
 
 impl std::fmt::Display for QBErrorResponse {
