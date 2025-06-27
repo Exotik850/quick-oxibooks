@@ -40,7 +40,7 @@ fn qb_read<T: QBItem>(item: &mut T, qb: &QBContext, client: &Agent) -> Result<()
         response
             .object
             .id()
-            .unwrap_or(&"No ID after reading QB Object".into())
+            .expect("ID should be present in the response")
     );
 
     *item = response.object;

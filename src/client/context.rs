@@ -187,6 +187,6 @@ impl QBContext {
                 response.into_body().read_json::<QBErrorResponse>()?
             );
         }
-        Ok(true)
+        Ok(status.is_success())
     }
 }
