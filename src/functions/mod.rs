@@ -93,6 +93,7 @@ pub(crate) struct QBResponse<T> {
         alias = "SalesReceipt",
         alias = "Vendor"
     )]
+    // TODO : Add more aliases as needed
     object: T,
     time: String,
 }

@@ -13,6 +13,7 @@
 //! - `functions`: Contains various utility functions for interacting with the API.
 //! - `limiter`: Provides rate limiting functionality (crate-private).
 //! - `macros`: Contains macros for use with the library (optional).
+//! - `reports`: Contains functions for generating / querying reports.
 //!
 //! ## Features
 //!
@@ -61,6 +62,7 @@ pub mod types {
 
 pub mod functions;
 pub(crate) mod limiter;
+pub mod reports;
 
 use crate::error::APIErrorInner;
 #[cfg(feature = "attachments")]
