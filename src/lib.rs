@@ -145,7 +145,7 @@ pub struct DiscoveryDoc {
 }
 
 impl DiscoveryDoc {
-    pub fn get(environment: Environment, client: &Agent) -> Result<Self, APIError> {
+    pub fn get(environment: Environment, client: &Agent) -> APIResult<Self> {
         let url = environment.discovery_url();
         let request = client.get(url).call()?;
         if !request.status().is_success() {

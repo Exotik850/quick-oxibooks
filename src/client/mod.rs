@@ -1,5 +1,7 @@
 use serde::Serialize;
-use ureq::http::{request::Builder, Method, Request};
+use ureq::{
+    http::{request::Builder, Method, Request}, SendBody,
+};
 use url::Url;
 
 use crate::{APIResult, Environment};
@@ -25,7 +27,7 @@ pub(crate) fn build_request<B>(
     content_type: &str,
     environment: Environment,
     access_token: &str,
-) -> APIResult<Request<String>>
+) -> APIResult<Request<SendBody<'static>>>
 where
     B: Serialize,
 {
@@ -33,15 +35,14 @@ where
     let mut request = Request::builder().method(method.clone()).uri(url.as_str());
     request = set_headers(content_type, access_token, request);
 
-    let request = if method != Method::GET && method != Method::DELETE {
-        if let Some(body) = body {
-            let value = serde_json::to_string(body)?;
-            request.body(value)
-        } else {
-            request.body(String::new())
+    let request = match (method == Method::GET || method == Method::DELETE, body) {
+        (true, _) => request.body(SendBody::none()),
+        (false, Some(body)) => {
+            let json_bytes = serde_json::to_vec(body)?;
+            let reader = std::io::Cursor::new(json_bytes);
+            request.body(SendBody::from_owned_reader(reader))
         }
-    } else {
-        request.body(String::new())
+        (false, None) => request.body(SendBody::none()),
     }?;
 
     log::debug!(
