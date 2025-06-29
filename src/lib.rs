@@ -62,7 +62,6 @@ pub mod types {
 
 pub mod functions;
 pub(crate) mod limiter;
-pub mod reports;
 
 use crate::error::APIErrorInner;
 #[cfg(feature = "attachments")]
