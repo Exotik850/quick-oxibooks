@@ -29,7 +29,10 @@ pdf = []
 [[example]]
 name = "invoice_query"
 path = "examples/invoice_query.rs"
-required_features = ["cache", "macro"]
+
+[[example]]
+name = "report_query"
+path = "examples/report_query.rs"
 
 [workspace]
 members = ["quickbooks-types"]
