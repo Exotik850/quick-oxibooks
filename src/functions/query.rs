@@ -80,7 +80,7 @@ fn qb_query<T: QBItem>(
         &format!("company/{}/query", qb.company_id),
         None::<&()>,
         None,
-        Some(&[(
+        Some([(
             "query",
             &format!(
                 "select * from {} {query_str} MAXRESULTS {max_results}",

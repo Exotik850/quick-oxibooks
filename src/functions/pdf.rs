@@ -93,7 +93,7 @@ fn qb_get_pdf_bytes<T: QBItem + QBPDFable>(
         ureq::http::Method::GET,
         &format!("company/{}/{}/{}/pdf", qb.company_id, T::qb_id(), id),
         None::<&()>,
-        None,
+        None::<std::iter::Empty<(&str, &str)>>,
         "application/json",
         qb.environment,
         &qb.access_token,

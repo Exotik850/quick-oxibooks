@@ -19,11 +19,11 @@ pub(crate) fn set_headers(content_type: &str, access_token: &str, request: Build
     request.header("Accept", "application/json")
 }
 
-pub(crate) fn build_request<B>(
+pub(crate) fn build_request<'a, B>(
     method: Method,
     path: &str,
     body: Option<&B>,
-    query: Option<&[(&str, &str)]>,
+    query: Option<impl IntoIterator<Item=(impl AsRef<str>, impl AsRef<str>)>>,
     content_type: &str,
     environment: Environment,
     access_token: &str,
@@ -46,7 +46,7 @@ where
     }?;
 
     log::debug!(
-        "Built Request with params: {}-{}-{}-{:?}",
+        "Built Request with params: {}-{}-{}",
         path,
         method,
         if body.is_some() {
@@ -54,16 +54,15 @@ where
         } else {
             "No JSON Body"
         },
-        query
     );
 
     Ok(request)
 }
 
-pub(crate) fn build_url(
+pub(crate) fn build_url<'a>(
     environment: Environment,
     path: &str,
-    query: Option<&[(&str, &str)]>,
+    query: Option<impl IntoIterator<Item=(impl AsRef<str>, impl AsRef<str>)>>,
 ) -> Result<Url, url::ParseError> {
     let url = Url::parse(environment.endpoint_url())?;
     let mut url = url.join(path)?;

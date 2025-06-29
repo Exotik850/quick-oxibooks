@@ -40,7 +40,7 @@ fn qb_create<T: QBItem + QBCreatable>(
         &format!("company/{}/{}", qb.company_id, T::qb_id()),
         Some(item),
         None,
-        None,
+        None::<std::iter::Empty<(&str, &str)>>,
     )?;
 
     log::info!(

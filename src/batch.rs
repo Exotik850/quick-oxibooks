@@ -256,7 +256,7 @@ where
     };
     let url = format!("company/{}/batch", qb.company_id);
     let resp = qb.with_batch_permission(|qb| {
-        execute_request(qb, client, Method::POST, &url, Some(&batch), None, None)
+        execute_request(qb, client, Method::POST, &url, Some(&batch), None, None::<std::iter::Empty<(&str, &str)>>)
     })?;
     let batch_resp: BatchResponseExt = resp.into_body().read_json()?;
     let mut items = batch

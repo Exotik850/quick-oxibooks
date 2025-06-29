@@ -45,7 +45,7 @@ fn qb_delete<T: QBItem + QBDeletable>(
         &format!("company/{}/{}?operation=delete", qb.company_id, T::qb_id()),
         Some(&delete_object),
         None,
-        None,
+        None::<std::iter::Empty<(&str, &str)>>,
     )?;
 
     log::info!("Successfully deleted {} with ID of {}", T::name(), id);

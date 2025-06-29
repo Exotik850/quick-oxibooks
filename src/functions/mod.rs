@@ -17,7 +17,7 @@ pub mod delete;
 pub mod pdf;
 pub mod query;
 pub mod read;
-
+pub mod reports;
 /// Sends a request to the `QuickBooks` API endpoint with the given parameters,
 /// accounts for rate limiting
 ///
@@ -36,7 +36,7 @@ pub(crate) fn qb_request<'a, T, U>(
     path: &str,
     body: Option<&T>,
     content_type: Option<&str>,
-    query: Option<&[(&str, &str)]>,
+    query: Option<impl IntoIterator<Item=(impl AsRef<str>, impl AsRef<str>)>>,
 ) -> APIResult<U>
 where
     T: Serialize,
@@ -48,14 +48,14 @@ where
     Ok(response.into_body().read_json()?)
 }
 
-pub(crate) fn execute_request<T: Serialize>(
+pub(crate) fn execute_request<'a, T: Serialize>(
     qb: &QBContext,
     client: &Agent,
     method: Method,
     path: &str,
     body: Option<&T>,
     content_type: Option<&str>,
-    query: Option<&[(&str, &str)]>,
+    query: Option<impl IntoIterator<Item=(impl AsRef<str>, impl AsRef<str>)>>,
 ) -> Result<Response<Body>, APIError> {
     let request = crate::client::build_request(
         method,
@@ -116,7 +116,7 @@ pub fn qb_send_email<T: QBItem + QBSendable>(
         &format!("company/{}/{}/{}/send", qb.company_id, T::qb_id(), id),
         None::<&()>,
         None,
-        Some(&[("sendTo", email)]),
+        Some([("sendTo", email)]),
     )?;
     log::info!("Successfully Sent {} object with ID : {}", T::name(), id);
     Ok(response.object)

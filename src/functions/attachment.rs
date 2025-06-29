@@ -104,7 +104,7 @@ fn qb_upload(attachable: &Attachable, qb: &QBContext, client: &Agent) -> APIResu
 
 fn make_upload_request(attachable: &Attachable, qb: &QBContext) -> APIResult<Request<String>> {
     let path = format!("company/{}/upload", qb.company_id);
-    let url = crate::client::build_url(qb.environment, &path, Some(&[]))?;
+    let url = crate::client::build_url(qb.environment, &path, None::<std::iter::Empty<(&str, &str)>>)?;
     let mut request = Request::post(url.as_str());
     request = crate::client::set_headers("multipart/form-data", &qb.access_token, request);
     let request = make_multipart(request, attachable)?;

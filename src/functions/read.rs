@@ -31,7 +31,7 @@ fn qb_read<T: QBItem>(item: &mut T, qb: &QBContext, client: &Agent) -> Result<()
         &format!("company/{}/{}/{}", qb.company_id, T::qb_id(), id),
         None::<&()>,
         None,
-        None,
+        None::<std::iter::Empty<(&str, &str)>>,
     )?;
 
     log::info!(
@@ -57,7 +57,7 @@ pub fn qb_get_single<T: QBItem>(id: &str, qb: &QBContext, client: &Agent) -> Res
         &format!("company/{}/{}/{}", qb.company_id, T::qb_id(), id),
         None::<&()>,
         None,
-        None,
+        None::<std::iter::Empty<(&str, &str)>>,
     )?;
     Ok(response.object)
 }
