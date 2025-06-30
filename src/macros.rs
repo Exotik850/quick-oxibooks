@@ -1,5 +1,3 @@
-pub use const_str::{concat, convert_ascii_case};
-
 /// # qb_where_clause
 ///
 /// Creates a SQL-like WHERE clause string for QuickBooks API queries with compile-time field validation.
@@ -78,10 +76,12 @@ macro_rules! qb_where_clause {
 
   // For literal values - completely compile-time string building
   (_CLAUSE $($field:ident $op:tt $value:literal),+) => {
-    $crate::macros::concat!(
+    concat!(
       "where ",
       $(
-        $crate::macros::convert_ascii_case!(upper_camel, stringify!($field)),
+        paste::paste! {
+          stringify!([<$field:camel>])
+        }
         ' ',
         stringify!($op),
         " '",

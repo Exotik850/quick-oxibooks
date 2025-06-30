@@ -14,17 +14,18 @@ url = "2.4.1"
 quickbooks-types = { path = "quickbooks-types", features = ["builder"] }
 thiserror = "2.0"
 base64 = { version = "0.22.1" }
-const-str = { version = "0.6.2", optional = true }
 chrono = { version = "0.4.40", features = ["serde"] }
 ureq = { version = "3.0.12", features = ["json"] }
+paste = { version = "1.0.15", optional = true }
 
 [dev-dependencies]
 env_logger = "0.11.6"
 
 [features]
-macros = ["dep:const-str"]
+macros = ["dep:paste"]
 attachments = []
 pdf = []
+polars = ["quickbooks-types/polars"]
 
 [[example]]
 name = "invoice_query"
