@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
     // Fetch Profit and Loss report
-    match Report::get::<ProfitAndLoss>(&qb_context, &client, None) {
+    match Report::get(&qb_context, &client, &ProfitAndLoss, None) {
         Ok(report) => println!("Successfully fetched report: {}", serde_json::to_string_pretty(&report)?),
         Err(e) => eprintln!("Error fetching report: {}", e),
     }

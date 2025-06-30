@@ -1,4 +1,7 @@
-use quickbooks_types::reports::{types::{QBReportParams, QBReportType}, Report};
+use quickbooks_types::reports::{
+    types::{QBReportParams, QBReportType},
+    Report,
+};
 use ureq::{http::Method, Agent};
 
 use crate::{functions::qb_request, APIResult, QBContext};
@@ -7,6 +10,7 @@ pub trait QBReport {
     fn get<T: QBReportType>(
         qb: &QBContext,
         client: &Agent,
+        report_type: &T,
         params: Option<T::QueryParams>,
     ) -> APIResult<Self>
     where
@@ -15,11 +19,16 @@ pub trait QBReport {
 
 impl QBReport for Report {
     fn get<T: QBReportType>(
-            qb: &QBContext,
-            client: &Agent,
-            params: Option<T::QueryParams>,
-        ) -> APIResult<Self> {
-        let path = format!("/v3/company/{}/reports/{}", qb.company_id, T::url_name());
+        qb: &QBContext,
+        client: &Agent,
+        report_type: &T,
+        params: Option<T::QueryParams>,
+    ) -> APIResult<Self> {
+        let path = format!(
+            "/v3/company/{}/reports/{}",
+            qb.company_id,
+            report_type.url_name()
+        );
         qb_request(
             qb,
             client,
