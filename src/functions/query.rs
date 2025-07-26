@@ -21,7 +21,7 @@ pub trait QBQuery {
     /// ```
     fn query(
         query_str: &str,
-        max_results: usize,
+        max_results: Option<usize>,
         qb: &QBContext,
         client: &Agent,
     ) -> APIResult<Vec<Self>>
@@ -40,14 +40,14 @@ pub trait QBQuery {
     where
         Self: Sized,
     {
-        Ok(Self::query(query_str, 1, qb, client)?.swap_remove(0))
+        Ok(Self::query(query_str, Some(1), qb, client)?.swap_remove(0))
     }
 }
 
 impl<T: QBItem> QBQuery for T {
     fn query(
         query_str: &str,
-        max_results: usize,
+        max_results: Option<usize>,
         qb: &QBContext,
         client: &Agent,
     ) -> APIResult<Vec<Self>> {
@@ -69,10 +69,14 @@ impl<T: QBItem> QBQuery for T {
 /// ```
 fn qb_query<T: QBItem>(
     query_str: &str,
-    max_results: usize,
+    max_results: Option<usize>,
     qb: &QBContext,
     client: &Agent,
 ) -> Result<Vec<T>, APIError> {
+    let mut query = format!("select * from {} {query_str}", T::name());
+    if let Some(max) = max_results {
+        query.push_str(&format!(" MAXRESULTS {}", max));
+    }
     let response: QueryResponseExt<T> = qb_request(
         qb,
         client,
@@ -80,15 +84,8 @@ fn qb_query<T: QBItem>(
         &format!("company/{}/query", qb.company_id),
         None::<&()>,
         None,
-        Some([(
-            "query",
-            &format!(
-                "select * from {} {query_str} MAXRESULTS {max_results}",
-                T::name()
-            ),
-        )]),
+        Some([("query", &query)]),
     )?;
-
     if response.query_response.items.is_empty() {
         log::warn!("Queried no items for query : {query_str}");
         Err(APIErrorInner::NoQueryObjects(query_str.into()).into())
