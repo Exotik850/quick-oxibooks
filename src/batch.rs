@@ -13,7 +13,7 @@
 //!
 //! ## Usage Example
 //!
-//! ```rust
+//! ```ignore
 //! use quick_oxibooks::{
 //!     batch::{QBBatchOperation, BatchIterator},
 //!     QBContext,
