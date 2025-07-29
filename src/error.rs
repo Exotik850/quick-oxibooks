@@ -48,8 +48,6 @@ pub enum APIErrorInner {
     HttpError(#[from] ureq::http::Error),
     #[error(transparent)]
     IoError(#[from] std::io::Error),
-    #[error(transparent)]
-    UrlParseError(#[from] url::ParseError),
     #[error("Bad request: {0}")]
     BadRequest(QBErrorResponse),
     #[error(transparent)]

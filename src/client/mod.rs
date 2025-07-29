@@ -1,10 +1,9 @@
+use crate::{APIResult, Environment};
 use serde::Serialize;
 use ureq::{
-    http::{request::Builder, Method, Request}, SendBody,
+    http::{request::Builder, Method, Request},
+    SendBody,
 };
-use url::Url;
-
-use crate::{APIResult, Environment};
 mod context;
 mod refresh;
 pub use context::QBContext;
@@ -19,19 +18,20 @@ pub(crate) fn set_headers(content_type: &str, access_token: &str, request: Build
     request.header("Accept", "application/json")
 }
 
-pub(crate) fn build_request<'a, B>(
+pub(crate) fn build_request<'a, B, S>(
     method: Method,
     path: &str,
     body: Option<&B>,
-    query: Option<impl IntoIterator<Item=(impl AsRef<str>, impl AsRef<str>)>>,
+    query: Option<impl IntoIterator<Item = (&'a S, &'a S)>>,
     content_type: &str,
     environment: Environment,
     access_token: &str,
 ) -> APIResult<Request<SendBody<'static>>>
 where
     B: Serialize,
+    S: AsRef<str> + 'a,
 {
-    let url = build_url(environment, path, query)?;
+    let url = build_url(environment, path, query);
     let mut request = Request::builder().method(method.clone()).uri(url.as_str());
     request = set_headers(content_type, access_token, request);
 
@@ -59,17 +59,32 @@ where
     Ok(request)
 }
 
-pub(crate) fn build_url<'a>(
+pub(crate) fn build_url<'a, S>(
     environment: Environment,
     path: &str,
-    query: Option<impl IntoIterator<Item=(impl AsRef<str>, impl AsRef<str>)>>,
-) -> Result<Url, url::ParseError> {
-    let url = Url::parse(environment.endpoint_url())?;
-    let mut url = url.join(path)?;
-    if let Some(q) = query {
-        url.query_pairs_mut()
-            .extend_pairs(q)
-            .extend_pairs([("minorVersion", "65")]);
+    query: Option<impl IntoIterator<Item = (&'a S, &'a S)>>,
+) -> String
+where
+    S: AsRef<str> + 'a,
+{
+    // let url = Url::parse(environment.endpoint_url())?;
+    let mut url = environment.endpoint_url().to_string();
+    if !path.starts_with('/') {
+        url.push('/');
     }
-    Ok(url)
+    url.push_str(path);
+    if let Some(q) = query {
+        let query_string: String = q
+            .into_iter()
+            .map(|(k, v)| (k.as_ref(), v.as_ref()))
+            .chain(std::iter::once(("minorversion", "75")))
+            .map(|(k, v)| format!("{k}={v}"))
+            .collect::<Vec<_>>()
+            .join("&");
+        if !query_string.is_empty() {
+            url.push('?');
+            url.push_str(&query_string);
+        }
+    }
+    url
 }
