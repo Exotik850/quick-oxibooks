@@ -4,14 +4,13 @@
 [![Documentation](https://docs.rs/quick-oxibooks/badge.svg)](https://docs.rs/quick-oxibooks)
 [![License](https://img.shields.io/crates/l/quick-oxibooks)](LICENSE) -->
 
-`quick-oxibooks` is a Rust library for interacting with the QuickBooks Online (QBO) API. It provides a high-level, type-safe, and async-first interface for managing accounting data, including invoices, customers, payments, and more. Built on top of the `quickbooks-types` crate, it simplifies integration with QuickBooks while maintaining full control over API interactions.
+`quick-oxibooks` is a Rust library for interacting with the QuickBooks Online (QBO) API. It provides a high-level, type-safe, and easy to use interface for managing accounting data, including invoices, customers, payments, and more. Built on top of the `quickbooks-types` crate, it simplifies integration with QuickBooks while maintaining full control over API interactions.
 
 ---
 
 ## Features
 
 - **Full QuickBooks API Coverage**: Supports all major QuickBooks entities and operations.
-- **Async-First**: Built with `async`/` for seamless integration into async Rust applications.
 - **Type-Safe**: Strongly-typed API responses and requests to prevent runtime errors.
 - **Authentication**: Handles OAuth2 authentication and token management.
 - **Batch Processing**: Supports batch operations for efficient bulk data handling.
