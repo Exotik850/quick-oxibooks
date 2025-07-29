@@ -7,7 +7,53 @@ use crate::{
     APIResult, QBContext,
 };
 
-/// Trait for creating an item
+/// Trait for creating QuickBooks entities via the API.
+///
+/// This trait provides the `create` method for sending new entities to QuickBooks.
+/// It automatically validates that entities meet creation requirements before
+/// sending them to the API.
+///
+/// # Automatic Implementation
+///
+/// This trait is automatically implemented for all types that implement both
+/// [`QBItem`] and [`QBCreatable`]. You don't need to implement it manually.
+///
+/// # Validation
+///
+/// Before creating, the trait checks `can_create()` to ensure the entity has
+/// all required fields. If validation fails, returns `CreateMissingItems` error.
+///
+/// # Examples
+///
+/// ```rust
+/// use quick_oxibooks::{QBContext, functions::QBCreate};
+/// use quickbooks_types::Customer;
+/// use ureq::Agent;
+///
+/// let client = Agent::new_with_defaults();
+/// let qb_context = QBContext::new(/* ... */)?;
+///
+/// // Create a new customer
+/// let mut customer = Customer::default();
+/// customer.display_name = Some("John Doe".to_string());
+/// customer.email = Some("john@example.com".to_string());
+///
+/// // Send to QuickBooks
+/// let created_customer = customer.create(&qb_context, &client)?;
+/// println!("Created customer with ID: {:?}", created_customer.id());
+/// ```
+///
+/// # Return Value
+///
+/// Returns the created entity with QuickBooks-assigned ID, sync token, and metadata.
+/// This return value can be used for subsequent operations like updates or deletes.
+///
+/// # Errors
+///
+/// - `CreateMissingItems`: Entity doesn't meet creation requirements
+/// - `UreqError`: Network or HTTP errors during API call
+/// - `BadRequest`: QuickBooks API returned an error response
+/// - `JsonError`: Response parsing errors
 pub trait QBCreate {
     /// Creates the item
     /// returns an error if the item is not suitable for creation

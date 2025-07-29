@@ -1,57 +1,86 @@
-/// # qb_where_clause
-///
 /// Creates a SQL-like WHERE clause string for QuickBooks API queries with compile-time field validation.
 ///
 /// This macro generates properly formatted WHERE clauses for QuickBooks Online API, converting
 /// field names from snake_case to UpperCamelCase automatically, joining multiple conditions
 /// with "AND", and properly escaping values.
 ///
-/// ## Features
+/// # Features
 ///
 /// - **Compile-time field validation**: Ensures all fields exist on the specified struct
 /// - **Case conversion**: Automatically converts field names to QuickBooks API format (UpperCamelCase)
 /// - **Memory optimization**: Uses compile-time string building for literals and capacity hints for expressions
 /// - **Additional clause support**: Allows appending raw SQL-like conditions
 ///
-/// ## Usage
+/// # Syntax
 ///
-/// ### Basic WHERE clause:
+/// ```ignore
+/// qb_where_clause!(EntityType | field1 op value1, field2 op value2 [; additional_clauses...])
+/// ```
+///
+/// # Parameters
+///
+/// - `EntityType`: The QuickBooks entity type (e.g., Customer, Invoice, Item)
+/// - `field`: Field name in snake_case (automatically converted to PascalCase)
+/// - `op`: Comparison operator (`=`, `like`, `in`)
+/// - `value`: Value to compare against (literal or expression)
+/// - `additional_clauses`: Optional raw SQL clauses after `;` separator
+///
+/// # Supported Operators
+///
+/// - `=`: Exact equality comparison
+/// - `like`: Pattern matching with wildcards
+/// - `in`: Value in a set of values
+///
+/// # Examples
+///
+/// ## Basic WHERE clause:
 /// ```rust
-/// qb_where_clause!(Customer | given_name = "John", family_name = "Doe")
+/// # use quick_oxibooks::qb_where_clause;
+/// # use quickbooks_types::Customer;
+/// let clause = qb_where_clause!(Customer | given_name = "John", family_name = "Doe");
 /// // Expands to: "WHERE GivenName = 'John' AND FamilyName = 'Doe'"
 /// ```
 ///
-/// ### Using dynamic values:
+/// ## Using dynamic values:
 /// ```rust
-/// let name = get_name();
-/// qb_where_clause!(Customer | given_name = name, active = true)
-/// // Expands to: "WHERE GivenName = '[name value]' AND Active = 'true'"
+/// # use quick_oxibooks::qb_where_clause;
+/// # use quickbooks_types::Customer;
+/// let name = "John".to_string();
+/// let active = true;
+/// let clause = qb_where_clause!(Customer | given_name = name, active = active);
+/// // Expands to: "WHERE GivenName = 'John' AND Active = 'true'"
 /// ```
 ///
-/// ### With additional conditions:
+/// ## With additional conditions:
 /// ```rust
-/// qb_where_clause!(Customer | created_at = today ; "ORDER BY Id DESC")
-/// // Expands to: "WHERE CreatedAt = '[today value]' ORDER BY Id DESC"
+/// # use quick_oxibooks::qb_where_clause;
+/// # use quickbooks_types::Customer;
+/// let today = "2024-01-01";
+/// let clause = qb_where_clause!(Customer | created_time = today ; "ORDER BY Id DESC", "MAXRESULTS 10");
+/// // Expands to: "WHERE CreatedTime = '2024-01-01' ORDER BY Id DESC MAXRESULTS 10"
 /// ```
 ///
-/// ## Supported operators
+/// ## Using different operators:
+/// ```rust
+/// # use quick_oxibooks::qb_where_clause;
+/// # use quickbooks_types::Customer;
+/// let clause = qb_where_clause!(Customer | display_name like "%Corp%", city in "New York");
+/// // Expands to: "WHERE DisplayName like '%Corp%' AND City in 'New York'"
+/// ```
 ///
-/// The macro supports the following operators:
-/// - `=` (equals)
-/// - `like` (pattern matching)
-/// - `in` (value in set)
+/// # Compile-time Safety
 ///
-/// ## Expansion
+/// The macro validates field names at compile time:
+/// ```compile_fail
+/// // This will fail to compile if `invalid_field` doesn't exist on Customer
+/// qb_where_clause!(Customer | invalid_field = "value")
+/// ```
 ///
-/// For the pattern `qb_where_clause!(Struct | field1 = value1, field2 = value2)`:
+/// # Performance
 ///
-/// 1. Validates that `field1` and `field2` exist on `Struct` (compile-time check)
-/// 2. Converts field names to UpperCamelCase: `field1` → `Field1`
-/// 3. Builds a WHERE clause string with proper formatting
-/// 4. For literal values, builds strings at compile time
-/// 5. For expression values, builds strings at runtime with capacity optimization
-///
-/// The `;` separator allows adding raw SQL fragments like `ORDER BY`, `LIMIT`, etc.
+/// - **Literal values**: Built entirely at compile time with zero runtime cost
+/// - **Expression values**: Uses capacity hints to minimize allocations
+/// - **Field validation**: Zero runtime overhead for type checking
 #[macro_export]
 macro_rules! qb_where_clause {
   // Define common operators as const strings
@@ -81,7 +110,7 @@ macro_rules! qb_where_clause {
       $(
         paste::paste! {
           stringify!([<$field:camel>])
-        }
+        },
         ' ',
         stringify!($op),
         " '",
@@ -138,71 +167,124 @@ macro_rules! qb_where_clause {
   }
 }
 
-/// # qb_query
-///
 /// Executes a QuickBooks API query for a specific entity type with compile-time field validation.
 ///
 /// This macro provides a convenient and type-safe way to query QuickBooks Online API
-/// for entity records. It builds upon the `qb_where_clause` macro to generate properly
+/// for entity records. It builds upon the [`qb_where_clause`] macro to generate properly
 /// formatted query conditions and executes the query against the QuickBooks API.
 ///
-/// ## Features
+/// # Features
 ///
 /// - **Compile-time field validation**: Ensures all fields exist on the specified struct
 /// - **Case conversion**: Automatically converts field names to QuickBooks API format
 /// - **Type safety**: Returns properly typed entity objects
-/// - **Additional clause support**: Allows appending raw SQL-like conditions like ORDER BY, LIMIT, etc.
+/// - **Single result**: Always returns a single entity (uses `query_single` internally)
+/// - **Additional clause support**: Allows appending raw SQL-like conditions
 ///
-/// ## Usage
+/// # Syntax
 ///
-/// ### Basic query:
+/// ```ignore
+/// qb_query!(qb_context, http_client, EntityType | field1 op value1, field2 op value2 [; additional_clauses...])
+/// ```
+///
+/// # Parameters
+///
+/// - `qb_context`: Reference to [`QBContext`] with authentication and configuration
+/// - `http_client`: Reference to HTTP client (usually `&ureq::Agent`)
+/// - `EntityType`: QuickBooks entity type (e.g., Customer, Invoice, Item)
+/// - `field op value`: Query conditions using supported operators
+/// - `additional_clauses`: Optional raw SQL clauses after `;` separator
+///
+/// # Examples
+///
+/// ## Basic query:
 /// ```rust
+/// # use quick_oxibooks::{qb_query, QBContext, Environment};
+/// # use quickbooks_types::Customer;
+/// # use ureq::Agent;
+/// # let client = Agent::new_with_defaults();
+/// # let qb_context = QBContext::new(Environment::SANDBOX, "123".to_string(), "token".to_string(), &client).unwrap();
 /// let customer = qb_query!(
 ///     &qb_context,
-///     &http_client,
+///     &client,
 ///     Customer | given_name = "John", family_name = "Doe"
 /// )?;
-/// // Executes a query to find Customer where GivenName = 'John' AND FamilyName = 'Doe'
+/// // Executes: SELECT * FROM Customer WHERE GivenName = 'John' AND FamilyName = 'Doe' MAXRESULTS 1
 /// ```
 ///
-/// ### With dynamic values:
+/// ## With dynamic values:
 /// ```rust
-/// let name = get_name();
+/// # use quick_oxibooks::{qb_query, QBContext, Environment};
+/// # use quickbooks_types::Customer;
+/// # use ureq::Agent;
+/// # let client = Agent::new_with_defaults();
+/// # let qb_context = QBContext::new(Environment::SANDBOX, "123".to_string(), "token".to_string(), &client).unwrap();
+/// let name = "John".to_string();
+/// let active = true;
 /// let customer = qb_query!(
 ///     &qb_context,
-///     &http_client,
-///     Customer | given_name = name, active = true
+///     &client,
+///     Customer | given_name = name, active = active
 /// )?;
-/// // Executes a query with runtime values
+/// // Uses runtime values in the query
 /// ```
 ///
-/// ### With additional query options:
+/// ## With additional query options:
 /// ```rust
-/// let customers = qb_query!(
+/// # use quick_oxibooks::{qb_query, QBContext, Environment};
+/// # use quickbooks_types::Invoice;
+/// # use ureq::Agent;
+/// # let client = Agent::new_with_defaults();
+/// # let qb_context = QBContext::new(Environment::SANDBOX, "123".to_string(), "token".to_string(), &client).unwrap();
+/// let today = "2024-01-01";
+/// let invoice = qb_query!(
 ///     &qb_context,
-///     &http_client,
-///     Customer | created_at = today ; "ORDER BY Id DESC MAXRESULTS 10"
+///     &client,
+///     Invoice | doc_number = "INV-001" ; "ORDER BY MetaData.CreateTime DESC"
 /// )?;
-/// // Adds ordering and result limits to the query
+/// // Adds ordering to the query
 /// ```
 ///
-/// ## Supported operators
+/// ## Different operators:
+/// ```rust
+/// # use quick_oxibooks::{qb_query, QBContext, Environment};
+/// # use quickbooks_types::Customer;
+/// # use ureq::Agent;
+/// # let client = Agent::new_with_defaults();
+/// # let qb_context = QBContext::new(Environment::SANDBOX, "123".to_string(), "token".to_string(), &client).unwrap();
+/// let customer = qb_query!(
+///     &qb_context,
+///     &client,
+///     Customer | display_name like "%Corp%"
+/// )?;
+/// // Pattern matching query
+/// ```
 ///
-/// The macro supports the same operators as `qb_where_clause`:
-/// - `=` (equals)
-/// - `like` (pattern matching)
-/// - `in` (value in set)
+/// # Return Value
 ///
-/// ## Expansion
+/// Returns `Result<EntityType, APIError>` where:
+/// - `Ok(entity)`: The single matching entity
+/// - `Err(APIError)`: Query failed or no results found
 ///
-/// For the pattern `qb_query!($qb, $client, Struct | field1 = value1, field2 = value2)`:
+/// # Supported Operators
 ///
-/// 1. Generates a WHERE clause using `qb_where_clause!`
-/// 2. Calls `<Struct as QBQuery>::query_single()` with the generated WHERE clause
-/// 3. Passes the QuickBooks context and HTTP client to handle the API request
-/// 4. Returns the result of the query as a `Result<Struct, Error>`
+/// - `=`: Exact equality comparison
+/// - `like`: Pattern matching with wildcards
+/// - `in`: Value in a set of values
 ///
-/// When additional clauses are provided after `;`, they are appended to the query string.
+/// # Errors
+///
+/// - Compile-time error if field names don't exist on the entity type
+/// - `NoQueryObjects`: No entities matched the query criteria
+/// - `UreqError`: Network or HTTP errors during API call
+/// - `BadRequest`: Invalid query syntax or field names
+/// - `JsonError`: Response parsing errors
+///
+/// # Performance Notes
+///
+/// - Always limits results to 1 (uses MAXRESULTS 1)
+/// - For multiple results, use [`QBQuery::query`] directly
+/// - Compile-time optimizations for literal values
 #[macro_export]
 macro_rules! qb_query {
   ($qb:expr, $client:expr, $struct_name:ident | $($field:ident $op:tt $value:expr),+) => {
@@ -228,7 +310,7 @@ mod test {
     use quickbooks_types::Customer;
 
     fn test_macro_works() -> Result<(), String> {
-        let client = reqwest::Client::new();
+        let client = ureq::Agent::new_with_defaults();
         let qb = QBContext::new_from_env(crate::Environment::SANDBOX, &client)
             .map_err(|e| e.to_string())?;
         let cust = qb_query!(

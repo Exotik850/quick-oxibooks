@@ -5,6 +5,59 @@ use simd_json::OwnedValue as Value;
 use crate::batch::{QBBatchOperation, QBBatchResponseData};
 // #[allow(dead_code)]
 
+/// The main error type for all QuickBooks API operations.
+///
+/// `APIError` is a wrapper around [`APIErrorInner`] that provides a consistent
+/// error interface for all operations in the library. It implements standard
+/// error traits and can be converted from various underlying error types.
+///
+/// # Examples
+///
+/// ```rust
+/// use quick_oxibooks::{APIError, QBContext};
+///
+/// fn create_context() -> Result<QBContext, APIError> {
+///     // This function returns APIError on failure
+///     QBContext::new_from_env(Environment::SANDBOX, &client)
+/// }
+///
+/// match create_context() {
+///     Ok(context) => println!("Context created successfully"),
+///     Err(e) => eprintln!("Error: {}", e),
+/// }
+/// ```
+///
+/// # Error Conversion
+///
+/// Many error types automatically convert to `APIError`:
+/// - Network errors from `ureq`
+/// - JSON parsing errors from `simd_json`
+/// - QuickBooks-specific validation errors
+/// - Environment variable errors
+///
+/// # Error Handling Patterns
+///
+/// ```rust
+/// use quick_oxibooks::{APIError, functions::QBCreate};
+/// use quickbooks_types::Customer;
+///
+/// fn handle_customer_creation(customer: &Customer) {
+///     match customer.create(&qb_context, &client) {
+///         Ok(created) => println!("Created: {:?}", created.id()),
+///         Err(APIError(inner)) => {
+///             match &**inner {
+///                 APIErrorInner::CreateMissingItems => {
+///                     eprintln!("Customer missing required fields");
+///                 }
+///                 APIErrorInner::BadRequest(qb_error) => {
+///                     eprintln!("QuickBooks rejected the request: {:?}", qb_error);
+///                 }
+///                 _ => eprintln!("Other error: {}", inner),
+///             }
+///         }
+///     }
+/// }
+/// ```
 #[derive(Debug)]
 pub struct APIError(Box<APIErrorInner>);
 
@@ -36,6 +89,78 @@ where
     }
 }
 
+/// Detailed error types for QuickBooks API operations.
+///
+/// This enum contains all the specific error conditions that can occur when
+/// interacting with the QuickBooks API. Each variant represents a different
+/// category of failure with appropriate context information.
+///
+/// # Error Categories
+///
+/// ## Network and HTTP Errors
+/// - [`UreqError`](APIErrorInner::UreqError): HTTP client errors (network, timeout, etc.)
+/// - [`HttpError`](APIErrorInner::HttpError): HTTP protocol errors (malformed requests, etc.)
+/// - [`IoError`](APIErrorInner::IoError): I/O errors (file operations, etc.)
+///
+/// ## API Response Errors  
+/// - [`BadRequest`](APIErrorInner::BadRequest): QuickBooks API returned an error response
+/// - [`InvalidClient`](APIErrorInner::InvalidClient): Authentication/authorization failures
+/// - [`ThrottleLimitReached`](APIErrorInner::ThrottleLimitReached): Rate limit exceeded
+///
+/// ## Data Validation Errors
+/// - [`QBTypeError`](APIErrorInner::QBTypeError): Entity validation failures
+/// - [`CreateMissingItems`](APIErrorInner::CreateMissingItems): Required fields missing for creation
+/// - [`DeleteMissingItems`](APIErrorInner::DeleteMissingItems): ID/sync token missing for deletion
+/// - [`NoIdOnRead`](APIErrorInner::NoIdOnRead): Entity missing ID for read operation
+///
+/// ## Query and Operation Errors
+/// - [`NoQueryObjects`](APIErrorInner::NoQueryObjects): Query returned no results
+/// - [`BatchRequestMissingItems`](APIErrorInner::BatchRequestMissingItems): Batch operation failures
+/// - [`BatchLimitExceeded`](APIErrorInner::BatchLimitExceeded): Too many items in batch request
+///
+/// ## File and Attachment Errors
+/// - [`AttachableUploadMissingItems`](APIErrorInner::AttachableUploadMissingItems): Missing required fields for file upload
+/// - [`NoAttachableObjects`](APIErrorInner::NoAttachableObjects): No attachments in upload response
+/// - [`InvalidFile`](APIErrorInner::InvalidFile): Invalid file name or extension
+/// - [`ByteLengthMismatch`](APIErrorInner::ByteLengthMismatch): File write operation incomplete
+///
+/// ## PDF Generation Errors
+/// - [`NoIdOnGetPDF`](APIErrorInner::NoIdOnGetPDF): Entity missing ID for PDF generation
+/// - [`NoIdOnSend`](APIErrorInner::NoIdOnSend): Entity missing ID for email send operation
+///
+/// ## Configuration Errors
+/// - [`EnvVarError`](APIErrorInner::EnvVarError): Missing or invalid environment variables
+/// - [`JsonError`](APIErrorInner::JsonError): JSON parsing/serialization errors
+///
+/// # Examples
+///
+/// ```rust
+/// use quick_oxibooks::{APIError, APIErrorInner};
+/// use quickbooks_types::Customer;
+///
+/// fn handle_specific_errors(result: Result<Customer, APIError>) {
+///     match result {
+///         Ok(customer) => println!("Success: {:?}", customer.id()),
+///         Err(e) => {
+///             match &*e {
+///                 APIErrorInner::CreateMissingItems => {
+///                     eprintln!("Please provide required fields like display_name");
+///                 }
+///                 APIErrorInner::NoQueryObjects(query) => {
+///                     eprintln!("No customers found for query: {}", query);
+///                 }
+///                 APIErrorInner::ThrottleLimitReached => {
+///                     eprintln!("Rate limit hit, please wait before retrying");
+///                 }
+///                 APIErrorInner::BadRequest(qb_error) => {
+///                     eprintln!("QuickBooks error: {:?}", qb_error);
+///                 }
+///                 _ => eprintln!("Other error: {}", e),
+///             }
+///         }
+///     }
+/// }
+/// ```
 // TODO Split this into multiple error types, currently all errors are lumped into one enum
 #[derive(Debug, thiserror::Error)]
 pub enum APIErrorInner {

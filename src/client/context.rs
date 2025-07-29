@@ -77,12 +77,70 @@ const RATE_LIMIT: usize = 500;
 const BATCH_RATE_LIMIT: usize = 40;
 const RESET_DURATION: Duration = Duration::from_secs(60);
 
-/// `QuickBooks` Online Context
+/// The core context for interacting with the QuickBooks Online API.
 ///
-/// This struct holds the context for interacting with the `QuickBooks` Online API.
-/// It includes authentication details, rate limiters, and discovery document.
+/// `QBContext` manages authentication, rate limiting, and API configuration for all
+/// QuickBooks operations. It automatically handles rate limiting to respect QuickBooks
+/// API limits and includes discovery document information for OAuth operations.
 ///
-/// Note: The `expires_in` field is set to a far future date by default and should be updated upon token refresh.
+/// # Rate Limits
+///
+/// - **Regular API**: 500 requests per minute
+/// - **Batch API**: 40 batches per minute, 30 requests per batch
+/// - **Throttle Recovery**: 60-second wait period after hitting limits
+///
+/// # Fields
+///
+/// - `environment`: The QuickBooks environment (sandbox or production)
+/// - `company_id`: The QuickBooks company ID for API requests
+/// - `access_token`: OAuth 2.0 access token for authentication
+/// - `expires_in`: Token expiration time (defaults to far future)
+/// - `discovery_doc`: OAuth discovery document with endpoint URLs
+/// - Rate limiters for regular and batch operations
+///
+/// # Examples
+///
+/// ## Creating a Context
+///
+/// ```rust
+/// use quick_oxibooks::{QBContext, Environment};
+/// use ureq::Agent;
+///
+/// let client = Agent::new_with_defaults();
+///
+/// // Create from explicit parameters
+/// let context = QBContext::new(
+///     Environment::SANDBOX,
+///     "company_123".to_string(),
+///     "access_token_xyz".to_string(),
+///     &client
+/// )?;
+///
+/// // Create from environment variables QB_COMPANY_ID and QB_ACCESS_TOKEN
+/// let context = QBContext::new_from_env(Environment::SANDBOX, &client)?;
+/// ```
+///
+/// ## Using with Operations
+///
+/// ```rust
+/// use quick_oxibooks::functions::{QBCreate, QBQuery};
+/// use quickbooks_types::Customer;
+///
+/// // Create a customer
+/// let mut customer = Customer::default();
+/// customer.display_name = Some("John Doe".to_string());
+/// let created = customer.create(&context, &client)?;
+///
+/// // Query customers
+/// let customers = Customer::query("WHERE Active = true", Some(10), &context, &client)?;
+/// ```
+///
+/// ## Refresh Token Support
+///
+/// ```rust
+/// // Create a refreshable context for automatic token renewal
+/// let refreshable = context.with_refresh("refresh_token_abc".to_string());
+/// ```
 pub struct QBContext {
     pub(crate) environment: Environment,
     pub(crate) company_id: String,
@@ -94,7 +152,42 @@ pub struct QBContext {
 }
 
 impl QBContext {
-    /// Creates a new `QBContext` with the given parameters
+    /// Creates a new QuickBooks context with the specified parameters.
+    ///
+    /// This constructor initializes the context with authentication details,
+    /// fetches the OAuth discovery document, and sets up rate limiters.
+    ///
+    /// # Parameters
+    ///
+    /// - `environment`: QuickBooks environment (sandbox or production)
+    /// - `company_id`: The QuickBooks company ID for your application
+    /// - `access_token`: Valid OAuth 2.0 access token
+    /// - `client`: HTTP client for making API requests
+    ///
+    /// # Returns
+    ///
+    /// Returns a configured `QBContext` on success, or an [`APIError`] on failure.
+    ///
+    /// # Errors
+    ///
+    /// - Network errors when fetching the discovery document
+    /// - JSON parsing errors if discovery response is malformed
+    /// - HTTP errors if discovery endpoint is unavailable
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use quick_oxibooks::{QBContext, Environment};
+    /// use ureq::Agent;
+    ///
+    /// let client = Agent::new_with_defaults();
+    /// let context = QBContext::new(
+    ///     Environment::SANDBOX,
+    ///     "company_123".to_string(),
+    ///     "Bearer_token_xyz".to_string(),
+    ///     &client
+    /// )?;
+    /// ```
     pub fn new(
         environment: Environment,
         company_id: String,
@@ -112,11 +205,45 @@ impl QBContext {
         })
     }
 
-    /// Creates a new `QBContext` from environment variables
+    /// Creates a new QuickBooks context from environment variables.
     ///
-    /// Environment variables:
-    /// - `QB_COMPANY_ID`
-    /// - `QB_ACCESS_TOKEN`
+    /// This convenience constructor reads the company ID and access token from
+    /// environment variables, making it easy to configure the context without
+    /// hardcoding credentials.
+    ///
+    /// # Environment Variables
+    ///
+    /// - `QB_COMPANY_ID`: The QuickBooks company ID
+    /// - `QB_ACCESS_TOKEN`: Valid OAuth 2.0 access token
+    ///
+    /// # Parameters
+    ///
+    /// - `environment`: QuickBooks environment (sandbox or production)
+    /// - `client`: HTTP client for making API requests
+    ///
+    /// # Returns
+    ///
+    /// Returns a configured `QBContext` on success, or an [`APIError`] on failure.
+    ///
+    /// # Errors
+    ///
+    /// - `EnvVarError` if required environment variables are missing
+    /// - Network/discovery errors (same as [`QBContext::new`])
+    ///
+    /// # Examples
+    ///
+    /// ```bash
+    /// export QB_COMPANY_ID="company_123"
+    /// export QB_ACCESS_TOKEN="Bearer_token_xyz"
+    /// ```
+    ///
+    /// ```rust
+    /// use quick_oxibooks::{QBContext, Environment};
+    /// use ureq::Agent;
+    ///
+    /// let client = Agent::new_with_defaults();
+    /// let context = QBContext::new_from_env(Environment::SANDBOX, &client)?;
+    /// ```
     pub fn new_from_env(environment: Environment, client: &Agent) -> APIResult<Self> {
         let company_id = std::env::var("QB_COMPANY_ID")?;
         let access_token = std::env::var("QB_ACCESS_TOKEN")?;
@@ -124,7 +251,36 @@ impl QBContext {
         Ok(context)
     }
 
-    /// Creates a `RefreshableQBContext` from the current context and a refresh token
+    /// Creates a refreshable context that can automatically renew access tokens.
+    ///
+    /// Returns a [`RefreshableQBContext`] that wraps this context and provides
+    /// automatic token refresh capabilities using the provided refresh token.
+    ///
+    /// # Parameters
+    ///
+    /// - `refresh_token`: OAuth 2.0 refresh token for automatic token renewal
+    ///
+    /// # Returns
+    ///
+    /// A [`RefreshableQBContext`] that can automatically refresh expired tokens.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use quick_oxibooks::{QBContext, Environment};
+    /// use ureq::Agent;
+    ///
+    /// let client = Agent::new_with_defaults();
+    /// let context = QBContext::new(
+    ///     Environment::SANDBOX,
+    ///     "company_123".to_string(),
+    ///     "access_token_xyz".to_string(),
+    ///     &client
+    /// )?;
+    ///
+    /// // Enable automatic token refresh
+    /// let refreshable = context.with_refresh("refresh_token_abc".to_string());
+    /// ```
     #[must_use]
     pub fn with_refresh(self, refresh_token: String) -> RefreshableQBContext {
         RefreshableQBContext {
@@ -133,7 +289,25 @@ impl QBContext {
         }
     }
 
-    /// Updates the access token in the context
+    /// Updates the access token and returns a new context.
+    ///
+    /// This method is useful when you need to update the access token after
+    /// a manual refresh or when switching between different tokens.
+    ///
+    /// # Parameters
+    ///
+    /// - `access_token`: The new OAuth 2.0 access token
+    ///
+    /// # Returns
+    ///
+    /// A new `QBContext` with the updated access token.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// // Update the access token after manual refresh
+    /// let new_context = context.with_access_token("new_access_token_xyz".to_string());
+    /// ```
     #[must_use]
     pub fn with_access_token(self, access_token: String) -> Self {
         Self {

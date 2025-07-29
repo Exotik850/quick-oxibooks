@@ -4,11 +4,12 @@
         ".\\quickbooks-types\\Cargo.toml",
     ],
     "rust-analyzer.diagnostics.disabled": [
-        "unreasolved-proc-macro"
+        "unresolved-proc-macro"
     ],
     "rust-analyzer.cargo.features": [
       "attachments",
       "pdf",
-      "polars"
+      "polars",
+      "macros",
     ]
 }

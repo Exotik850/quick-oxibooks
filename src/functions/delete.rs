@@ -8,7 +8,66 @@ use crate::{
     APIResult, QBContext,
 };
 
-/// Trait for deleting an item
+/// Trait for deleting QuickBooks entities via the API.
+///
+/// This trait provides the `delete` method for removing entities from QuickBooks.
+/// It validates that entities have the required ID and sync token before attempting deletion.
+///
+/// # Automatic Implementation
+///
+/// This trait is automatically implemented for all types that implement both
+/// [`QBItem`] and [`QBDeletable`]. You don't need to implement it manually.
+///
+/// # Requirements
+///
+/// Before deletion, entities must have:
+/// - Valid ID (entity exists in QuickBooks)
+/// - Current sync token (for optimistic concurrency control)
+///
+/// These are automatically present when entities are read from QuickBooks.
+///
+/// # Important Notes
+///
+/// - **Permanent Action**: Deletion cannot be undone
+/// - **Referential Integrity**: QuickBooks may prevent deletion if entity is referenced elsewhere
+/// - **Audit Trail**: Some entities may be marked as inactive instead of deleted
+/// - **Sync Token**: Must be current or deletion will fail with sync error
+///
+/// # Examples
+///
+/// ```rust
+/// use quick_oxibooks::{QBContext, functions::{QBDelete, QBQuery}};
+/// use quickbooks_types::Customer;
+/// use ureq::Agent;
+///
+/// let client = Agent::new_with_defaults();
+/// let qb_context = QBContext::new(/* ... */)?;
+///
+/// // Find and delete a customer
+/// let customer = Customer::query_single(
+///     "WHERE DisplayName = 'Test Customer'",
+///     &qb_context,
+///     &client
+/// )?;
+///
+/// // Delete the customer
+/// let deleted_info = customer.delete(&qb_context, &client)?;
+/// println!("Deleted customer with ID: {}", deleted_info.id);
+/// ```
+///
+/// # Return Value
+///
+/// Returns [`QBDeleted`] with information about the deleted entity:
+/// - `id`: The ID of the deleted entity
+/// - `status`: Deletion status from QuickBooks
+/// - `domain`: The QuickBooks domain information
+///
+/// # Errors
+///
+/// - `DeleteMissingItems`: Entity missing ID or sync token
+/// - `UreqError`: Network or HTTP errors during API call
+/// - `BadRequest`: QuickBooks API error (e.g., entity referenced elsewhere, sync conflict)
+/// - `JsonError`: Response parsing errors
 pub trait QBDelete {
     /// Deletes the item
     /// returns an error if the item has no ID and sync token
@@ -81,7 +140,36 @@ impl<T: QBItem> QBToDeleteTrait for T {
     }
 }
 
-/// Information about the deleted object from `qb_delete`
+/// Information about a successfully deleted QuickBooks entity.
+///
+/// This struct contains metadata returned by QuickBooks after a successful deletion operation.
+/// It provides confirmation details about what was deleted and the operation status.
+///
+/// # Fields
+///
+/// - `status`: The status of the deletion operation (typically "Deleted")
+/// - `domain`: QuickBooks domain information (e.g., "QBO" for QuickBooks Online)
+/// - `id`: The ID of the entity that was deleted
+///
+/// # Examples
+///
+/// ```rust
+/// use quick_oxibooks::functions::{QBDelete, delete::QBDeleted};
+/// use quickbooks_types::Customer;
+///
+/// let deleted_info: QBDeleted = customer.delete(&qb_context, &client)?;
+/// 
+/// println!("Deletion status: {}", deleted_info.status);
+/// println!("Deleted entity ID: {}", deleted_info.id);
+/// println!("Domain: {}", deleted_info.domain);
+/// ```
+///
+/// # Usage
+///
+/// This struct is returned by the [`QBDelete::delete`] method and can be used to:
+/// - Confirm successful deletion
+/// - Log deletion operations for audit purposes
+/// - Verify the correct entity was deleted by checking the ID
 #[derive(Deserialize, Debug, Default)]
 pub struct QBDeleted {
     pub status: String,

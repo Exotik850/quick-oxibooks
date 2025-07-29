@@ -9,7 +9,90 @@ use crate::{
 
 use super::qb_request;
 
-/// Trait for querying `QuickBooks` objects
+/// Trait for querying QuickBooks entities using SQL-like syntax.
+///
+/// This trait provides methods for executing QuickBooks queries using SQL-like syntax.
+/// QuickBooks supports a subset of SQL including WHERE clauses, ORDER BY, and MAXRESULTS.
+///
+/// # Automatic Implementation
+///
+/// This trait is automatically implemented for all types that implement [`QBItem`].
+/// You don't need to implement it manually.
+///
+/// # Query Syntax
+///
+/// QuickBooks queries use SQL-like syntax:
+/// - `WHERE field = 'value'`: Filter by field value
+/// - `WHERE field IN ('val1', 'val2')`: Filter by multiple values  
+/// - `WHERE field LIKE '%pattern%'`: Pattern matching
+/// - `ORDER BY field ASC/DESC`: Sort results
+/// - `MAXRESULTS n`: Limit number of results
+///
+/// # Examples
+///
+/// ## Basic Queries
+///
+/// ```rust
+/// use quick_oxibooks::{QBContext, functions::QBQuery};
+/// use quickbooks_types::{Customer, Invoice};
+/// use ureq::Agent;
+///
+/// let client = Agent::new_with_defaults();
+/// let qb_context = QBContext::new(/* ... */)?;
+///
+/// // Query active customers
+/// let customers = Customer::query(
+///     "WHERE Active = true ORDER BY DisplayName",
+///     Some(50),
+///     &qb_context,
+///     &client
+/// )?;
+///
+/// // Query recent invoices
+/// let invoices = Invoice::query(
+///     "WHERE TotalAmt > '1000.00' AND MetaData.CreateTime > '2024-01-01'",
+///     Some(25),
+///     &qb_context,
+///     &client
+/// )?;
+/// ```
+///
+/// ## Single Entity Queries
+///
+/// ```rust
+/// // Find a specific customer by name
+/// let customer = Customer::query_single(
+///     "WHERE DisplayName = 'Acme Corp'",
+///     &qb_context,
+///     &client
+/// )?;
+///
+/// // Find an invoice by document number
+/// let invoice = Invoice::query_single(
+///     "WHERE DocNumber = 'INV-001'",
+///     &qb_context,
+///     &client
+/// )?;
+/// ```
+///
+/// # Field Names
+///
+/// Use QuickBooks field names (PascalCase) in queries, not Rust field names (snake_case):
+/// - Correct: `WHERE DisplayName = 'John'`
+/// - Incorrect: `WHERE display_name = 'John'`
+///
+/// # Performance Notes
+///
+/// - Use `MAXRESULTS` to limit large result sets
+/// - Index-friendly queries (ID, DisplayName) perform better
+/// - Complex queries may timeout on large datasets
+///
+/// # Errors
+///
+/// - `NoQueryObjects`: No entities matched the query
+/// - `UreqError`: Network or HTTP errors during API call
+/// - `BadRequest`: Invalid query syntax or field names
+/// - `JsonError`: Response parsing errors
 pub trait QBQuery {
     /// Queries the `QuickBooks` API for objects of type T
     /// Returns a vector of objects of type T
