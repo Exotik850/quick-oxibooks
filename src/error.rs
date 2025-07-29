@@ -1,6 +1,6 @@
 use quickbooks_types::QBTypeError;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use simd_json::OwnedValue as Value;
 
 use crate::batch::{QBBatchOperation, QBBatchResponseData};
 // #[allow(dead_code)]
@@ -51,7 +51,7 @@ pub enum APIErrorInner {
     #[error("Bad request: {0}")]
     BadRequest(QBErrorResponse),
     #[error(transparent)]
-    JsonError(#[from] serde_json::Error),
+    JsonError(#[from] simd_json::Error),
     #[error(transparent)]
     QBTypeError(#[from] QBTypeError),
     #[error("No query objects returned for query_str : {0}")]
@@ -170,7 +170,7 @@ impl std::fmt::Display for QBErrorResponse {
         write!(
             f,
             "{}",
-            serde_json::to_string_pretty(self)
+            simd_json::to_string_pretty(self)
                 .expect("Could not serialize QBErrorResponse for display!")
         )
     }

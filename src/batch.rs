@@ -256,7 +256,15 @@ where
     };
     let url = format!("company/{}/batch", qb.company_id);
     let resp = qb.with_batch_permission(|qb| {
-        execute_request(qb, client, Method::POST, &url, Some(&batch), None, None::<std::iter::Empty<(&str, &str)>>)
+        execute_request(
+            qb,
+            client,
+            Method::POST,
+            &url,
+            Some(&batch),
+            None,
+            None::<std::iter::Empty<(&str, &str)>>,
+        )
     })?;
     let batch_resp: BatchResponseExt = resp.into_body().read_json()?;
     let mut items = batch
@@ -286,15 +294,15 @@ mod test {
     use super::{BatchResponseExt, QBBatchRequest};
     #[test]
     fn test_batch_resp() {
-        let s = include_str!("../test/data/batch_resp.json");
-        let resp: BatchResponseExt = serde_json::from_str(s).unwrap();
+        let mut s = include_bytes!("../test/data/batch_resp.json").to_vec();
+        let resp: BatchResponseExt = simd_json::from_slice(&mut s).unwrap();
         println!("{resp:#?}");
     }
 
     #[test]
     fn test_batch_req() {
-        let s = include_str!("../test/data/batch_req.json");
-        let resp: QBBatchRequest = serde_json::from_str(s).unwrap();
+        let mut s = include_bytes!("../test/data/batch_req.json").to_vec();
+        let resp: QBBatchRequest = simd_json::from_slice(&mut s).unwrap();
         println!("{resp:#?}");
     }
 }

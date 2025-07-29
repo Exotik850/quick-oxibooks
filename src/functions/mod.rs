@@ -29,18 +29,20 @@ pub mod reports;
 /// * `body` - Optional request body to send
 /// * `content_type` - Optional content type header value
 /// * `query` - Optional query parameters
-pub(crate) fn qb_request<'a, T, U>(
+pub(crate) fn qb_request<'a, S, SS, T, U>(
     qb: &QBContext,
     client: &Agent,
     method: Method,
     path: &str,
     body: Option<&T>,
     content_type: Option<&str>,
-    query: Option<impl IntoIterator<Item=(impl AsRef<str>, impl AsRef<str>)>>,
+    query: Option<impl IntoIterator<Item = (S, SS)>>,
 ) -> APIResult<U>
 where
     T: Serialize,
     U: serde::de::DeserializeOwned,
+    S: std::fmt::Display,
+    SS: std::fmt::Display,
 {
     let response = qb.with_permission(|qb| {
         execute_request(qb, client, method, path, body, content_type, query)
@@ -48,15 +50,19 @@ where
     Ok(response.into_body().read_json()?)
 }
 
-pub(crate) fn execute_request<'a, T: Serialize>(
+pub(crate) fn execute_request<'a, S, SS, T: Serialize>(
     qb: &QBContext,
     client: &Agent,
     method: Method,
     path: &str,
     body: Option<&T>,
     content_type: Option<&str>,
-    query: Option<impl IntoIterator<Item=(impl AsRef<str>, impl AsRef<str>)>>,
-) -> Result<Response<Body>, APIError> {
+    query: Option<impl IntoIterator<Item = (S, SS)>>,
+) -> Result<Response<Body>, APIError>
+where
+    S: std::fmt::Display,
+    SS: std::fmt::Display,
+{
     let request = crate::client::build_request(
         method,
         path,

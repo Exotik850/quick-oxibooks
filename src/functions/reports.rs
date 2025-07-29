@@ -1,5 +1,5 @@
 use quickbooks_types::reports::{
-    types::{QBReportParams, QBReportType},
+    types::QBReportType,
     Report,
 };
 use ureq::{http::Method, Agent};
@@ -36,7 +36,7 @@ impl QBReport for Report {
             dbg!(&path),
             None::<&()>,
             Some("application/json"),
-            params.as_ref().map(|p| p.params()),
+            params.as_ref().map(quickbooks_types::reports::types::QBReportParams::params),
         )
     }
 }

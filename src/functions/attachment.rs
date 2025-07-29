@@ -104,7 +104,7 @@ fn qb_upload(attachable: &Attachable, qb: &QBContext, client: &Agent) -> APIResu
 
 fn make_upload_request(attachable: &Attachable, qb: &QBContext) -> APIResult<Request<String>> {
     let path = format!("company/{}/upload", qb.company_id);
-    let url = crate::client::build_url(qb.environment, &path, None::<std::iter::Empty<(&str, &str)>>)?;
+    let url = crate::client::build_url(qb.environment, &path, None::<std::iter::Empty<(&str, &str)>>);
     let mut request = Request::post(url.as_str());
     request = crate::client::set_headers("multipart/form-data", &qb.access_token, request);
     let request = make_multipart(request, attachable)?;
@@ -127,7 +127,7 @@ fn make_multipart(req: Builder, attachable: &Attachable) -> Result<Request<Strin
     body.push_str("Content-Disposition: form-data; name=\"file_metadata_01\"\r\n");
     body.push_str("Content-Type: application/json\r\n\r\n");
 
-    let json_body = serde_json::to_string(attachable)?;
+    let json_body = simd_json::to_string(attachable)?;
     body.push_str(&json_body);
     body.push_str("\r\n");
 

@@ -75,7 +75,7 @@ fn qb_query<T: QBItem>(
 ) -> Result<Vec<T>, APIError> {
     let mut query = format!("select * from {} {query_str}", T::name());
     if let Some(max) = max_results {
-        query.push_str(&format!(" MAXRESULTS {}", max));
+        query.push_str(&format!(" MAXRESULTS {max}"));
     }
     let response: QueryResponseExt<T> = qb_request(
         qb,
@@ -84,7 +84,7 @@ fn qb_query<T: QBItem>(
         &format!("company/{}/query", qb.company_id),
         None::<&()>,
         None,
-        Some([("query", &query)]),
+        Some([("query", query.as_str())]),
     )?;
     if response.query_response.items.is_empty() {
         log::warn!("Queried no items for query : {query_str}");

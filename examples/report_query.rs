@@ -1,6 +1,6 @@
 use quick_oxibooks::functions::reports::QBReport;
 use quick_oxibooks::{Environment, QBContext};
-use quickbooks_types::reports::types::{ProfitAndLoss, QBReportParams};
+use quickbooks_types::reports::types::ProfitAndLoss;
 use quickbooks_types::reports::Report;
 use ureq::Agent;
 
@@ -20,8 +20,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Fetch Profit and Loss report
     match Report::get(&qb_context, &client, &ProfitAndLoss, None) {
-        Ok(report) => println!("Successfully fetched report: {}", serde_json::to_string_pretty(&report)?),
-        Err(e) => eprintln!("Error fetching report: {}", e),
+        Ok(report) => println!("Successfully fetched report: {}", simd_json::to_string_pretty(&report)?),
+        Err(e) => eprintln!("Error fetching report: {e}"),
     }
 
     Ok(())

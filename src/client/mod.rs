@@ -18,18 +18,19 @@ pub(crate) fn set_headers(content_type: &str, access_token: &str, request: Build
     request.header("Accept", "application/json")
 }
 
-pub(crate) fn build_request<'a, B, S>(
+pub(crate) fn build_request<'a, B, S, SS>(
     method: Method,
     path: &str,
     body: Option<&B>,
-    query: Option<impl IntoIterator<Item = (&'a S, &'a S)>>,
+    query: Option<impl IntoIterator<Item = (S, SS)>>,
     content_type: &str,
     environment: Environment,
     access_token: &str,
 ) -> APIResult<Request<SendBody<'static>>>
 where
     B: Serialize,
-    S: AsRef<str> + 'a,
+    S: std::fmt::Display,
+    SS: std::fmt::Display,
 {
     let url = build_url(environment, path, query);
     let mut request = Request::builder().method(method.clone()).uri(url.as_str());
@@ -38,7 +39,7 @@ where
     let request = match (method == Method::GET || method == Method::DELETE, body) {
         (true, _) => request.body(SendBody::none()),
         (false, Some(body)) => {
-            let json_bytes = serde_json::to_vec(body)?;
+            let json_bytes = simd_json::to_vec(body)?;
             let reader = std::io::Cursor::new(json_bytes);
             request.body(SendBody::from_owned_reader(reader))
         }
@@ -59,13 +60,14 @@ where
     Ok(request)
 }
 
-pub(crate) fn build_url<'a, S>(
+pub(crate) fn build_url<'a, S, SS>(
     environment: Environment,
     path: &str,
-    query: Option<impl IntoIterator<Item = (&'a S, &'a S)>>,
+    query: Option<impl IntoIterator<Item = (S, SS)>>,
 ) -> String
 where
-    S: AsRef<str> + 'a,
+    S: std::fmt::Display,
+    SS: std::fmt::Display,
 {
     // let url = Url::parse(environment.endpoint_url())?;
     let mut url = environment.endpoint_url().to_string();
@@ -76,9 +78,8 @@ where
     if let Some(q) = query {
         let query_string: String = q
             .into_iter()
-            .map(|(k, v)| (k.as_ref(), v.as_ref()))
-            .chain(std::iter::once(("minorversion", "75")))
             .map(|(k, v)| format!("{k}={v}"))
+            .chain(std::iter::once("minorversion=75".to_string()))
             .collect::<Vec<_>>()
             .join("&");
         if !query_string.is_empty() {
