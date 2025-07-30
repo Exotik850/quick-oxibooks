@@ -8,6 +8,7 @@ mod context;
 mod refresh;
 pub use context::QBContext;
 pub use refresh::RefreshableQBContext;
+use urlencoding::encode;
 
 pub(crate) fn set_headers(content_type: &str, access_token: &str, request: Builder) -> Builder {
     let bt = format!("Bearer {access_token}");
@@ -29,8 +30,8 @@ pub(crate) fn build_request<'a, B, S, SS>(
 ) -> APIResult<Request<SendBody<'static>>>
 where
     B: Serialize,
-    S: std::fmt::Display,
-    SS: std::fmt::Display,
+    S: AsRef<str>,
+    SS: AsRef<str>,
 {
     let url = build_url(environment, path, query);
     let mut request = Request::builder().method(method.clone()).uri(url.as_str());
@@ -66,18 +67,24 @@ pub(crate) fn build_url<'a, S, SS>(
     query: Option<impl IntoIterator<Item = (S, SS)>>,
 ) -> String
 where
-    S: std::fmt::Display,
-    SS: std::fmt::Display,
+    S: AsRef<str>,
+    SS: AsRef<str>,
 {
     // let url = Url::parse(environment.endpoint_url())?;
     let mut url = environment.endpoint_url().to_string();
-    if !path.starts_with('/') {
+    if !path.ends_with('/') {
         url.push('/');
     }
     url.push_str(path);
     if let Some(q) = query {
         let query_string: String = q
             .into_iter()
+            .map(|(k, v)| {
+                (
+                    encode(k.as_ref()).to_string(),
+                    encode(v.as_ref()).to_string(),
+                )
+            })
             .map(|(k, v)| format!("{k}={v}"))
             .chain(std::iter::once("minorversion=75".to_string()))
             .collect::<Vec<_>>()

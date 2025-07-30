@@ -41,8 +41,8 @@ pub(crate) fn qb_request<'a, S, SS, T, U>(
 where
     T: Serialize,
     U: serde::de::DeserializeOwned,
-    S: std::fmt::Display,
-    SS: std::fmt::Display,
+    S: AsRef<str>,
+    SS: AsRef<str>,
 {
     let response = qb.with_permission(|qb| {
         execute_request(qb, client, method, path, body, content_type, query)
@@ -60,8 +60,8 @@ pub(crate) fn execute_request<'a, S, SS, T: Serialize>(
     query: Option<impl IntoIterator<Item = (S, SS)>>,
 ) -> Result<Response<Body>, APIError>
 where
-    S: std::fmt::Display,
-    SS: std::fmt::Display,
+    S: AsRef<str>,
+    SS: AsRef<str>,
 {
     let request = crate::client::build_request(
         method,
