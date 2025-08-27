@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-log = "0.4.20"
+log = { version = "0.4.20", optional = true }
 serde = { version = "1.0", features = ["derive"] }
 # serde_json = "1.0"
 simd-json = "0.15.1"
@@ -28,6 +28,7 @@ macros = ["dep:paste"]
 attachments = []
 pdf = []
 polars = ["quickbooks-types/polars"]
+logging = ["dep:log"]
 
 [[example]]
 name = "invoice_query"

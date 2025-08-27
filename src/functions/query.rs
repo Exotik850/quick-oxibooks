@@ -9,10 +9,10 @@ use crate::{
 
 use super::qb_request;
 
-/// Trait for querying QuickBooks entities using SQL-like syntax.
+/// Trait for querying `QuickBooks` entities using SQL-like syntax.
 ///
-/// This trait provides methods for executing QuickBooks queries using SQL-like syntax.
-/// QuickBooks supports a subset of SQL including WHERE clauses, ORDER BY, and MAXRESULTS.
+/// This trait provides methods for executing `QuickBooks` queries using SQL-like syntax.
+/// `QuickBooks` supports a subset of SQL including WHERE clauses, ORDER BY, and MAXRESULTS.
 ///
 /// # Automatic Implementation
 ///
@@ -21,7 +21,7 @@ use super::qb_request;
 ///
 /// # Query Syntax
 ///
-/// QuickBooks queries use SQL-like syntax:
+/// `QuickBooks` queries use SQL-like syntax:
 /// - `WHERE field = 'value'`: Filter by field value
 /// - `WHERE field IN ('val1', 'val2')`: Filter by multiple values  
 /// - `WHERE field LIKE '%pattern%'`: Pattern matching
@@ -77,14 +77,14 @@ use super::qb_request;
 ///
 /// # Field Names
 ///
-/// Use QuickBooks field names (PascalCase) in queries, not Rust field names (snake_case):
+/// Use `QuickBooks` field names (`PascalCase`) in queries, not Rust field names (`snake_case)`:
 /// - Correct: `WHERE DisplayName = 'John'`
 /// - Incorrect: `WHERE display_name = 'John'`
 ///
 /// # Performance Notes
 ///
 /// - Use `MAXRESULTS` to limit large result sets
-/// - Index-friendly queries (ID, DisplayName) perform better
+/// - Index-friendly queries (ID, `DisplayName`) perform better
 /// - Complex queries may timeout on large datasets
 ///
 /// # Errors
@@ -170,9 +170,11 @@ fn qb_query<T: QBItem>(
         Some([("query", query.as_str())]),
     )?;
     if response.query_response.items.is_empty() {
+        #[cfg(feature = "logging")]
         log::warn!("Queried no items for query : {query_str}");
         Err(APIErrorInner::NoQueryObjects(query_str.into()).into())
     } else {
+        #[cfg(feature = "logging")]
         log::info!(
             "Successfully Queried {} {}(s) for query string : {query_str}",
             response.query_response.items.len(),

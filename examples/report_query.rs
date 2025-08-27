@@ -12,15 +12,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let qb_context = QBContext::new(
         Environment::PRODUCTION,
-        args.get(1).cloned().ok_or_else(|| "Missing company ID".to_string())?,
-        args.get(2).cloned().ok_or_else(|| "Missing access token".to_string())?,
-        &client
+        args.get(1)
+            .cloned()
+            .ok_or_else(|| "Missing company ID".to_string())?,
+        args.get(2)
+            .cloned()
+            .ok_or_else(|| "Missing access token".to_string())?,
+        &client,
     )?;
-
 
     // Fetch Profit and Loss report
     match Report::get(&qb_context, &client, &ProfitAndLoss, None) {
-        Ok(report) => println!("Successfully fetched report: {}", simd_json::to_string_pretty(&report)?),
+        Ok(report) => println!(
+            "Successfully fetched report: {}",
+            simd_json::to_string_pretty(&report)?
+        ),
         Err(e) => eprintln!("Error fetching report: {e}"),
     }
 

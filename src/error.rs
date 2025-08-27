@@ -5,7 +5,7 @@ use simd_json::OwnedValue as Value;
 use crate::batch::{QBBatchOperation, QBBatchResponseData};
 // #[allow(dead_code)]
 
-/// The main error type for all QuickBooks API operations.
+/// The main error type for all `QuickBooks` API operations.
 ///
 /// `APIError` is a wrapper around [`APIErrorInner`] that provides a consistent
 /// error interface for all operations in the library. It implements standard
@@ -89,10 +89,10 @@ where
     }
 }
 
-/// Detailed error types for QuickBooks API operations.
+/// Detailed error types for `QuickBooks` API operations.
 ///
 /// This enum contains all the specific error conditions that can occur when
-/// interacting with the QuickBooks API. Each variant represents a different
+/// interacting with the `QuickBooks` API. Each variant represents a different
 /// category of failure with appropriate context information.
 ///
 /// # Error Categories
@@ -103,7 +103,7 @@ where
 /// - [`IoError`](APIErrorInner::IoError): I/O errors (file operations, etc.)
 ///
 /// ## API Response Errors  
-/// - [`BadRequest`](APIErrorInner::BadRequest): QuickBooks API returned an error response
+/// - [`BadRequest`](APIErrorInner::BadRequest): `QuickBooks` API returned an error response
 /// - [`InvalidClient`](APIErrorInner::InvalidClient): Authentication/authorization failures
 /// - [`ThrottleLimitReached`](APIErrorInner::ThrottleLimitReached): Rate limit exceeded
 ///

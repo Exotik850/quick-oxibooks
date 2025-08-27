@@ -124,6 +124,7 @@ pub fn qb_send_email<T: QBItem + QBSendable>(
         None,
         Some([("sendTo", email)]),
     )?;
+    #[cfg(feature = "logging")]
     log::info!("Successfully Sent {} object with ID : {}", T::name(), id);
     Ok(response.object)
 }

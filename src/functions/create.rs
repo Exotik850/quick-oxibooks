@@ -7,9 +7,9 @@ use crate::{
     APIResult, QBContext,
 };
 
-/// Trait for creating QuickBooks entities via the API.
+/// Trait for creating `QuickBooks` entities via the API.
 ///
-/// This trait provides the `create` method for sending new entities to QuickBooks.
+/// This trait provides the `create` method for sending new entities to `QuickBooks`.
 /// It automatically validates that entities meet creation requirements before
 /// sending them to the API.
 ///
@@ -52,7 +52,7 @@ use crate::{
 ///
 /// - `CreateMissingItems`: Entity doesn't meet creation requirements
 /// - `UreqError`: Network or HTTP errors during API call
-/// - `BadRequest`: QuickBooks API returned an error response
+/// - `BadRequest`: `QuickBooks` API returned an error response
 /// - `JsonError`: Response parsing errors
 pub trait QBCreate {
     /// Creates the item
@@ -89,6 +89,7 @@ fn qb_create<T: QBItem + QBCreatable>(
         None::<std::iter::Empty<(&str, &str)>>,
     )?;
 
+    #[cfg(feature = "logging")]
     log::info!(
         "Successfully created {} with ID of '{:?}'",
         T::name(),

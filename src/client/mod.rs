@@ -19,7 +19,7 @@ pub(crate) fn set_headers(content_type: &str, access_token: &str, request: Build
     request.header("Accept", "application/json")
 }
 
-pub(crate) fn build_request<'a, B, S, SS>(
+pub(crate) fn build_request<B, S, SS>(
     method: Method,
     path: &str,
     body: Option<&B>,
@@ -47,6 +47,7 @@ where
         (false, None) => request.body(SendBody::none()),
     }?;
 
+    #[cfg(feature = "logging")]
     log::debug!(
         "Built Request with params: {}-{}-{}",
         path,
@@ -72,9 +73,6 @@ where
 {
     // let url = Url::parse(environment.endpoint_url())?;
     let mut url = environment.endpoint_url().to_string();
-    if !path.ends_with('/') {
-        url.push('/');
-    }
     url.push_str(path);
     if let Some(q) = query {
         let query_string: String = q

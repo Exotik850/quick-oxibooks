@@ -8,9 +8,9 @@ use crate::{
 
 use super::{qb_request, QBResponse};
 
-/// Trait for reading QuickBooks entities from the API.
+/// Trait for reading `QuickBooks` entities from the API.
 ///
-/// This trait provides methods for reading entities from QuickBooks, either by
+/// This trait provides methods for reading entities from `QuickBooks`, either by
 /// updating an existing entity instance or by fetching a completely new entity by ID.
 ///
 /// # Automatic Implementation
@@ -20,7 +20,7 @@ use super::{qb_request, QBResponse};
 ///
 /// # Methods
 ///
-/// - `read()`: Updates the current entity instance with fresh data from QuickBooks
+/// - `read()`: Updates the current entity instance with fresh data from `QuickBooks`
 /// - [`qb_get_single()`]: Static function to fetch an entity by ID
 ///
 /// # Examples
@@ -59,7 +59,7 @@ use super::{qb_request, QBResponse};
 ///
 /// - `NoIdOnRead`: Entity doesn't have an ID for reading
 /// - `UreqError`: Network or HTTP errors during API call  
-/// - `BadRequest`: QuickBooks API returned an error (e.g., entity not found)
+/// - `BadRequest`: `QuickBooks` API returned an error (e.g., entity not found)
 /// - `JsonError`: Response parsing errors
 pub trait QBRead {
     fn read(&mut self, qb: &QBContext, client: &Agent) -> Result<(), APIError>;
@@ -87,6 +87,7 @@ fn qb_read<T: QBItem>(item: &mut T, qb: &QBContext, client: &Agent) -> Result<()
         None::<std::iter::Empty<(&str, &str)>>,
     )?;
 
+    #[cfg(feature = "logging")]
     log::info!(
         "Successfully Read {} object with ID : {}",
         T::name(),
@@ -101,21 +102,21 @@ fn qb_read<T: QBItem>(item: &mut T, qb: &QBContext, client: &Agent) -> Result<()
     Ok(())
 }
 
-/// Retrieves a QuickBooks entity by ID.
+/// Retrieves a `QuickBooks` entity by ID.
 ///
-/// This function fetches a single entity from QuickBooks using its unique identifier.
+/// This function fetches a single entity from `QuickBooks` using its unique identifier.
 /// Unlike the `read` method on [`QBRead`], this is a standalone function that creates
 /// a new entity instance rather than updating an existing one.
 ///
 /// # Parameters
 ///
-/// - `id`: The QuickBooks entity ID to fetch
-/// - `qb`: QuickBooks context with authentication and configuration
+/// - `id`: The `QuickBooks` entity ID to fetch
+/// - `qb`: `QuickBooks` context with authentication and configuration
 /// - `client`: HTTP client for making the API request
 ///
 /// # Returns
 ///
-/// Returns the fetched entity with all fields populated from QuickBooks.
+/// Returns the fetched entity with all fields populated from `QuickBooks`.
 ///
 /// # Type Parameter
 ///
@@ -137,7 +138,7 @@ fn qb_read<T: QBItem>(item: &mut T, qb: &QBContext, client: &Agent) -> Result<()
 /// # Errors
 ///
 /// - `UreqError`: Network or HTTP errors during API call
-/// - `BadRequest`: QuickBooks API returned an error (e.g., entity not found, invalid ID)
+/// - `BadRequest`: `QuickBooks` API returned an error (e.g., entity not found, invalid ID)
 /// - `JsonError`: Response parsing errors
 /// - Rate limiting errors if API limits are exceeded
 pub fn qb_get_single<T: QBItem>(id: &str, qb: &QBContext, client: &Agent) -> Result<T, APIError> {

@@ -64,7 +64,7 @@ use ureq::Agent;
 // };
 
 use super::refresh::RefreshableQBContext;
-use crate::{error::QBErrorResponse, limiter::RateLimiter, APIResult, DiscoveryDoc, Environment};
+use crate::{limiter::RateLimiter, APIResult, DiscoveryDoc, Environment};
 
 // Rate Limit:
 // Sandbox - 500 req / min
@@ -77,10 +77,10 @@ const RATE_LIMIT: usize = 500;
 const BATCH_RATE_LIMIT: usize = 40;
 const RESET_DURATION: Duration = Duration::from_secs(60);
 
-/// The core context for interacting with the QuickBooks Online API.
+/// The core context for interacting with the `QuickBooks` Online API.
 ///
 /// `QBContext` manages authentication, rate limiting, and API configuration for all
-/// QuickBooks operations. It automatically handles rate limiting to respect QuickBooks
+/// `QuickBooks` operations. It automatically handles rate limiting to respect `QuickBooks`
 /// API limits and includes discovery document information for OAuth operations.
 ///
 /// # Rate Limits
@@ -91,8 +91,8 @@ const RESET_DURATION: Duration = Duration::from_secs(60);
 ///
 /// # Fields
 ///
-/// - `environment`: The QuickBooks environment (sandbox or production)
-/// - `company_id`: The QuickBooks company ID for API requests
+/// - `environment`: The `QuickBooks` environment (sandbox or production)
+/// - `company_id`: The `QuickBooks` company ID for API requests
 /// - `access_token`: OAuth 2.0 access token for authentication
 /// - `expires_in`: Token expiration time (defaults to far future)
 /// - `discovery_doc`: OAuth discovery document with endpoint URLs
@@ -152,15 +152,15 @@ pub struct QBContext {
 }
 
 impl QBContext {
-    /// Creates a new QuickBooks context with the specified parameters.
+    /// Creates a new `QuickBooks` context with the specified parameters.
     ///
     /// This constructor initializes the context with authentication details,
     /// fetches the OAuth discovery document, and sets up rate limiters.
     ///
     /// # Parameters
     ///
-    /// - `environment`: QuickBooks environment (sandbox or production)
-    /// - `company_id`: The QuickBooks company ID for your application
+    /// - `environment`: `QuickBooks` environment (sandbox or production)
+    /// - `company_id`: The `QuickBooks` company ID for your application
     /// - `access_token`: Valid OAuth 2.0 access token
     /// - `client`: HTTP client for making API requests
     ///
@@ -205,7 +205,7 @@ impl QBContext {
         })
     }
 
-    /// Creates a new QuickBooks context from environment variables.
+    /// Creates a new `QuickBooks` context from environment variables.
     ///
     /// This convenience constructor reads the company ID and access token from
     /// environment variables, making it easy to configure the context without
@@ -213,12 +213,12 @@ impl QBContext {
     ///
     /// # Environment Variables
     ///
-    /// - `QB_COMPANY_ID`: The QuickBooks company ID
+    /// - `QB_COMPANY_ID`: The `QuickBooks` company ID
     /// - `QB_ACCESS_TOKEN`: Valid OAuth 2.0 access token
     ///
     /// # Parameters
     ///
-    /// - `environment`: QuickBooks environment (sandbox or production)
+    /// - `environment`: `QuickBooks` environment (sandbox or production)
     /// - `client`: HTTP client for making API requests
     ///
     /// # Returns
@@ -355,10 +355,11 @@ impl QBContext {
         let response = request.call()?;
         let status = response.status();
         if !status.is_success() {
+            #[cfg(feature = "logging")]
             log::error!(
                 "Failed to check authorized status: {} - {}",
                 status,
-                response.into_body().read_json::<QBErrorResponse>()?
+                response.into_body().read_json::<crate::error::QBErrorResponse>()?
             );
         }
         Ok(status.is_success())

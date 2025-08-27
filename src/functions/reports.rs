@@ -3,10 +3,10 @@ use ureq::{http::Method, Agent};
 
 use crate::{functions::qb_request, APIResult, QBContext};
 
-/// Trait for retrieving QuickBooks financial reports.
+/// Trait for retrieving `QuickBooks` financial reports.
 ///
 /// This trait provides the interface for fetching various financial reports from
-/// QuickBooks, such as Profit & Loss, Balance Sheet, Trial Balance, and others.
+/// `QuickBooks`, such as Profit & Loss, Balance Sheet, Trial Balance, and others.
 /// Reports can be customized with parameters like date ranges, summarization levels,
 /// and accounting methods.
 ///
@@ -17,14 +17,14 @@ use crate::{functions::qb_request, APIResult, QBContext};
 ///
 /// # Report Types
 ///
-/// QuickBooks supports many report types including:
-/// - **ProfitAndLoss**: Income statement showing revenue and expenses
-/// - **BalanceSheet**: Statement of financial position
-/// - **TrialBalance**: List of all account balances
-/// - **CashFlow**: Cash flow statement
-/// - **AgedReceivables**: Outstanding customer invoices by age
-/// - **AgedPayables**: Outstanding vendor bills by age
-/// - **GeneralLedger**: Detailed transaction history
+/// `QuickBooks` supports many report types including:
+/// - **`ProfitAndLoss`**: Income statement showing revenue and expenses
+/// - **`BalanceSheet`**: Statement of financial position
+/// - **`TrialBalance`**: List of all account balances
+/// - **`CashFlow`**: Cash flow statement
+/// - **`AgedReceivables`**: Outstanding customer invoices by age
+/// - **`AgedPayables`**: Outstanding vendor bills by age
+/// - **`GeneralLedger`**: Detailed transaction history
 /// - And many more...
 ///
 /// # Examples
@@ -96,7 +96,7 @@ use crate::{functions::qb_request, APIResult, QBContext};
 /// # Errors
 ///
 /// - `UreqError`: Network or HTTP errors during API call
-/// - `BadRequest`: Invalid report parameters or QuickBooks API error
+/// - `BadRequest`: Invalid report parameters or `QuickBooks` API error
 /// - `JsonError`: Response parsing errors
 /// - Rate limiting errors if API limits are exceeded
 ///

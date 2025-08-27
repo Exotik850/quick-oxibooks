@@ -8,9 +8,9 @@ use crate::{
     APIResult, QBContext,
 };
 
-/// Trait for deleting QuickBooks entities via the API.
+/// Trait for deleting `QuickBooks` entities via the API.
 ///
-/// This trait provides the `delete` method for removing entities from QuickBooks.
+/// This trait provides the `delete` method for removing entities from `QuickBooks`.
 /// It validates that entities have the required ID and sync token before attempting deletion.
 ///
 /// # Automatic Implementation
@@ -21,15 +21,15 @@ use crate::{
 /// # Requirements
 ///
 /// Before deletion, entities must have:
-/// - Valid ID (entity exists in QuickBooks)
+/// - Valid ID (entity exists in `QuickBooks`)
 /// - Current sync token (for optimistic concurrency control)
 ///
-/// These are automatically present when entities are read from QuickBooks.
+/// These are automatically present when entities are read from `QuickBooks`.
 ///
 /// # Important Notes
 ///
 /// - **Permanent Action**: Deletion cannot be undone
-/// - **Referential Integrity**: QuickBooks may prevent deletion if entity is referenced elsewhere
+/// - **Referential Integrity**: `QuickBooks` may prevent deletion if entity is referenced elsewhere
 /// - **Audit Trail**: Some entities may be marked as inactive instead of deleted
 /// - **Sync Token**: Must be current or deletion will fail with sync error
 ///
@@ -59,14 +59,14 @@ use crate::{
 ///
 /// Returns [`QBDeleted`] with information about the deleted entity:
 /// - `id`: The ID of the deleted entity
-/// - `status`: Deletion status from QuickBooks
-/// - `domain`: The QuickBooks domain information
+/// - `status`: Deletion status from `QuickBooks`
+/// - `domain`: The `QuickBooks` domain information
 ///
 /// # Errors
 ///
 /// - `DeleteMissingItems`: Entity missing ID or sync token
 /// - `UreqError`: Network or HTTP errors during API call
-/// - `BadRequest`: QuickBooks API error (e.g., entity referenced elsewhere, sync conflict)
+/// - `BadRequest`: `QuickBooks` API error (e.g., entity referenced elsewhere, sync conflict)
 /// - `JsonError`: Response parsing errors
 pub trait QBDelete {
     /// Deletes the item
@@ -107,6 +107,7 @@ fn qb_delete<T: QBItem + QBDeletable>(
         None::<std::iter::Empty<(&str, &str)>>,
     )?;
 
+    #[cfg(feature = "logging")]
     log::info!("Successfully deleted {} with ID of {}", T::name(), id);
 
     Ok(response.object)
@@ -140,15 +141,15 @@ impl<T: QBItem> QBToDeleteTrait for T {
     }
 }
 
-/// Information about a successfully deleted QuickBooks entity.
+/// Information about a successfully deleted `QuickBooks` entity.
 ///
-/// This struct contains metadata returned by QuickBooks after a successful deletion operation.
+/// This struct contains metadata returned by `QuickBooks` after a successful deletion operation.
 /// It provides confirmation details about what was deleted and the operation status.
 ///
 /// # Fields
 ///
 /// - `status`: The status of the deletion operation (typically "Deleted")
-/// - `domain`: QuickBooks domain information (e.g., "QBO" for QuickBooks Online)
+/// - `domain`: `QuickBooks` domain information (e.g., "QBO" for `QuickBooks` Online)
 /// - `id`: The ID of the entity that was deleted
 ///
 /// # Examples
@@ -158,7 +159,7 @@ impl<T: QBItem> QBToDeleteTrait for T {
 /// use quickbooks_types::Customer;
 ///
 /// let deleted_info: QBDeleted = customer.delete(&qb_context, &client)?;
-/// 
+///
 /// println!("Deletion status: {}", deleted_info.status);
 /// println!("Deleted entity ID: {}", deleted_info.id);
 /// println!("Domain: {}", deleted_info.domain);

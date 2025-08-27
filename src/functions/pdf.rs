@@ -90,7 +90,7 @@ use crate::{
 ///
 /// // Get PDF as bytes
 /// let pdf_bytes = invoice.get_pdf_bytes(&qb_context, &client)?;
-/// 
+///
 /// // Use the bytes (save to file, send via email, etc.)
 /// std::fs::write("invoice_001.pdf", pdf_bytes)?;
 /// ```
@@ -233,6 +233,7 @@ fn qb_get_pdf_bytes<T: QBItem + QBPDFable>(
         return Err(APIErrorInner::BadRequest(response.into_body().read_json()?).into());
     }
 
+    #[cfg(feature = "logging")]
     log::info!(
         "Successfully got PDF of {} with ID : {}",
         T::name(),
@@ -256,10 +257,12 @@ fn qb_save_pdf_to_file<T: QBItem + QBPDFable>(
     let amt = file.write(&bytes)?;
 
     if bytes.len() != amt {
+        #[cfg(feature = "logging")]
         log::error!("Couldn't write all the bytes of file : {}", file_name);
         return Err(APIErrorInner::ByteLengthMismatch.into());
     }
 
+    #[cfg(feature = "logging")]
     log::info!(
         "Successfully saved PDF of {} #{} to {}",
         T::name(),

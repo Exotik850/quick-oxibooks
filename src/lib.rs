@@ -1,18 +1,18 @@
 //! # Quick Oxibooks Library
 //!
-//! **Quick Oxibooks** is a comprehensive Rust library for interacting with the QuickBooks Online API.
+//! **Quick Oxibooks** is a comprehensive Rust library for interacting with the `QuickBooks` Online API.
 //! It provides a strongly-typed, rate-limited, and feature-rich interface for performing CRUD operations,
-//! batch processing, and generating reports with QuickBooks data.
+//! batch processing, and generating reports with `QuickBooks` data.
 //!
 //! ## Key Features
 //!
-//! - **Complete CRUD Operations**: Create, read, update, delete, and query QuickBooks entities
+//! - **Complete CRUD Operations**: Create, read, update, delete, and query `QuickBooks` entities
 //! - **Batch Processing**: Execute multiple operations in a single API call for improved performance
-//! - **Rate Limiting**: Built-in rate limiting to respect QuickBooks API limits
-//! - **Strong Typing**: All QuickBooks entities are strongly typed with validation
+//! - **Rate Limiting**: Built-in rate limiting to respect `QuickBooks` API limits
+//! - **Strong Typing**: All `QuickBooks` entities are strongly typed with validation
 //! - **PDF Generation**: Generate PDFs for supported entities (invoices, estimates, etc.)
 //! - **Attachment Support**: Upload and manage file attachments
-//! - **Report Generation**: Access QuickBooks financial reports (P&L, Balance Sheet, etc.)
+//! - **Report Generation**: Access `QuickBooks` financial reports (P&L, Balance Sheet, etc.)
 //! - **Macro Support**: Convenient macros for building queries
 //!
 //! ## Quick Start
@@ -47,16 +47,16 @@
 //! ## Modules
 //!
 //! - [`batch`]: Batch operations for processing multiple API calls efficiently
-//! - [`client`]: QuickBooks client context and authentication management
+//! - [`client`]: `QuickBooks` client context and authentication management
 //! - [`error`]: Comprehensive error types for API and validation errors
-//! - [`types`]: Re-exports of strongly-typed QuickBooks entities from `quickbooks_types`
+//! - [`types`]: Re-exports of strongly-typed `QuickBooks` entities from `quickbooks_types`
 //! - [`functions`]: Core CRUD operations and utility functions
 //! - [`macros`]: Convenient macros for query building (requires `macros` feature)
 //!
 //! ## Features
 //!
 //! - `attachments`: Enables file attachment upload and management functions
-//! - `pdf`: Enables PDF generation for supported QuickBooks entities
+//! - `pdf`: Enables PDF generation for supported `QuickBooks` entities
 //! - `macros`: Enables convenient query-building macros
 //!
 //! ## Enums
@@ -110,15 +110,15 @@ pub use crate::functions::pdf;
 pub mod macros;
 
 /// The result type used throughout the library for operations that may fail.
-/// 
+///
 /// This is a type alias for `Result<T, APIError>` where `APIError` contains
 /// detailed information about what went wrong during API operations.
 ///
 /// # Examples
-/// 
+///
 /// ```rust
 /// use quick_oxibooks::{APIResult, QBContext};
-/// 
+///
 /// fn get_context() -> APIResult<QBContext> {
 ///     // Returns Ok(context) on success or Err(APIError) on failure
 ///     QBContext::new_from_env(Environment::SANDBOX, &client)
@@ -126,9 +126,9 @@ pub mod macros;
 /// ```
 pub type APIResult<T> = Result<T, APIError>;
 
-/// Represents the QuickBooks API environment.
+/// Represents the `QuickBooks` API environment.
 ///
-/// QuickBooks provides two environments:
+/// `QuickBooks` provides two environments:
 /// - **SANDBOX**: For development and testing, uses sandbox URLs and data
 /// - **PRODUCTION**: For live applications, uses production URLs and real data
 ///
@@ -151,7 +151,7 @@ pub type APIResult<T> = Result<T, APIError>;
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
 pub enum Environment {
-    /// Production environment for live QuickBooks data
+    /// Production environment for live `QuickBooks` data
     PRODUCTION,
     /// Sandbox environment for development and testing (default)
     #[default]
@@ -162,9 +162,9 @@ impl Environment {
     /// Returns the OAuth 2.0 discovery URL for the environment.
     ///
     /// The discovery URL provides OAuth endpoints and configuration for authentication.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// A static string containing the discovery URL for the environment.
     #[inline]
     #[must_use]
@@ -182,9 +182,9 @@ impl Environment {
     /// Returns the token migration URL for the environment.
     ///
     /// Used for migrating OAuth 1.0 tokens to OAuth 2.0.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// A static string containing the migration URL for the environment.
     #[inline]
     #[must_use]
@@ -199,10 +199,10 @@ impl Environment {
 
     /// Returns the user info URL for the environment.
     ///
-    /// Used to retrieve user information from the OpenID Connect userinfo endpoint.
-    /// 
+    /// Used to retrieve user information from the `OpenID` Connect userinfo endpoint.
+    ///
     /// # Returns
-    /// 
+    ///
     /// A static string containing the user info URL for the environment.
     #[inline]
     #[must_use]
@@ -219,10 +219,10 @@ impl Environment {
 
     /// Returns the base API endpoint URL for the environment.
     ///
-    /// This is the root URL for all QuickBooks API operations (CRUD, queries, reports, etc.).
-    /// 
+    /// This is the root URL for all `QuickBooks` API operations (CRUD, queries, reports, etc.).
+    ///
     /// # Returns
-    /// 
+    ///
     /// A static string containing the API endpoint URL for the environment.
     #[inline]
     #[must_use]
@@ -234,10 +234,10 @@ impl Environment {
     }
 }
 
-/// OAuth 2.0 discovery document for QuickBooks API.
+/// OAuth 2.0 discovery document for `QuickBooks` API.
 ///
 /// Contains OAuth 2.0 endpoint URLs and supported capabilities discovered from
-/// the QuickBooks OAuth discovery endpoint. This is automatically fetched when
+/// the `QuickBooks` OAuth discovery endpoint. This is automatically fetched when
 /// creating a [`QBContext`] and used for authentication flows.
 ///
 /// # Fields
@@ -278,14 +278,14 @@ pub struct DiscoveryDoc {
 }
 
 impl DiscoveryDoc {
-    /// Fetches the OAuth 2.0 discovery document from QuickBooks.
+    /// Fetches the OAuth 2.0 discovery document from `QuickBooks`.
     ///
-    /// This method makes an HTTP request to the QuickBooks discovery endpoint
+    /// This method makes an HTTP request to the `QuickBooks` discovery endpoint
     /// to retrieve OAuth 2.0 configuration and supported capabilities.
     ///
     /// # Parameters
     ///
-    /// - `environment`: The QuickBooks environment (sandbox or production)
+    /// - `environment`: The `QuickBooks` environment (sandbox or production)
     /// - `client`: HTTP client for making the request
     ///
     /// # Returns
