@@ -395,7 +395,9 @@ impl QBContext {
             log::error!(
                 "Failed to check authorized status: {} - {}",
                 status,
-                response.into_body().read_json::<crate::error::QBErrorResponse>()?
+                response
+                    .into_body()
+                    .read_json::<crate::error::QBErrorResponse>()?
             );
         }
         Ok(status.is_success())

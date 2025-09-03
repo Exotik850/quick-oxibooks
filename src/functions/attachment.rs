@@ -24,8 +24,7 @@
 //! # }
 //! ```
 use base64::Engine;
-use quickbooks_types::{content_type_from_ext, Attachable, QBAttachable};
-use std::path::{Path, PathBuf};
+use quickbooks_types::{Attachable, QBAttachable};
 // use reqwest::{
 //     header::{self, HeaderValue},
 //     multipart::{Form, Part},

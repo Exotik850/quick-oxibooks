@@ -56,9 +56,14 @@ impl RefreshableQBContext {
 
         self.refresh_token = refresh_token;
         self.context.access_token = access_token;
-        self.context.expires_in = chrono::Utc::now() + chrono::Duration::seconds(expires_in.cast_signed());
+        self.context.expires_in =
+            chrono::Utc::now() + chrono::Duration::seconds(expires_in.cast_signed());
 
         Ok(())
+    }
+
+    pub fn refresh_token(&self) -> &str {
+        &self.refresh_token
     }
 }
 

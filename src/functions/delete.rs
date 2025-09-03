@@ -98,7 +98,7 @@ fn qb_delete<T: QBItem + QBDeletable>(
     qb: &QBContext,
     client: &Agent,
 ) -> Result<QBDeleted, APIError> {
-    let (Some(_), Some(id)) = (item.sync_token(), item.id()) else {
+    let (Some(_), Some(_)) = (item.sync_token(), item.id()) else {
         return Err(APIErrorInner::DeleteMissingItems.into());
     };
 
@@ -130,7 +130,7 @@ struct QBToDelete<'a> {
 trait QBToDeleteTrait {
     fn id(&self) -> &str;
     fn sync_token(&self) -> &str;
-    fn to_delete(&self) -> QBToDelete {
+    fn to_delete(&self) -> QBToDelete<'_> {
         QBToDelete {
             id: self.id(),
             sync_token: self.sync_token(),
