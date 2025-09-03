@@ -35,24 +35,31 @@ use crate::{
 ///
 /// # Examples
 ///
-/// ```rust
-/// use quick_oxibooks::{QBContext, functions::{QBDelete, QBQuery}};
-/// use quickbooks_types::Customer;
+/// ```no_run
+/// use quick_oxibooks::{QBContext, Environment};
+/// use quick_oxibooks::functions::delete::QBDelete;
+/// use quick_oxibooks::functions::query::QBQuery;
+/// use quickbooks_types::Invoice;
 /// use ureq::Agent;
 ///
 /// let client = Agent::new_with_defaults();
-/// let qb_context = QBContext::new(/* ... */)?;
+/// let qb_context = QBContext::new(
+///     Environment::SANDBOX,
+///     "company_id".to_string(),
+///     "access_token".to_string(),
+///     &client,
+/// ).unwrap();
 ///
-/// // Find and delete a customer
-/// let customer = Customer::query_single(
-///     "WHERE DisplayName = 'Test Customer'",
+/// // Find and delete an invoice
+/// let invoice = Invoice::query_single(
+///     "WHERE DocNumber = 'INV-0001'",
 ///     &qb_context,
 ///     &client
-/// )?;
+/// ).unwrap();
 ///
-/// // Delete the customer
-/// let deleted_info = customer.delete(&qb_context, &client)?;
-/// println!("Deleted customer with ID: {}", deleted_info.id);
+/// // Delete the invoice
+/// let deleted_info = invoice.delete(&qb_context, &client).unwrap();
+/// println!("Deleted invoice with ID: {}", deleted_info.id);
 /// ```
 ///
 /// # Return Value
@@ -154,11 +161,23 @@ impl<T: QBItem> QBToDeleteTrait for T {
 ///
 /// # Examples
 ///
-/// ```rust
-/// use quick_oxibooks::functions::{QBDelete, delete::QBDeleted};
-/// use quickbooks_types::Customer;
+/// ```no_run
+/// use quick_oxibooks::{QBContext, Environment};
+/// use quick_oxibooks::functions::delete::{QBDelete, QBDeleted};
+/// use quick_oxibooks::functions::query::QBQuery;
+/// use quickbooks_types::Invoice;
+/// use ureq::Agent;
 ///
-/// let deleted_info: QBDeleted = customer.delete(&qb_context, &client)?;
+/// let client = Agent::new_with_defaults();
+/// let qb_context = QBContext::new(
+///     Environment::SANDBOX,
+///     "company_id".to_string(),
+///     "access_token".to_string(),
+///     &client,
+/// ).unwrap();
+/// // Assume `entity` is fetched and has id/sync token
+/// let entity = Invoice::query_single("WHERE DocNumber = 'INV-0001'", &qb_context, &client).unwrap();
+/// let deleted_info: QBDeleted = entity.delete(&qb_context, &client).unwrap();
 ///
 /// println!("Deletion status: {}", deleted_info.status);
 /// println!("Deleted entity ID: {}", deleted_info.id);

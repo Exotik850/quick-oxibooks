@@ -11,18 +11,21 @@
 //!
 //! There are several ways to create a `QBContext`:
 //!
-//! ```ignore
+//! ```no_run
+//! use quick_oxibooks::{QBContext, Environment};
+//! use ureq::Agent;
+//!
 //! // Create from environment variables
-//! let client = ureq::Agent::new_with_defaults();
-//! let context = QBContext::new_from_env(Environment::Sandbox, &client)?;
+//! let client = Agent::new_with_defaults();
+//! let context = QBContext::new_from_env(Environment::SANDBOX, &client).unwrap();
 //!
 //! // Create manually
 //! let context = QBContext::new(
-//!     Environment::Production,
+//!     Environment::PRODUCTION,
 //!     "company_id".to_string(),
 //!     "access_token".to_string(),
 //!     &client
-//! )?;
+//! ).unwrap();
 //!
 //! // Create with refresh token capability
 //! let refreshable_context = context.with_refresh("refresh_token".to_string());
@@ -34,9 +37,9 @@
 //! When making API calls, use the `with_permission` or `with_batch_permission` methods to respect rate limits:
 //!
 //! ```ignore
-//! context.with_permission(|ctx| async {
-//!     // Your API call here that uses ctx
-//! })?;
+//! // The context enforces rate limits internally via with_permission/with_batch_permission.
+//! // These methods are crate-internal and used by library operations.
+//! // End users typically don't call them directly.
 //! ```
 //!
 //! ### Refreshing Tokens
@@ -44,7 +47,8 @@
 //! If you need to refresh access tokens, use the `RefreshableQBContext`:
 //!
 //! ```ignore
-//! refreshable_context.refresh_access_token("client_id", "client_secret", &client)?;
+//! // See RefreshableQBContext docs for usage
+//! // refreshable_context.refresh_access_token("client_id", "client_secret", &client)?;
 //! ```
 //!
 //! ### Rate Limits
@@ -102,7 +106,7 @@ const RESET_DURATION: Duration = Duration::from_secs(60);
 ///
 /// ## Creating a Context
 ///
-/// ```rust
+/// ```no_run
 /// use quick_oxibooks::{QBContext, Environment};
 /// use ureq::Agent;
 ///
@@ -114,32 +118,53 @@ const RESET_DURATION: Duration = Duration::from_secs(60);
 ///     "company_123".to_string(),
 ///     "access_token_xyz".to_string(),
 ///     &client
-/// )?;
+/// ).unwrap();
 ///
 /// // Create from environment variables QB_COMPANY_ID and QB_ACCESS_TOKEN
-/// let context = QBContext::new_from_env(Environment::SANDBOX, &client)?;
+/// let context = QBContext::new_from_env(Environment::SANDBOX, &client).unwrap();
 /// ```
 ///
 /// ## Using with Operations
 ///
-/// ```rust
-/// use quick_oxibooks::functions::{QBCreate, QBQuery};
+/// ```no_run
+/// use quick_oxibooks::functions::{create::QBCreate, query::QBQuery};
 /// use quickbooks_types::Customer;
+/// use ureq::Agent;
+///
+/// let client = Agent::new_with_defaults();
+/// let context = quick_oxibooks::QBContext::new(
+///     quick_oxibooks::Environment::SANDBOX,
+///     "company".to_string(),
+///     "token".to_string(),
+///     &client
+/// ).unwrap();
 ///
 /// // Create a customer
 /// let mut customer = Customer::default();
 /// customer.display_name = Some("John Doe".to_string());
-/// let created = customer.create(&context, &client)?;
+/// let created = customer.create(&context, &client).unwrap();
 ///
 /// // Query customers
-/// let customers = Customer::query("WHERE Active = true", Some(10), &context, &client)?;
+/// let customers = Customer::query("WHERE Active = true", Some(10), &context, &client).unwrap();
 /// ```
 ///
 /// ## Refresh Token Support
 ///
-/// ```rust
+/// ```no_run
+/// use quick_oxibooks::{QBContext, Environment};
+/// use ureq::Agent;
+///
+/// let client = Agent::new_with_defaults();
+/// let context = QBContext::new(
+///     Environment::SANDBOX,
+///     "company_123".to_string(),
+///     "access_token_xyz".to_string(),
+///     &client
+/// ).unwrap();
+///
 /// // Create a refreshable context for automatic token renewal
 /// let refreshable = context.with_refresh("refresh_token_abc".to_string());
+/// let _ = refreshable;
 /// ```
 pub struct QBContext {
     pub(crate) environment: Environment,
@@ -176,7 +201,7 @@ impl QBContext {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```no_run
     /// use quick_oxibooks::{QBContext, Environment};
     /// use ureq::Agent;
     ///
@@ -186,7 +211,7 @@ impl QBContext {
     ///     "company_123".to_string(),
     ///     "Bearer_token_xyz".to_string(),
     ///     &client
-    /// )?;
+    /// ).unwrap();
     /// ```
     pub fn new(
         environment: Environment,
@@ -237,12 +262,12 @@ impl QBContext {
     /// export QB_ACCESS_TOKEN="Bearer_token_xyz"
     /// ```
     ///
-    /// ```rust
+    /// ```no_run
     /// use quick_oxibooks::{QBContext, Environment};
     /// use ureq::Agent;
     ///
     /// let client = Agent::new_with_defaults();
-    /// let context = QBContext::new_from_env(Environment::SANDBOX, &client)?;
+    /// let context = QBContext::new_from_env(Environment::SANDBOX, &client).unwrap();
     /// ```
     pub fn new_from_env(environment: Environment, client: &Agent) -> APIResult<Self> {
         let company_id = std::env::var("QB_COMPANY_ID")?;
@@ -266,7 +291,7 @@ impl QBContext {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```no_run
     /// use quick_oxibooks::{QBContext, Environment};
     /// use ureq::Agent;
     ///
@@ -276,7 +301,7 @@ impl QBContext {
     ///     "company_123".to_string(),
     ///     "access_token_xyz".to_string(),
     ///     &client
-    /// )?;
+    /// ).unwrap();
     ///
     /// // Enable automatic token refresh
     /// let refreshable = context.with_refresh("refresh_token_abc".to_string());
@@ -304,9 +329,20 @@ impl QBContext {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```no_run
+    /// use quick_oxibooks::{QBContext, Environment};
+    /// use ureq::Agent;
+    ///
+    /// let client = Agent::new_with_defaults();
+    /// let context = QBContext::new(
+    ///     Environment::SANDBOX,
+    ///     "company_123".to_string(),
+    ///     "access_token_xyz".to_string(),
+    ///     &client
+    /// ).unwrap();
     /// // Update the access token after manual refresh
     /// let new_context = context.with_access_token("new_access_token_xyz".to_string());
+    /// let _ = new_context; // suppress unused variable warning
     /// ```
     #[must_use]
     pub fn with_access_token(self, access_token: String) -> Self {

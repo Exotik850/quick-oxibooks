@@ -32,13 +32,19 @@ use super::qb_request;
 ///
 /// ## Basic Queries
 ///
-/// ```rust
-/// use quick_oxibooks::{QBContext, functions::QBQuery};
+/// ```no_run
+/// use quick_oxibooks::{QBContext, Environment};
+/// use quick_oxibooks::functions::query::QBQuery;
 /// use quickbooks_types::{Customer, Invoice};
 /// use ureq::Agent;
 ///
 /// let client = Agent::new_with_defaults();
-/// let qb_context = QBContext::new(/* ... */)?;
+/// let qb_context = QBContext::new(
+///     Environment::SANDBOX,
+///     "company_id".to_string(),
+///     "access_token".to_string(),
+///     &client,
+/// ).unwrap();
 ///
 /// // Query active customers
 /// let customers = Customer::query(
@@ -46,7 +52,7 @@ use super::qb_request;
 ///     Some(50),
 ///     &qb_context,
 ///     &client
-/// )?;
+/// ).unwrap();
 ///
 /// // Query recent invoices
 /// let invoices = Invoice::query(
@@ -54,25 +60,36 @@ use super::qb_request;
 ///     Some(25),
 ///     &qb_context,
 ///     &client
-/// )?;
+/// ).unwrap();
 /// ```
 ///
 /// ## Single Entity Queries
 ///
-/// ```rust
+/// ```no_run
+/// use quick_oxibooks::{QBContext, Environment};
+/// use ureq::Agent;
+/// use quickbooks_types::{Customer, Invoice};
+/// use quick_oxibooks::functions::query::QBQuery;
+/// let client = Agent::new_with_defaults();
+/// let qb_context = QBContext::new(
+///     Environment::SANDBOX,
+///     "company_id".to_string(),
+///     "access_token".to_string(),
+///     &client,
+/// ).unwrap();
 /// // Find a specific customer by name
 /// let customer = Customer::query_single(
 ///     "WHERE DisplayName = 'Acme Corp'",
 ///     &qb_context,
 ///     &client
-/// )?;
+/// ).unwrap();
 ///
 /// // Find an invoice by document number
 /// let invoice = Invoice::query_single(
 ///     "WHERE DocNumber = 'INV-001'",
 ///     &qb_context,
 ///     &client
-/// )?;
+/// ).unwrap();
 /// ```
 ///
 /// # Field Names
@@ -183,18 +200,6 @@ fn qb_query<T: QBItem>(
         Ok(response.query_response.items)
     }
 }
-
-// /// Gets a single object via query from the `QuickBooks` API
-// ///
-// /// Handles retrieving a `QBItem` via query,
-// /// refer to `qb_query` for more details
-// fn qb_query_single<T: QBItem>(
-//     query_str: &str,
-//     qb: &QBContext,
-//     client: &Agent,
-// ) -> Result<T, APIError> {
-//     Ok(qb_query(query_str, 1, qb, client)?.swap_remove(0))
-// }
 
 /// Internal struct that Quickbooks returns when querying objects
 #[derive(Debug, Clone, Default, Deserialize)]

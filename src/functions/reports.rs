@@ -31,13 +31,19 @@ use crate::{functions::qb_request, APIResult, QBContext};
 ///
 /// ## Basic Report (No Parameters)
 ///
-/// ```rust
-/// use quick_oxibooks::{QBContext, functions::QBReport};
+/// ```no_run
+/// use quick_oxibooks::{QBContext, Environment};
+/// use quick_oxibooks::functions::reports::QBReport;
 /// use quickbooks_types::reports::{Report, types::ProfitAndLoss};
 /// use ureq::Agent;
 ///
 /// let client = Agent::new_with_defaults();
-/// let qb_context = QBContext::new(/* ... */)?;
+/// let qb_context = QBContext::new(
+///     Environment::SANDBOX,
+///     "company_id".to_string(),
+///     "access_token".to_string(),
+///     &client,
+/// ).unwrap();
 ///
 /// // Get a basic Profit & Loss report
 /// let report = Report::get(
@@ -45,27 +51,33 @@ use crate::{functions::qb_request, APIResult, QBContext};
 ///     &client,
 ///     &ProfitAndLoss,
 ///     None
-/// )?;
-///
-/// println!("Report: {}", serde_json::to_string_pretty(&report)?);
+/// ).unwrap();
+/// println!("Report name: {:?}", report.header.as_ref().unwrap().report_name);
 /// ```
 ///
 /// ## Report with Parameters
 ///
-/// ```rust
-/// use quick_oxibooks::{QBContext, functions::QBReport};
+/// ```no_run
+/// use quick_oxibooks::{QBContext, Environment};
+/// use quick_oxibooks::functions::reports::QBReport;
 /// use quickbooks_types::reports::{Report, types::{BalanceSheet, BalanceSheetParams}};
+/// use quickbooks_types::reports::params::SummarizeColumnBy;
 /// use chrono::NaiveDate;
 /// use ureq::Agent;
 ///
 /// let client = Agent::new_with_defaults();
-/// let qb_context = QBContext::new(/* ... */)?;
+/// let qb_context = QBContext::new(
+///     Environment::SANDBOX,
+///     "company_id".to_string(),
+///     "access_token".to_string(),
+///     &client,
+/// ).unwrap();
 ///
 /// // Create parameters for the report
-/// let mut params = BalanceSheetParams::default()
+/// let params = BalanceSheetParams::default()
 ///         .start_date(NaiveDate::from_ymd_opt(2024, 1, 1).unwrap())
 ///         .end_date(NaiveDate::from_ymd_opt(2024, 12, 31).unwrap())
-///         .summarize_column_by("Month");
+///         .summarize_column_by(SummarizeColumnBy::Month);
 ///
 /// // Get Balance Sheet with parameters
 /// let report = Report::get(
@@ -73,7 +85,8 @@ use crate::{functions::qb_request, APIResult, QBContext};
 ///     &client,
 ///     &BalanceSheet,
 ///     Some(params)
-/// )?;
+/// ).unwrap();
+/// println!("Report name: {:?}", report.header.as_ref().unwrap().report_name);
 /// ```
 ///
 /// ## Available Report Parameters

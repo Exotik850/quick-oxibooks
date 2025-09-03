@@ -17,10 +17,10 @@
 //!
 //! ## Quick Start
 //!
-//! ```rust
+//! ```no_run
 //! use quick_oxibooks::{QBContext, Environment};
 //! use quickbooks_types::{Customer, Invoice};
-//! use quick_oxibooks::functions::{QBCreate, QBQuery, QBRead};
+//! use quick_oxibooks::functions::{create::QBCreate, query::QBQuery, read::QBRead};
 //! use ureq::Agent;
 //!
 //! // Create a QuickBooks context
@@ -30,18 +30,18 @@
 //!     "your_company_id".to_string(),
 //!     "your_access_token".to_string(),
 //!     &client
-//! )?;
+//! ).unwrap();
 //!
 //! // Create a new customer
 //! let mut customer = Customer::default();
 //! customer.display_name = Some("John Doe".to_string());
-//! let created_customer = customer.create(&qb_context, &client)?;
+//! let created_customer = customer.create(&qb_context, &client).unwrap();
 //!
 //! // Query for invoices
-//! let invoices = Invoice::query("WHERE TotalAmt > '100.00'", Some(10), &qb_context, &client)?;
+//! let invoices = Invoice::query("WHERE TotalAmt > '100.00'", Some(10), &qb_context, &client).unwrap();
 //!
 //! // Read a specific invoice by ID
-//! let invoice = Invoice::query_single("WHERE Id = '123'", &qb_context, &client)?;
+//! let invoice = Invoice::query_single("WHERE Id = '123'", &qb_context, &client).unwrap();
 //! ```
 //!
 //! ## Modules
@@ -116,11 +116,12 @@ pub mod macros;
 ///
 /// # Examples
 ///
-/// ```rust
-/// use quick_oxibooks::{APIResult, QBContext};
+/// ```no_run
+/// use quick_oxibooks::{APIResult, QBContext, Environment};
+/// use ureq::Agent;
 ///
 /// fn get_context() -> APIResult<QBContext> {
-///     // Returns Ok(context) on success or Err(APIError) on failure
+///     let client = Agent::new_with_defaults();
 ///     QBContext::new_from_env(Environment::SANDBOX, &client)
 /// }
 /// ```
@@ -252,12 +253,12 @@ impl Environment {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```no_run
 /// use quick_oxibooks::{DiscoveryDoc, Environment};
 /// use ureq::Agent;
 ///
 /// let client = Agent::new_with_defaults();
-/// let discovery = DiscoveryDoc::get(Environment::SANDBOX, &client)?;
+/// let discovery = DiscoveryDoc::get(Environment::SANDBOX, &client).unwrap();
 /// println!("Token endpoint: {}", discovery.token_endpoint);
 /// ```
 #[derive(Deserialize, Debug, Serialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -300,12 +301,12 @@ impl DiscoveryDoc {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```no_run
     /// use quick_oxibooks::{DiscoveryDoc, Environment};
     /// use ureq::Agent;
     ///
     /// let client = Agent::new_with_defaults();
-    /// let discovery = DiscoveryDoc::get(Environment::SANDBOX, &client)?;
+    /// let discovery = DiscoveryDoc::get(Environment::SANDBOX, &client).unwrap();
     /// ```
     pub fn get(environment: Environment, client: &Agent) -> APIResult<Self> {
         let url = environment.discovery_url();

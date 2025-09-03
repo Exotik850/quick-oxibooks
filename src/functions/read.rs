@@ -27,31 +27,47 @@ use super::{qb_request, QBResponse};
 ///
 /// ## Reading to Update Existing Entity
 ///
-/// ```rust
-/// use quick_oxibooks::{QBContext, functions::QBRead};
+/// ```no_run
+/// use quick_oxibooks::{QBContext, Environment};
+/// use quick_oxibooks::functions::read::QBRead;
 /// use quickbooks_types::Customer;
 /// use ureq::Agent;
 ///
 /// let client = Agent::new_with_defaults();
-/// let qb_context = QBContext::new(/* ... */)?;
+/// let qb_context = QBContext::new(
+///     Environment::SANDBOX,
+///     "company_id".to_string(),
+///     "access_token".to_string(),
+///     &client,
+/// ).unwrap();
 ///
 /// // Entity with ID that needs fresh data
 /// let mut customer = Customer::default();
 /// customer.id = Some("123".to_string());
 ///
 /// // Read fresh data from QuickBooks into this entity
-/// customer.read(&qb_context, &client)?;
+/// customer.read(&qb_context, &client).unwrap();
 /// println!("Updated customer: {}", customer.display_name.unwrap_or_default());
 /// ```
 ///
 /// ## Fetching New Entity by ID
 ///
-/// ```rust
+/// ```no_run
+/// use quick_oxibooks::{QBContext, Environment};
 /// use quick_oxibooks::functions::read::qb_get_single;
 /// use quickbooks_types::Customer;
+/// use ureq::Agent;
+///
+/// let client = Agent::new_with_defaults();
+/// let qb_context = QBContext::new(
+///     Environment::SANDBOX,
+///     "company_id".to_string(),
+///     "access_token".to_string(),
+///     &client,
+/// ).unwrap();
 ///
 /// // Fetch a customer by ID
-/// let customer: Customer = qb_get_single("123", &qb_context, &client)?;
+/// let customer: Customer = qb_get_single("123", &qb_context, &client).unwrap();
 /// println!("Fetched customer: {}", customer.display_name.unwrap_or_default());
 /// ```
 ///
@@ -125,14 +141,24 @@ fn qb_read<T: QBItem>(item: &mut T, qb: &QBContext, client: &Agent) -> Result<()
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```no_run
+/// use quick_oxibooks::{QBContext, Environment};
 /// use quick_oxibooks::functions::read::qb_get_single;
 /// use quickbooks_types::{Customer, Invoice, Item};
+/// use ureq::Agent;
+///
+/// let client = Agent::new_with_defaults();
+/// let qb_context = QBContext::new(
+///     Environment::SANDBOX,
+///     "company_id".to_string(),
+///     "access_token".to_string(),
+///     &client,
+/// ).unwrap();
 ///
 /// // Fetch different types of entities
-/// let customer: Customer = qb_get_single("123", &qb_context, &client)?;
-/// let invoice: Invoice = qb_get_single("456", &qb_context, &client)?;
-/// let item: Item = qb_get_single("789", &qb_context, &client)?;
+/// let customer: Customer = qb_get_single("123", &qb_context, &client).unwrap();
+/// let invoice: Invoice = qb_get_single("456", &qb_context, &client).unwrap();
+/// let item: Item = qb_get_single("789", &qb_context, &client).unwrap();
 /// ```
 ///
 /// # Errors

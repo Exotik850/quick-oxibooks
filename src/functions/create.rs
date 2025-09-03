@@ -25,22 +25,27 @@ use crate::{
 ///
 /// # Examples
 ///
-/// ```rust
-/// use quick_oxibooks::{QBContext, functions::QBCreate};
+/// ```no_run
+/// use quick_oxibooks::{QBContext, Environment};
+/// use quick_oxibooks::functions::create::QBCreate;
 /// use quickbooks_types::Customer;
 /// use ureq::Agent;
 ///
 /// let client = Agent::new_with_defaults();
-/// let qb_context = QBContext::new(/* ... */)?;
+/// let qb_context = QBContext::new(
+///     Environment::SANDBOX,
+///     "company_id".to_string(),
+///     "access_token".to_string(),
+///     &client,
+/// ).unwrap();
 ///
 /// // Create a new customer
 /// let mut customer = Customer::default();
 /// customer.display_name = Some("John Doe".to_string());
-/// customer.email = Some("john@example.com".to_string());
 ///
 /// // Send to QuickBooks
-/// let created_customer = customer.create(&qb_context, &client)?;
-/// println!("Created customer with ID: {:?}", created_customer.id());
+/// let created_customer = customer.create(&qb_context, &client).unwrap();
+/// println!("Created customer with ID: {:?}", created_customer.id);
 /// ```
 ///
 /// # Return Value

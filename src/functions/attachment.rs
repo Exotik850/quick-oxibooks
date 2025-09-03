@@ -279,10 +279,10 @@ fn make_multipart(req: Builder, attachable: &Attachable) -> Result<Request<Strin
         .body(body)?)
 }
 
-fn get_ext(input: &str) -> Option<&str> {
-    let path = Path::new(input);
-    path.extension().and_then(|ext| ext.to_str())
-}
+// fn get_ext(input: &str) -> Option<&str> {
+//     let path = Path::new(input);
+//     path.extension().and_then(|ext| ext.to_str())
+// }
 
 #[derive(Debug, serde::Deserialize)]
 struct AttachableResponseExt {

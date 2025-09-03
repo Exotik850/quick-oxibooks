@@ -48,7 +48,6 @@ impl RateLimiter {
             if guard.requests < self.max_requests {
                 guard.requests += 1;
                 let window_start = guard.window_start;
-                drop(guard);
                 return RateLimiterGuard {
                     limiter: self,
                     window_start,
@@ -73,7 +72,7 @@ impl Drop for RateLimiterGuard<'_> {
             return;
         };
         // Only decrement if still in the same window
-        if guard.window_start == self.window_start && guard.requests > 0 {
+        if guard.window_start + self.limiter.duration <= self.window_start && guard.requests > 0 {
             guard.requests -= 1;
         }
     }

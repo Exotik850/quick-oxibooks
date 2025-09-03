@@ -13,18 +13,20 @@ use crate::batch::{QBBatchOperation, QBBatchResponseData};
 ///
 /// # Examples
 ///
-/// ```rust
-/// use quick_oxibooks::{APIError, QBContext};
+/// ```no_run
+/// use quick_oxibooks::error::APIError;
+/// use quick_oxibooks::{QBContext, Environment};
+/// use ureq::Agent;
 ///
 /// fn create_context() -> Result<QBContext, APIError> {
-///     // This function returns APIError on failure
+///     let client = Agent::new_with_defaults();
 ///     QBContext::new_from_env(Environment::SANDBOX, &client)
 /// }
 ///
-/// match create_context() {
-///     Ok(context) => println!("Context created successfully"),
-///     Err(e) => eprintln!("Error: {}", e),
-/// }
+/// let _ = match create_context() {
+///     Ok(_context) => { println!("Context created successfully"); Ok(()) }
+///     Err(e) => { eprintln!("Error: {}", e); Err(e) }
+/// };
 /// ```
 ///
 /// # Error Conversion
@@ -37,22 +39,23 @@ use crate::batch::{QBBatchOperation, QBBatchResponseData};
 ///
 /// # Error Handling Patterns
 ///
-/// ```rust
-/// use quick_oxibooks::{APIError, functions::QBCreate};
-/// use quickbooks_types::Customer;
+/// ```no_run
+/// use quick_oxibooks::error::{APIError, APIErrorInner};
+/// use quick_oxibooks::functions::create::QBCreate;
+/// use quickbooks_types::{Customer, QBItem};
 ///
-/// fn handle_customer_creation(customer: &Customer) {
-///     match customer.create(&qb_context, &client) {
+/// fn handle_customer_creation(customer: &Customer, qb_context: &quick_oxibooks::QBContext, client: &ureq::Agent) {
+///     match customer.create(qb_context, client) {
 ///         Ok(created) => println!("Created: {:?}", created.id()),
-///         Err(APIError(inner)) => {
-///             match &**inner {
+///         Err(e) => {
+///             match &*e {
 ///                 APIErrorInner::CreateMissingItems => {
 ///                     eprintln!("Customer missing required fields");
 ///                 }
-///                 APIErrorInner::BadRequest(qb_error) => {
-///                     eprintln!("QuickBooks rejected the request: {:?}", qb_error);
+///                 APIErrorInner::BadRequest(_qb_error) => {
+///                     eprintln!("QuickBooks rejected the request");
 ///                 }
-///                 _ => eprintln!("Other error: {}", inner),
+///                 _ => eprintln!("Other error: {}", e),
 ///             }
 ///         }
 ///     }
@@ -135,12 +138,12 @@ where
 /// # Examples
 ///
 /// ```rust
-/// use quick_oxibooks::{APIError, APIErrorInner};
+/// use quick_oxibooks::error::{APIError, APIErrorInner};
 /// use quickbooks_types::Customer;
 ///
 /// fn handle_specific_errors(result: Result<Customer, APIError>) {
 ///     match result {
-///         Ok(customer) => println!("Success: {:?}", customer.id()),
+///         Ok(customer) => println!("Success: {:?}", customer.id),
 ///         Err(e) => {
 ///             match &*e {
 ///                 APIErrorInner::CreateMissingItems => {
