@@ -49,7 +49,7 @@ use ureq::Agent;
 
 use crate::{
     error::{APIError, APIErrorInner},
-    APIResult, Environment, QBContext,
+    APIResult, QBContext,
 };
 
 /// Trait for generating PDF documents from QuickBooks entities.
@@ -218,7 +218,7 @@ fn qb_get_pdf_bytes<T: QBItem + QBPDFable>(
     };
 
     let request = crate::client::build_request(
-        ureq::http::Method::GET,
+        &ureq::http::Method::GET,
         &format!("company/{}/{}/{}/pdf", qb.company_id, T::qb_id(), id),
         None::<&()>,
         None::<std::iter::Empty<(&str, &str)>>,

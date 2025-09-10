@@ -20,7 +20,7 @@ pub(crate) fn set_headers(content_type: &str, access_token: &str, request: Build
 }
 
 pub(crate) fn build_request<B, S, SS>(
-    method: Method,
+    method: &Method,
     path: &str,
     body: Option<&B>,
     query: Option<impl IntoIterator<Item = (S, SS)>>,
@@ -38,13 +38,12 @@ where
     request = set_headers(content_type, access_token, request);
 
     let request = match (method == Method::GET || method == Method::DELETE, body) {
-        (true, _) => request.body(SendBody::none()),
+        (true, _) | (false, None) => request.body(SendBody::none()),
         (false, Some(body)) => {
             let json_bytes = serde_json::to_vec(body)?;
             let reader = std::io::Cursor::new(json_bytes);
             request.body(SendBody::from_owned_reader(reader))
         }
-        (false, None) => request.body(SendBody::none()),
     }?;
 
     #[cfg(feature = "logging")]
@@ -62,7 +61,7 @@ where
     Ok(request)
 }
 
-pub(crate) fn build_url<'a, S, SS>(
+pub(crate) fn build_url<S, SS>(
     environment: Environment,
     path: &str,
     query: Option<impl IntoIterator<Item = (S, SS)>>,

@@ -64,7 +64,7 @@ where
     SS: AsRef<str>,
 {
     let request = crate::client::build_request(
-        method,
+        &method,
         path,
         body,
         query,

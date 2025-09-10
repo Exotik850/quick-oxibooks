@@ -62,7 +62,7 @@ impl RefreshableQBContext {
         Ok(())
     }
 
-    pub fn refresh_token(&self) -> &str {
+    #[must_use] pub fn refresh_token(&self) -> &str {
         &self.refresh_token
     }
 }

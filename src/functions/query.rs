@@ -1,11 +1,10 @@
+use std::fmt::Write;
+
 use quickbooks_types::QBItem;
 use serde::Deserialize;
 use ureq::{http::Method, Agent};
 
-use crate::{
-    error::{APIError, APIErrorInner},
-    APIResult, QBContext,
-};
+use crate::{error::APIError, APIResult, QBContext};
 
 use super::qb_request;
 
@@ -135,7 +134,6 @@ pub trait QBQuery {
     /// ```ignore
     /// "select * from {type_name} {query_str} MAXRESULTS {max_results}"
     /// ```
-    #[must_use]
     fn query_single(query_str: &str, qb: &QBContext, client: &Agent) -> APIResult<Self>
     where
         Self: Sized,
@@ -175,7 +173,7 @@ fn qb_query<T: QBItem>(
 ) -> Result<Vec<T>, APIError> {
     let mut query = format!("select * from {} {query_str}", T::name());
     if let Some(max) = max_results {
-        query.push_str(&format!(" MAXRESULTS {max}"));
+        write!(&mut query, " MAXRESULTS {max}").expect("Writing to string should not fail");
     }
     let response: QueryResponseExt<T> = qb_request(
         qb,
