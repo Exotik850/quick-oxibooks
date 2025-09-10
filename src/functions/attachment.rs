@@ -246,7 +246,7 @@ fn make_multipart(req: Builder, attachable: &Attachable) -> Result<Request<Strin
     body.push_str("Content-Disposition: form-data; name=\"file_metadata_01\"\r\n");
     body.push_str("Content-Type: application/json\r\n\r\n");
 
-    let json_body = simd_json::to_string(attachable)?;
+    let json_body = serde_json::to_string(attachable)?;
     body.push_str(&json_body);
     body.push_str("\r\n");
 

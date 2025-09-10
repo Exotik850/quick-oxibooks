@@ -295,14 +295,14 @@ mod test {
     #[test]
     fn test_batch_resp() {
         let mut s = include_bytes!("../test/data/batch_resp.json").to_vec();
-        let resp: BatchResponseExt = simd_json::from_slice(&mut s).unwrap();
+        let resp: BatchResponseExt = serde_json::from_slice(&mut s).unwrap();
         println!("{resp:#?}");
     }
 
     #[test]
     fn test_batch_req() {
         let mut s = include_bytes!("../test/data/batch_req.json").to_vec();
-        let resp: QBBatchRequest = simd_json::from_slice(&mut s).unwrap();
+        let resp: QBBatchRequest = serde_json::from_slice(&mut s).unwrap();
         println!("{resp:#?}");
     }
 }

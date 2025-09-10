@@ -1,6 +1,6 @@
 use quickbooks_types::QBTypeError;
 use serde::{Deserialize, Serialize};
-use simd_json::OwnedValue as Value;
+use serde_json::Value;
 
 use crate::batch::{QBBatchOperation, QBBatchResponseData};
 // #[allow(dead_code)]
@@ -33,7 +33,7 @@ use crate::batch::{QBBatchOperation, QBBatchResponseData};
 ///
 /// Many error types automatically convert to `APIError`:
 /// - Network errors from `ureq`
-/// - JSON parsing errors from `simd_json`
+/// - JSON parsing errors from `serde_json`
 /// - QuickBooks-specific validation errors
 /// - Environment variable errors
 ///
@@ -175,7 +175,7 @@ pub enum APIErrorInner {
     #[error("Bad request: {0}")]
     BadRequest(QBErrorResponse),
     #[error(transparent)]
-    JsonError(#[from] simd_json::Error),
+    JsonError(#[from] serde_json::Error),
     #[error(transparent)]
     QBTypeError(#[from] QBTypeError),
     #[error("Invalid Client! Try re-authenticating")]
@@ -292,7 +292,7 @@ impl std::fmt::Display for QBErrorResponse {
         write!(
             f,
             "{}",
-            simd_json::to_string_pretty(self)
+            serde_json::to_string_pretty(self)
                 .expect("Could not serialize QBErrorResponse for display!")
         )
     }

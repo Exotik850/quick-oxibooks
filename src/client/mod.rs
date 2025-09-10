@@ -40,7 +40,7 @@ where
     let request = match (method == Method::GET || method == Method::DELETE, body) {
         (true, _) => request.body(SendBody::none()),
         (false, Some(body)) => {
-            let json_bytes = simd_json::to_vec(body)?;
+            let json_bytes = serde_json::to_vec(body)?;
             let reader = std::io::Cursor::new(json_bytes);
             request.body(SendBody::from_owned_reader(reader))
         }
