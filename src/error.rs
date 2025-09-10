@@ -117,7 +117,6 @@ where
 /// - [`NoIdOnRead`](APIErrorInner::NoIdOnRead): Entity missing ID for read operation
 ///
 /// ## Query and Operation Errors
-/// - [`NoQueryObjects`](APIErrorInner::NoQueryObjects): Query returned no results
 /// - [`BatchRequestMissingItems`](APIErrorInner::BatchRequestMissingItems): Batch operation failures
 /// - [`BatchLimitExceeded`](APIErrorInner::BatchLimitExceeded): Too many items in batch request
 ///
@@ -149,9 +148,6 @@ where
 ///                 APIErrorInner::CreateMissingItems => {
 ///                     eprintln!("Please provide required fields like display_name");
 ///                 }
-///                 APIErrorInner::NoQueryObjects(query) => {
-///                     eprintln!("No customers found for query: {}", query);
-///                 }
 ///                 APIErrorInner::ThrottleLimitReached => {
 ///                     eprintln!("Rate limit hit, please wait before retrying");
 ///                 }
@@ -182,8 +178,6 @@ pub enum APIErrorInner {
     JsonError(#[from] simd_json::Error),
     #[error(transparent)]
     QBTypeError(#[from] QBTypeError),
-    #[error("No query objects returned for query_str : {0}")]
-    NoQueryObjects(String),
     #[error("Invalid Client! Try re-authenticating")]
     InvalidClient,
     #[error("Trying to update an object when it doesn't have an ID set")]

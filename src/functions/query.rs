@@ -186,19 +186,13 @@ fn qb_query<T: QBItem>(
         None,
         Some([("query", query.as_str())]),
     )?;
-    if response.query_response.items.is_empty() {
-        #[cfg(feature = "logging")]
-        log::warn!("Queried no items for query : {query_str}");
-        Err(APIErrorInner::NoQueryObjects(query_str.into()).into())
-    } else {
-        #[cfg(feature = "logging")]
-        log::info!(
-            "Successfully Queried {} {}(s) for query string : {query_str}",
-            response.query_response.items.len(),
-            T::name()
-        );
-        Ok(response.query_response.items)
-    }
+    #[cfg(feature = "logging")]
+    log::info!(
+        "Successfully Queried {} {}(s) for query string : {query_str}",
+        response.query_response.items.len(),
+        T::name()
+    );
+    Ok(response.query_response.items)
 }
 
 /// Internal struct that Quickbooks returns when querying objects
