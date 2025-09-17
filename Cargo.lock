@@ -2190,7 +2190,7 @@ dependencies = [
  "env_logger",
  "log",
  "pastey",
- "quickbooks-types",
+ "quickbooks-types 0.1.0 (git+https://github.com/exotik850/quickbooks-types)",
  "serde",
  "serde_json",
  "thiserror",
@@ -2211,6 +2211,21 @@ dependencies = [
 [[package]]
 name = "quickbooks-types"
 version = "0.1.0"
+dependencies = [
+ "chrono",
+ "derive_builder",
+ "paste",
+ "polars",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "thiserror",
+]
+
+[[package]]
+name = "quickbooks-types"
+version = "0.1.0"
+source = "git+https://github.com/exotik850/quickbooks-types#0978b34d42d594fe1d26188a603f0e4892ac8df3"
 dependencies = [
  "chrono",
  "derive_builder",
