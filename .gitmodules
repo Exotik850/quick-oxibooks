@@ -1,0 +1,3 @@
+[submodule "quickbooks-types"]
+	path = quickbooks-types
+	url = https://github.com/exotik850/quickbooks-types
