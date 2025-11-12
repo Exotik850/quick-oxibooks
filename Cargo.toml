@@ -2,11 +2,17 @@
 name = "quick-oxibooks"
 version = "0.1.0"
 edition = "2021"
+authors = ["@exotik850"]
+license = "MIT"
+description = "A Rust client library for QuickBooks Online API"
+repository = "https://github.com/exotik850/quick-oxibooks"
+keywords = ["quickbooks", "quickbooks-online", "api", "client", "rust"]
+categories = ["api-clients", "web-programming"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-quickbooks-types = { git = "https://github.com/exotik850/quickbooks-types", features = [
+quickbooks-types = { path = "quickbooks-types", features = [
   "builder",
 ] }
 log = { version = "0.4.20", optional = true }
