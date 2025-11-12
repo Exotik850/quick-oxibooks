@@ -1,3 +1,51 @@
+//! # `QuickBooks` Online API Client
+//!
+//! This module provides functionality to interact with the `QuickBooks` Online API.
+//!
+//! ## Usage
+//!
+//! The primary way to interact with the `QuickBooks` Online API is through the [`QBContext`] struct,
+//! which manages authentication, rate limiting, and API discovery information.
+//!
+//! ### Creating a Context
+//!
+//! There are several ways to create a [`QBContext`]:
+//!
+//! ```no_run
+//! use quick_oxibooks::{QBContext, Environment};
+//! use ureq::Agent;
+//!
+//! // Create from environment variables
+//! let client = Agent::new_with_defaults();
+//! let context = QBContext::new_from_env(Environment::SANDBOX, &client).unwrap();
+//!
+//! // Create manually
+//! let context = QBContext::new(
+//!     Environment::PRODUCTION,
+//!     "company_id".to_string(),
+//!     "access_token".to_string(),
+//!     &client
+//! ).unwrap();
+//!
+//! // Create with refresh token capability
+//! let refreshable_context = context.with_refresh("refresh_token".to_string());
+//! ```
+//!
+//! ### Handling Refresh Tokens
+//!
+//! The [`RefreshableQBContext`] struct extends [`QBContext`] to support automatic token refreshing.
+//!
+//! This is useful for long-running applications that need to maintain access to the `QuickBooks` Online API,
+//! or use on a desktop application where the user may not be able to go through the OAuth flow frequently.
+//!
+//! ### Rate Limits
+//!
+//! - Sandbox: 500 requests per minute
+//! - Production: 500 requests per minute, 10 requests per second
+//! - Batch operations: 30 requests per batch, 40 batches per minute
+//!
+//! After being throttled, wait 60 seconds before retrying.
+
 use crate::{APIResult, Environment};
 use serde::Serialize;
 use ureq::{

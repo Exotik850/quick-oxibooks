@@ -1,3 +1,8 @@
+//! Module for `QuickBooks` API functions
+//!
+//! This module contains functions for interacting with the `QuickBooks` API, including
+//! creating, reading, updating, and deleting various `QuickBooks` entities.
+
 use quickbooks_types::{QBItem, QBSendable};
 use serde::{Deserialize, Serialize};
 use ureq::http::Response;
@@ -18,6 +23,7 @@ pub mod pdf;
 pub mod query;
 pub mod read;
 pub mod reports;
+
 /// Sends a request to the `QuickBooks` API endpoint with the given parameters,
 /// accounts for rate limiting
 ///
@@ -29,7 +35,7 @@ pub mod reports;
 /// * `body` - Optional request body to send
 /// * `content_type` - Optional content type header value
 /// * `query` - Optional query parameters
-pub(crate) fn qb_request<'a, S, SS, T, U>(
+pub(crate) fn qb_request<S, SS, T, U>(
     qb: &QBContext,
     client: &Agent,
     method: Method,
@@ -50,7 +56,7 @@ where
     Ok(response.into_body().read_json()?)
 }
 
-pub(crate) fn execute_request<'a, S, SS, T: Serialize>(
+pub(crate) fn execute_request<S, SS, T: Serialize>(
     qb: &QBContext,
     client: &Agent,
     method: Method,

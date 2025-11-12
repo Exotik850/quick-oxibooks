@@ -52,11 +52,10 @@ impl RateLimiter {
                     limiter: self,
                     window_start,
                 };
-            } else {
-                let wait = self.duration - now.duration_since(guard.window_start);
-                drop(guard);
-                std::thread::sleep(wait);
             }
+            let wait = self.duration - now.duration_since(guard.window_start);
+            drop(guard);
+            std::thread::sleep(wait);
         }
     }
 }

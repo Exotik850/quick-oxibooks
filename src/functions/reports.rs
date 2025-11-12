@@ -1,3 +1,5 @@
+//! Module for `QuickBooks` report retrieval functions.
+
 use quickbooks_types::reports::{types::QBReportType, Report};
 use ureq::{http::Method, Agent};
 

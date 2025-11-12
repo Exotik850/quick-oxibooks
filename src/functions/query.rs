@@ -1,3 +1,5 @@
+//! Functions for querying `QuickBooks` entities using SQL-like syntax.
+
 use std::fmt::Write;
 
 use quickbooks_types::QBItem;
@@ -22,7 +24,7 @@ use super::qb_request;
 ///
 /// `QuickBooks` queries use SQL-like syntax:
 /// - `WHERE field = 'value'`: Filter by field value
-/// - `WHERE field IN ('val1', 'val2')`: Filter by multiple values  
+/// - `WHERE field IN ('val1', 'val2')`: Filter by multiple values
 /// - `WHERE field LIKE '%pattern%'`: Pattern matching
 /// - `ORDER BY field ASC/DESC`: Sort results
 /// - `MAXRESULTS n`: Limit number of results

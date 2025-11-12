@@ -95,6 +95,7 @@ use ureq::Agent;
 pub mod error;
 
 pub mod types {
+    //! Re-exports of all types from the `quickbooks_types` crate.
     pub use quickbooks_types::*;
 }
 

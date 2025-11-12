@@ -25,13 +25,13 @@
 //!     let operations = vec![
 //!         // Query for invoices
 //!         QBBatchOperation::query("SELECT * FROM Invoice WHERE TotalAmt > '100.00' MAXRESULTS 10"),
-//!         
+//!
 //!         // Create a new vendor
 //!         QBBatchOperation::create(Vendor {
 //!             display_name: Some("New Supplier Inc.".to_string()),
 //!             ..Default::default()
 //!         }),
-//!         
+//!
 //!         // Update an existing invoice
 //!         QBBatchOperation::update(Invoice {
 //!             id: Some("123".to_string()),
@@ -42,7 +42,7 @@
 //!
 //!     // Execute the batch request
 //!     let results = operations.batch(qb, client)?;
-//!     
+//!
 //!     // Process the results
 //!     for (operation, response) in results {
 //!         // Handle each response based on the operation type
@@ -51,18 +51,10 @@
 //!             _ => println!("Got a response!"),
 //!         }
 //!     }
-//!     
+//!
 //!     Ok(())
 //! }
 //! ```
-//!
-//! ## Best Practices
-//!
-//! - Combine related operations in a single batch to minimize API calls
-//! - Keep batch sizes reasonable (`QuickBooks` allows no more than 30 operations per batch, 40 req / min)
-//! - Handle potential partial failures where some operations succeed while others fail
-//! - Use the appropriate operation type (create, update, delete, query) for each task
-//!
 use std::collections::HashMap;
 
 use quickbooks_types::{Invoice, SalesReceipt, Vendor};

@@ -1,9 +1,10 @@
+//! Error types for `QuickBooks` API operations.
+
 use quickbooks_types::QBTypeError;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::batch::{QBBatchOperation, QBBatchResponseData};
-// #[allow(dead_code)]
 
 /// The main error type for all `QuickBooks` API operations.
 ///
@@ -105,7 +106,7 @@ where
 /// - [`HttpError`](APIErrorInner::HttpError): HTTP protocol errors (malformed requests, etc.)
 /// - [`IoError`](APIErrorInner::IoError): I/O errors (file operations, etc.)
 ///
-/// ## API Response Errors  
+/// ## API Response Errors
 /// - [`BadRequest`](APIErrorInner::BadRequest): `QuickBooks` API returned an error response
 /// - [`InvalidClient`](APIErrorInner::InvalidClient): Authentication/authorization failures
 /// - [`ThrottleLimitReached`](APIErrorInner::ThrottleLimitReached): Rate limit exceeded

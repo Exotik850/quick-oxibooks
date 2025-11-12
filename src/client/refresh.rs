@@ -5,6 +5,9 @@ use ureq::{http::Request, Agent};
 use super::QBContext;
 use crate::error::{APIError, APIErrorInner};
 
+/// `RefreshableQBContext`
+///
+/// Holds a `QBContext` along with a refresh token to allow refreshing access tokens
 pub struct RefreshableQBContext {
     pub(crate) context: QBContext,
     pub(crate) refresh_token: String,
@@ -20,17 +23,6 @@ impl RefreshableQBContext {
     ) -> Result<(), APIError> {
         let auth_string = format!("{client_id}:{client_secret}");
         let auth_string = base64::engine::general_purpose::STANDARD.encode(auth_string);
-
-        // let request = client
-        //     .request(Method::POST, &self.context.discovery_doc.token_endpoint)
-        //     .bearer_auth(auth_string)
-        //     .header("ACCEPT", "application/json")
-        //     .header("Content-Type", "application/x-www-form-urlencoded")
-        //     .body(format!(
-        //         "grant_type=refresh_token&refresh_token={}",
-        //         &self.refresh_token
-        //     ))
-        //     .build()?;
 
         let request = Request::post(self.context.discovery_doc.token_endpoint.as_str())
             .header("Authorization", format!("Basic {auth_string}"))
@@ -62,7 +54,8 @@ impl RefreshableQBContext {
         Ok(())
     }
 
-    #[must_use] pub fn refresh_token(&self) -> &str {
+    #[must_use]
+    pub fn refresh_token(&self) -> &str {
         &self.refresh_token
     }
 }

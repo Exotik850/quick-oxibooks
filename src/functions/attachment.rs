@@ -25,11 +25,6 @@
 //! ```
 use base64::Engine;
 use quickbooks_types::{Attachable, QBAttachable};
-// use reqwest::{
-//     header::{self, HeaderValue},
-//     multipart::{Form, Part},
-//     Client, Method, Request,
-// };
 use ureq::{
     http::{request::Builder, Request, StatusCode},
     Agent,

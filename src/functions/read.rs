@@ -1,3 +1,5 @@
+//! Functions for reading `QuickBooks` entities from the API.
+
 use quickbooks_types::QBItem;
 use ureq::{http::Method, Agent};
 
@@ -74,7 +76,7 @@ use super::{qb_request, QBResponse};
 /// # Errors
 ///
 /// - `NoIdOnRead`: Entity doesn't have an ID for reading
-/// - `UreqError`: Network or HTTP errors during API call  
+/// - `UreqError`: Network or HTTP errors during API call
 /// - `BadRequest`: `QuickBooks` API returned an error (e.g., entity not found)
 /// - `JsonError`: Response parsing errors
 pub trait QBRead {

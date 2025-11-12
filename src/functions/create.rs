@@ -1,3 +1,10 @@
+//! Trait and implementation for creating `QuickBooks` entities via the API.
+//!
+//! This module defines the `QBCreate` trait, which provides a method for creating
+//! entities in `QuickBooks` Online. The trait is automatically implemented for all types
+//! that implement both `QBItem` and `QBCreatable`. It includes validation to ensure
+//! that entities meet the necessary requirements before being sent to the API.
+
 use quickbooks_types::{QBCreatable, QBItem};
 use ureq::{http::Method, Agent};
 

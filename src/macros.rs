@@ -1,3 +1,10 @@
+//! Macro definitions for QuickBooks Online API interactions
+//!
+//! # Features
+//!
+//! `qb_where_clause` - Macro to create SQL-like WHERE clauses with compile-time field validation
+//! `qb_query` - Macro to execute QuickBooks API queries with compile-time field validation
+
 /// Creates a SQL-like WHERE clause string for QuickBooks API queries with compile-time field validation.
 ///
 /// This macro generates properly formatted WHERE clauses for QuickBooks Online API, converting
@@ -279,12 +286,6 @@ macro_rules! qb_where_clause {
 /// - `UreqError`: Network or HTTP errors during API call
 /// - `BadRequest`: Invalid query syntax or field names
 /// - `JsonError`: Response parsing errors
-///
-/// # Performance Notes
-///
-/// - Always limits results to 1 (uses MAXRESULTS 1)
-/// - For multiple results, use [`QBQuery::query`] directly
-/// - Compile-time optimizations for literal values
 #[macro_export]
 macro_rules! qb_query {
   ($qb:expr, $client:expr, $struct_name:ident | $($field:ident $op:tt $value:expr),+) => {

@@ -1,81 +1,10 @@
-//! # `QuickBooks` Online API Client
-//!
-//! This module provides functionality to interact with the `QuickBooks` Online API.
-//!
-//! ## Usage
-//!
-//! The primary way to interact with the `QuickBooks` Online API is through the `QBContext` struct,
-//! which manages authentication, rate limiting, and API discovery information.
-//!
-//! ### Creating a Context
-//!
-//! There are several ways to create a `QBContext`:
-//!
-//! ```no_run
-//! use quick_oxibooks::{QBContext, Environment};
-//! use ureq::Agent;
-//!
-//! // Create from environment variables
-//! let client = Agent::new_with_defaults();
-//! let context = QBContext::new_from_env(Environment::SANDBOX, &client).unwrap();
-//!
-//! // Create manually
-//! let context = QBContext::new(
-//!     Environment::PRODUCTION,
-//!     "company_id".to_string(),
-//!     "access_token".to_string(),
-//!     &client
-//! ).unwrap();
-//!
-//! // Create with refresh token capability
-//! let refreshable_context = context.with_refresh("refresh_token".to_string());
-//! ```
-//!
-//! ### Handling Rate Limits
-//!
-//! The context automatically handles rate limiting for both regular API calls and batch operations.
-//! When making API calls, use the `with_permission` or `with_batch_permission` methods to respect rate limits:
-//!
-//! ```ignore
-//! // The context enforces rate limits internally via with_permission/with_batch_permission.
-//! // These methods are crate-internal and used by library operations.
-//! // End users typically don't call them directly.
-//! ```
-//!
-//! ### Refreshing Tokens
-//!
-//! If you need to refresh access tokens, use the `RefreshableQBContext`:
-//!
-//! ```ignore
-//! // See RefreshableQBContext docs for usage
-//! // refreshable_context.refresh_access_token("client_id", "client_secret", &client)?;
-//! ```
-//!
-//! ### Rate Limits
-//!
-//! - Sandbox: 500 requests per minute
-//! - Production: 500 requests per minute, 10 requests per second
-//! - Batch operations: 30 requests per batch, 40 batches per minute
-//!
-//! After being throttled, wait 60 seconds before retrying.
 use std::time::Duration;
 
 use chrono::{DateTime, Utc};
 use ureq::Agent;
-// use reqwest::{
-//     header::{self, HeaderMap, InvalidHeaderValue},
-//     Client, Method, Request,
-// };
 
 use super::refresh::RefreshableQBContext;
 use crate::{limiter::RateLimiter, APIResult, DiscoveryDoc, Environment};
-
-// Rate Limit:
-// Sandbox - 500 req / min
-/// TODO
-// Production - 500 req / min, 10 req / sec
-// Batch - 30 req / batch & 40 batches / min
-// Wait 60 seconds after throttle
 
 const RATE_LIMIT: usize = 500;
 const BATCH_RATE_LIMIT: usize = 40;
@@ -191,7 +120,7 @@ impl QBContext {
     ///
     /// # Returns
     ///
-    /// Returns a configured `QBContext` on success, or an [`APIError`] on failure.
+    /// Returns a configured `QBContext` on success, or an [`crate::error::APIError`] on failure.
     ///
     /// # Errors
     ///
@@ -248,7 +177,7 @@ impl QBContext {
     ///
     /// # Returns
     ///
-    /// Returns a configured `QBContext` on success, or an [`APIError`] on failure.
+    /// Returns a configured `QBContext` on success, or an [`crate::error::APIError`] on failure.
     ///
     /// # Errors
     ///

@@ -1,3 +1,5 @@
+//! Functions for deleting `QuickBooks` entities via the API.
+
 use quickbooks_types::{QBDeletable, QBItem};
 use serde::{Deserialize, Serialize};
 use ureq::{http::Method, Agent};
@@ -115,7 +117,11 @@ fn qb_delete<T: QBItem + QBDeletable>(
     )?;
 
     #[cfg(feature = "logging")]
-    log::info!("Successfully deleted {} with ID of {}", T::name(), id);
+    log::info!(
+        "Successfully deleted {} with ID of {}",
+        T::name(),
+        delete_object.id
+    );
 
     Ok(response.object)
 }
