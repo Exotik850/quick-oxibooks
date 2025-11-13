@@ -1,4 +1,4 @@
-//! Trait and implementation for creating `QuickBooks` entities via the API.
+//! Functions for creating `QuickBooks` entities via the API.
 //!
 //! This module defines the `QBCreate` trait, which provides a method for creating
 //! entities in `QuickBooks` Online. The trait is automatically implemented for all types

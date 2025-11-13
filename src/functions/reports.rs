@@ -1,4 +1,4 @@
-//! Module for `QuickBooks` report retrieval functions.
+//! Functions for handling `QuickBooks` financial reports via the API.
 
 use quickbooks_types::reports::{types::QBReportType, Report};
 use ureq::{http::Method, Agent};
