@@ -34,7 +34,7 @@ This crate does not:
 
 ## Installation
 
-```/dev/null/Cargo.toml#L1-8
+```toml
 [dependencies]
 quick-oxibooks = "0.1.0"
 ```
@@ -47,7 +47,7 @@ Optional features:
 - logging: enable request/response logging via the `log` crate
 - polars: pass-through feature that enables Polars helpers in `quickbooks-types`
 
-```/dev/null/Cargo.toml#L10-15
+```toml
 [dependencies]
 quick-oxibooks = { version = "0.1.0", features = ["attachments", "pdf", "logging"] }
 # or
@@ -78,7 +78,7 @@ quick-oxibooks = { version = "0.1.0", features = ["polars"] }
 
 Create a context, then perform CRUD and queries with typed entities from `quickbooks-types`.
 
-```/dev/null/quickstart.rs#L1-60
+```rust
 use quick_oxibooks::{Environment, QBContext};
 use quick_oxibooks::functions::{create::QBCreate, read::QBRead, delete::QBDelete, query::QBQuery};
 use quick_oxibooks::error::APIError;
@@ -132,7 +132,7 @@ Tip: You can also build contexts from env vars: `QBContext::new_from_env(Environ
 
 Use strongly-typed report kinds and optional typed parameters from `quickbooks-types::reports`.
 
-```/dev/null/reports.rs#L1-50
+```rust
 use chrono::NaiveDate;
 use quick_oxibooks::{Environment, QBContext};
 use quick_oxibooks::functions::reports::QBReport;
@@ -168,7 +168,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 Batch multiple operations (query/create/update/delete) into one request and correlate responses.
 
-```/dev/null/batch.rs#L1-90
+```rust
 use quick_oxibooks::{QBContext, Environment};
 use quick_oxibooks::batch::{QBBatchOperation, BatchIterator};
 use quick_oxibooks::types::{Invoice, Vendor};
@@ -222,7 +222,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 Enable one or more:
 
-```/dev/null/Cargo.toml#L1-6
+```toml
 [dependencies]
 quick-oxibooks = { version = "0.1.0", features = ["attachments", "pdf", "logging"] }
 ```
@@ -239,7 +239,7 @@ quick-oxibooks = { version = "0.1.0", features = ["attachments", "pdf", "logging
 - ThrottleLimitReached, BatchLimitExceeded
 - EnvVarError, InvalidClient, etc.
 
-```/dev/null/errors.rs#L1-40
+```rust
 use quick_oxibooks::error::{APIError, APIErrorInner};
 
 fn handle(err: APIError) {
