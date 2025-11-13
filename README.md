@@ -73,8 +73,8 @@ We welcome contributions! Here’s how to get started:
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
-<!-- ---
+---
 
 ## Documentation
 
-For detailed documentation, visit [docs.rs/quick-oxibooks](https://docs.rs/quick-oxibooks). -->
+For detailed documentation, visit [docs.rs/quick-oxibooks](https://docs.rs/quick-oxibooks).
