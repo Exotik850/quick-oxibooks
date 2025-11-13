@@ -93,7 +93,6 @@ pub(crate) struct QBResponse<T> {
     #[serde(
         alias = "Item",
         alias = "Account",
-        alias = "Attachabe",
         alias = "Invoice",
         alias = "Attachable",
         alias = "Bill",
