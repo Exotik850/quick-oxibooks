@@ -7,7 +7,7 @@ license = "MIT"
 description = "A Rust client library for QuickBooks Online API"
 repository = "https://github.com/exotik850/quick-oxibooks"
 keywords = ["quickbooks", "quickbooks-online", "api", "client", "rust"]
-categories = ["api-clients", "web-programming"]
+categories = ["api-bindings", "web-programming"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
