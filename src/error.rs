@@ -122,7 +122,6 @@ where
 /// - [`BatchLimitExceeded`](APIErrorInner::BatchLimitExceeded): Too many items in batch request
 ///
 /// ## File and Attachment Errors
-/// - [`AttachableUploadMissingItems`](APIErrorInner::AttachableUploadMissingItems): Missing required fields for file upload
 /// - [`NoAttachableObjects`](APIErrorInner::NoAttachableObjects): No attachments in upload response
 /// - [`InvalidFile`](APIErrorInner::InvalidFile): Invalid file name or extension
 /// - [`ByteLengthMismatch`](APIErrorInner::ByteLengthMismatch): File write operation incomplete
@@ -193,8 +192,6 @@ pub enum APIErrorInner {
     NoIdOnGetPDF,
     #[error("Couldn't write all the bytes of file")]
     ByteLengthMismatch,
-    #[error("Attachable Missing '{0}' field")]
-    AttachableUploadMissingItems(&'static str),
     #[error("Missing Attachable object on upload response")]
     NoAttachableObjects,
     #[error("Throttle limit reached")]
