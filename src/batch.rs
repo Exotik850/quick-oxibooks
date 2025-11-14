@@ -84,6 +84,7 @@ pub struct QBResourceOperation {
     pub operation: QBOperationType,
 }
 
+/// Represents the type of operation to be performed on a resource in a batch request
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum QBOperationType {
@@ -141,6 +142,7 @@ impl QBBatchOperation {
 }
 
 /// Represents a resource in a batch request,
+///
 /// TODO, Make this more generic as needed.
 #[derive(Serialize, Deserialize, Debug)]
 pub enum QBResource {
@@ -151,6 +153,7 @@ pub enum QBResource {
 }
 
 /// Represents the result of a query operation in a batch request.
+///
 /// TODO, Make this more generic as needed.
 #[derive(Serialize, Deserialize, Debug)]
 pub enum QBQueryResource {

@@ -2,8 +2,8 @@
 //!
 //! # Features
 //!
-//! `qb_where_clause` - Macro to create SQL-like WHERE clauses with compile-time field validation
-//! `qb_query` - Macro to execute QuickBooks API queries with compile-time field validation
+//! - `qb_where_clause` - Macro to create SQL-like WHERE clauses with compile-time field validation
+//! - `qb_query` - Macro to execute QuickBooks API queries with compile-time field validation
 
 /// Creates a SQL-like WHERE clause string for QuickBooks API queries with compile-time field validation.
 ///

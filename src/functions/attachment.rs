@@ -226,14 +226,10 @@ fn make_upload_request(attachable: &Attachable, qb: &QBContext) -> APIResult<Req
 }
 
 fn make_multipart(req: Builder, attachable: &Attachable) -> Result<Request<String>, APIError> {
-    let file_path = attachable
-        .file_path
-        .as_deref()
-        .ok_or_else(|| APIErrorInner::AttachableUploadMissingItems("file_path"))?;
-    let ct = attachable
-        .content_type
-        .as_deref()
-        .ok_or_else(|| APIErrorInner::AttachableUploadMissingItems("content_type"))?;
+    attachable.can_upload()?;
+    let file_path = attachable.file_path().unwrap();
+    let ct = attachable.content_type.as_deref().unwrap();
+    let file_name = attachable.file_name.as_deref().unwrap();
     let mut body = String::new();
 
     body.push_str(&format!("--{BOUNDARY}\r\n"));
@@ -248,13 +244,6 @@ fn make_multipart(req: Builder, attachable: &Attachable) -> Result<Request<Strin
     let file_content = std::fs::read(file_path)?;
     let encoded = base64::engine::general_purpose::STANDARD_NO_PAD.encode(file_content);
     body.push_str(&format!("--{BOUNDARY}\r\n"));
-
-    // let sep = if file_path.contains('\\') { '\\' } else { '/' };
-    // let file_name = file_path.split(sep).last().unwrap_or(file_path);
-    let file_name = file_path
-        .file_name()
-        .ok_or_else(|| APIErrorInner::InvalidFile(file_path.to_string_lossy().to_string()))?
-        .to_string_lossy();
 
     body.push_str(&format!(
         "Content-Disposition: form-data; name=\"file_content_01\"; filename=\"{file_name}\"\r\n"
@@ -272,11 +261,6 @@ fn make_multipart(req: Builder, attachable: &Attachable) -> Result<Request<Strin
         .header("Content-Length", body.len().to_string())
         .body(body)?)
 }
-
-// fn get_ext(input: &str) -> Option<&str> {
-//     let path = Path::new(input);
-//     path.extension().and_then(|ext| ext.to_str())
-// }
 
 #[derive(Debug, serde::Deserialize)]
 struct AttachableResponseExt {

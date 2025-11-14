@@ -43,45 +43,13 @@
 //! // Read a specific invoice by ID
 //! let invoice = Invoice::query_single("WHERE Id = '123'", &qb_context, &client).unwrap();
 //! ```
-//!
-//! ## Modules
-//!
-//! - [`batch`]: Batch operations for processing multiple API calls efficiently
-//! - [`client`]: `QuickBooks` client context and authentication management
-//! - [`error`]: Comprehensive error types for API and validation errors
-//! - [`types`]: Re-exports of strongly-typed `QuickBooks` entities from `quickbooks_types`
-//! - [`functions`]: Core CRUD operations and utility functions
-//! - [`macros`]: Convenient macros for query building (requires `macros` feature)
-//!
 //! ## Features
 //!
 //! - `attachments`: Enables file attachment upload and management functions
 //! - `pdf`: Enables PDF generation for supported `QuickBooks` entities
 //! - `macros`: Enables convenient query-building macros
-//!
-//! ## Enums
-//!
-//! - `Environment`: Represents the environment (production or sandbox) for the `QuickBooks` API.
-//!
-//! ## Structs
-//!
-//! - `DiscoveryDoc`: Represents the discovery document for the `QuickBooks` API.
-//!
-//! ## Usage
-//!
-//! To use this library, add it as a dependency in your `Cargo.toml`:
-//!
-//! ```toml
-//! [dependencies]
-//! quick-oxibooks = "0.1.0"
-//! ```
-//!
-//! Then, import the necessary modules and types in your code:
-//!
-//! ```rust
-//! use quick_oxibooks::client::QBContext;
-//! use quick_oxibooks::Environment;
-//! ```
+//! - `polars`: Enables integration with the `polars` `DataFrame` library for data analysis
+//! - `logging`: Enables detailed logging of API requests and responses
 //!
 //! For more detailed usage examples, refer to the documentation for each module and type.
 #![warn(clippy::pedantic)]

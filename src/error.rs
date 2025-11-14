@@ -122,7 +122,6 @@ where
 /// - [`BatchLimitExceeded`](APIErrorInner::BatchLimitExceeded): Too many items in batch request
 ///
 /// ## File and Attachment Errors
-/// - [`AttachableUploadMissingItems`](APIErrorInner::AttachableUploadMissingItems): Missing required fields for file upload
 /// - [`NoAttachableObjects`](APIErrorInner::NoAttachableObjects): No attachments in upload response
 /// - [`InvalidFile`](APIErrorInner::InvalidFile): Invalid file name or extension
 /// - [`ByteLengthMismatch`](APIErrorInner::ByteLengthMismatch): File write operation incomplete
@@ -193,8 +192,6 @@ pub enum APIErrorInner {
     NoIdOnGetPDF,
     #[error("Couldn't write all the bytes of file")]
     ByteLengthMismatch,
-    #[error("Attachable Missing '{0}' field")]
-    AttachableUploadMissingItems(&'static str),
     #[error("Missing Attachable object on upload response")]
     NoAttachableObjects,
     #[error("Throttle limit reached")]
@@ -209,6 +206,7 @@ pub enum APIErrorInner {
     InvalidFile(String),
 }
 
+/// Error type for missing items in batch requests.
 #[derive(Debug, thiserror::Error)]
 pub struct BatchMissingItemsError {
     pub items: std::collections::HashMap<String, crate::batch::QBBatchOperation>,
@@ -225,12 +223,6 @@ impl std::fmt::Display for BatchMissingItemsError {
     }
 }
 
-// impl From<http_client::http_types::Error> for APIError {
-//     fn from(err: http_client::http_types::Error) -> Self {
-//         APIErrorInner::HttpError(err).into()
-//     }
-// }
-
 impl Serialize for APIError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -240,6 +232,10 @@ impl Serialize for APIError {
     }
 }
 
+/// Represents a single error returned by the `QuickBooks` API.
+///
+/// This is currently not a strongly typed structure, as the `QuickBooks` API
+/// does not provide detailed documentation on the error fields.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct QBError {
     #[serde(alias = "Message")]
@@ -250,6 +246,7 @@ pub struct QBError {
     pub element: Option<String>,
 }
 
+/// Represents the type of fault returned by the `QuickBooks` API.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum FaultType {
     #[serde(alias = "AUTHENTICATION")]
@@ -258,11 +255,12 @@ pub enum FaultType {
     Validation,
     #[serde(rename = "SystemFault")]
     System,
-    // TODO Add the rest of the fault types
+    // TODO Add the rest of the fault types, if found or needed
     #[serde(untagged)]
     Other(String),
 }
 
+/// Represents a fault returned by the `QuickBooks` API.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Fault {
     pub r#type: FaultType,
@@ -270,6 +268,7 @@ pub struct Fault {
     pub error: Vec<QBError>,
 }
 
+/// Represents an error response returned by the `QuickBooks` API.
 // TODO Make the fields more strongly typed, currently no documentation on the error types that I can find
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]

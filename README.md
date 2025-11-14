@@ -1,71 +1,289 @@
-# Quick-Oxibooks: Rust Client for QuickBooks Online API
+# Quick-Oxibooks: Rust Client for QuickBooks Online (QBO)
 
 [![Crates.io](https://img.shields.io/crates/v/quick-oxibooks)](https://crates.io/crates/quick-oxibooks)
 [![Documentation](https://docs.rs/quick-oxibooks/badge.svg)](https://docs.rs/quick-oxibooks)
 [![License](https://img.shields.io/crates/l/quick-oxibooks)](LICENSE)
+The `quick-oxibooks` crate is a small, ergonomic client for the QuickBooks Online API built on top of `quickbooks-types`. It focuses on a simple, type-safe workflow for CRUD, queries, reports, and batch operations, with rate-limiting and OAuth2 token usage handled by a lightweight context.
 
-`quick-oxibooks` is a Rust library for interacting with the QuickBooks Online (QBO) API. It provides a high-level, type-safe, and easy to use interface for managing accounting data, including invoices, customers, payments, and more. Built on top of the `quickbooks-types` crate, it simplifies integration with QuickBooks while maintaining full control over API interactions.
+QuickBooks API docs: https://developer.intuit.com/app/developer/qbo/docs/get-started
 
 ---
 
-## Features
+## Status and scope
 
-- **Full QuickBooks API Coverage**: Supports all major QuickBooks entities and operations.
-- **Type-Safe**: Strongly-typed API responses and requests to prevent runtime errors.
-- **Authentication**: Handles OAuth2 authentication and token management.
-- **Batch Processing**: Supports batch operations for efficient bulk data handling.
-- **Error Handling**: Comprehensive error types for API, authentication, and validation errors.
-- **Extensible**: Easily extendable for custom integrations and use cases.
-- **Logging**: Built-in logging for debugging and monitoring API interactions.
+This crate:
+
+- Provides a minimal blocking HTTP client for QBO built on `ureq`
+- Exposes a `QBContext` and `Environment` for auth/config + rate limiting
+- Implements high-level traits for:
+  - CRUD: create, read, delete
+  - Query: SQL-like QBO queries
+  - Reports: typed report fetching using `quickbooks-types::reports`
+  - Batch: batched create/update/delete/query
+- Re-exports QBO data models via `quick_oxibooks::types::*` (from `quickbooks-types`)
+- Offers optional features for attachments, PDFs, logging, macros, and Polars (via `quickbooks-types`)
+
+This crate does not:
+
+- Implement the OAuth browser flow (you supply tokens)
+- Provide an async runtime (it’s synchronous via `ureq`)
+- Hide QBO’s SQL-like query strings behind a DSL
 
 ---
 
 ## Installation
-
-Add the crate to your `Cargo.toml`:
 
 ```toml
 [dependencies]
 quick-oxibooks = "0.1.2"
 ```
 
-Optional features can be enabled:
+Optional features:
+
+- attachments: enable file upload/download helpers
+- pdf: enable PDF retrieval for supported entities
+- macros: enable query-building convenience macros
+- logging: enable request/response logging via the `log` crate
+- polars: pass-through feature that enables Polars helpers in `quickbooks-types`
 
 ```toml
 [dependencies]
 quick-oxibooks = { version = "0.1.2", features = ["pdf", "attachments"] }
 ```
 
-### Optional Features
+---
 
-- **pdf**: Enables PDF generation and retrieval for supported entities (e.g., invoices, estimates).
-- **attachments**: Enables support for file attachments and uploads.
-- **builder**: Enables builder patterns for entity creation (requires `quickbooks-types` with the `builder` feature).
+## Modules and re-exports
+
+- `quick_oxibooks::client`:
+  - `QBContext`, `RefreshableQBContext`, `Environment`
+- `quick_oxibooks::functions`:
+  - `create::QBCreate`, `read::QBRead`, `delete::QBDelete`
+  - `query::QBQuery`
+  - `reports::QBReport`
+  - `attachment` (feature = "attachments"), `pdf` (feature = "pdf")
+- `quick_oxibooks::batch`:
+  - `QBBatchOperation`, `BatchIterator`
+- `quick_oxibooks::error`:
+  - `APIError`, `APIErrorInner`
+- `quick_oxibooks::types::*`:
+  - All re-exports from `quickbooks-types` (entities, reports, helpers)
 
 ---
 
-# README WIP
+## Quick start
+
+Create a context, then perform CRUD and queries with typed entities from `quickbooks-types`.
+
+```rust
+use quick_oxibooks::{Environment, QBContext};
+use quick_oxibooks::functions::{create::QBCreate, read::QBRead, delete::QBDelete, query::QBQuery};
+use quick_oxibooks::error::APIError;
+use quick_oxibooks::types::{Customer, Invoice};
+use ureq::Agent;
+
+fn main() -> Result<(), APIError> {
+    // 1) Create a QBO context (provide your existing OAuth2 Bearer token and company ID)
+    let client = Agent::new_with_defaults();
+    let qb = QBContext::new(
+        Environment::SANDBOX,
+        "your_company_id".to_string(),
+        "your_access_token".to_string(),
+        &client,
+    )?;
+
+    // 2) Create
+    let mut customer = Customer::default();
+    customer.display_name = Some("Acme Corp".into());
+    let created = customer.create(&qb, &client)?;
+    println!("Created customer ID = {:?}", created.id);
+
+    // 3) Read (in-place refresh by ID)
+    let mut c = Customer::default();
+    c.id = created.id.clone();
+    c.read(&qb, &client)?;
+    println!("Refreshed name = {:?}", c.display_name);
+
+    // 4) Query (SQL-like)
+    let invoices: Vec<Invoice> = Invoice::query(
+        "WHERE TotalAmt > '100.00' ORDER BY MetaData.CreateTime DESC",
+        Some(10),
+        &qb,
+        &client,
+    )?;
+    println!("Found {} invoices over $100", invoices.len());
+
+    // 5) Delete (requires ID + sync_token)
+    // let deleted = created.delete(&qb, &client)?;
+    // println!("Deleted status = {}", deleted.status);
+
+    Ok(())
+}
+```
+
+Tip: You can also build contexts from env vars: `QBContext::new_from_env(Environment::..., &client)` expects `QB_COMPANY_ID` and `QB_ACCESS_TOKEN`.
+
+---
+
+## Reports
+
+Use strongly-typed report kinds and optional typed parameters from `quickbooks-types::reports`.
+
+```rust
+use chrono::NaiveDate;
+use quick_oxibooks::{Environment, QBContext};
+use quick_oxibooks::functions::reports::QBReport;
+use quick_oxibooks::types::reports::{Report, types::*, params::*};
+use ureq::Agent;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Agent::new_with_defaults();
+    let qb = QBContext::new(
+        Environment::SANDBOX,
+        "company".into(),
+        "access_token".into(),
+        &client,
+    )?;
+
+    // Example: Balance Sheet with typed params
+    let params = BalanceSheetParams::new()
+        .start_date(NaiveDate::from_ymd_opt(2024, 1, 1).unwrap())
+        .end_date(NaiveDate::from_ymd_opt(2024, 12, 31).unwrap())
+        .accounting_method(AccountingMethod::Accrual)
+        .summarize_column_by(SummarizeColumnBy::Month);
+
+    let report: Report = Report::get(&qb, &client, &BalanceSheet, Some(params))?;
+    println!("Report name = {:?}", report.name());
+
+    Ok(())
+}
+```
+
+---
+
+## Batch
+
+Batch multiple operations (query/create/update/delete) into one request and correlate responses.
+
+```rust
+use quick_oxibooks::{QBContext, Environment};
+use quick_oxibooks::batch::{QBBatchOperation, BatchIterator};
+use quick_oxibooks::types::{Invoice, Vendor};
+use ureq::Agent;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Agent::new_with_defaults();
+    let qb = QBContext::new(
+        Environment::SANDBOX,
+        "company".into(),
+        "token".into(),
+        &client,
+    )?;
+
+    // Prepare a few operations
+    let ops = vec![
+        // Query invoices
+        QBBatchOperation::query("SELECT * FROM Invoice WHERE TotalAmt > '250.00' MAXRESULTS 5"),
+        // Create a vendor
+        QBBatchOperation::create(Vendor {
+            display_name: Some("New Supplier LLC".into()),
+            ..Default::default()
+        }),
+        // Update an invoice (provide id + sync_token as needed)
+        QBBatchOperation::update(Invoice {
+            id: Some("123".into()),
+            // .. other fields to change here
+            ..Default::default()
+        }),
+    ];
+
+    // Execute and inspect
+    let results = ops.batch(&qb, &client)?;
+    for (op, resp) in results {
+        println!("{op:?} -> {resp:?}");
+    }
+
+    Ok(())
+}
+```
+
+---
+
+## Features
+
+- attachments: upload and manage file attachments
+- pdf: fetch PDFs for supported types (e.g., invoices)
+- logging: enable request/response logs via `log`
+- macros: convenience macros for building queries
+- polars: enable `quickbooks-types` Polars helpers (feature passthrough)
+
+Enable one or more:
+
+```toml
+[dependencies]
+quick-oxibooks = { version = "0.1.0", features = ["attachments", "pdf", "logging"] }
+```
+
+---
+
+## Errors
+
+`APIError` wraps all errors surfaced by the client, including HTTP, JSON, and QBO faults, with variants in `APIErrorInner` such as:
+
+- UreqError / HttpError / JsonError
+- BadRequest(QBErrorResponse) with QBO fault info
+- CreateMissingItems, DeleteMissingItems, NoIdOnRead/Send/GetPDF
+- ThrottleLimitReached, BatchLimitExceeded
+- EnvVarError, InvalidClient, etc.
+
+```rust
+use quick_oxibooks::error::{APIError, APIErrorInner};
+
+fn handle(err: APIError) {
+    match &*err {
+        APIErrorInner::BadRequest(qb) => {
+            eprintln!("QBO error: {}", qb);
+        }
+        APIErrorInner::ThrottleLimitReached => {
+            eprintln!("Hit QBO rate limits; wait ~60s before retrying");
+        }
+        other => {
+            eprintln!("Other error: {other}");
+        }
+    }
+}
+```
+
+---
+
+## Tips
+
+- Auth: You supply the OAuth2 access token; `RefreshableQBContext` can renew it if you have a refresh token.
+- Rate limits:
+  - Regular API: 500 requests/min
+  - Batch: 40 batches/min (30 ops/batch)
+- Field names in queries use QBO PascalCase (e.g., `DisplayName`, `TotalAmt`).
+- IDs + `sync_token` are required for deletion and some updates.
+- This client is blocking (ureq). For async, consider wrapping calls in a thread pool.
 
 ---
 
 ## Contributing
 
-We welcome contributions! Here’s how to get started:
+Issues and PRs are welcome. If you need additional endpoints, features, or ergonomics, open an issue describing your use case.
 
-1. **Fork the Repository**: Start by forking the [quick-oxibooks repository](https://github.com/your-repo/quick-oxibooks).
-2. **Set Up the Development Environment**:
-   - Clone your fork: `git clone https://github.com/your-username/quick-oxibooks.git`
-   - Install dependencies: `cargo build`
-3. **Make Changes**: Implement your changes or fixes.
-4. **Run Tests**: Ensure all tests pass with `cargo test`.
-5. **Submit a Pull Request**: Open a PR against the `main` branch with a detailed description of your changes.
+Basic workflow:
+1) Fork and clone
+2) `cargo build && cargo test`
+3) Make changes with tests
+4) Open a PR against main with context and examples
 
-### Guidelines
+---
 
-- Follow Rust coding conventions and best practices.
-- Write unit tests for new functionality.
-- Document new features and update the README if necessary.
-- Use descriptive commit messages.
+## Documentation
+
+- API docs: https://docs.rs/quick-oxibooks
+- Types crate: https://docs.rs/quickbooks-types
 
 ---
 
