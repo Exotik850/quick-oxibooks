@@ -1,6 +1,6 @@
 //! Functions for querying `QuickBooks` entities using SQL-like syntax.
 
-use std::fmt::Write;
+use std::fmt::{Display, Write};
 
 use quickbooks_types::QBItem;
 use serde::Deserialize;
@@ -155,6 +155,33 @@ impl<T: QBItem> QBQuery for T {
     }
 }
 
+/// Unsafe function to query the quickbooks context using the raw query string
+///
+/// # Safety
+///
+/// This function is unsafe because it allows arbitrary query strings to be executed
+/// against the QuickBooks API. Malformed or malicious query strings could lead to
+/// unexpected behavior or security vulnerabilities. It is the caller's responsibility
+/// to ensure that the query string is well-formed and safe to execute.
+pub unsafe fn qb_query_raw<T: QBItem>(
+    query_str: impl Display,
+    qb: &QBContext,
+    client: &Agent,
+) -> Result<Vec<T>, APIError> {
+    let response: QueryResponseExt<T> = qb_request(
+        qb,
+        client,
+        Method::GET,
+        &format!("company/{}/query", qb.company_id),
+        None::<&()>,
+        None,
+        Some([("query", format!("{query_str}"))]),
+    )?;
+    #[cfg(feature = "logging")]
+    log::info!("Successfully Queried Raw Data for query string : {query_str}",);
+    Ok(response.query_response.items)
+}
+
 /// Query the quickbooks context using the query string,
 /// The type determines what type of quickbooks object you are
 /// Query `QuickBooks` for objects matching the query string
@@ -177,22 +204,7 @@ fn qb_query<T: QBItem>(
     if let Some(max) = max_results {
         write!(&mut query, " MAXRESULTS {max}").expect("Writing to string should not fail");
     }
-    let response: QueryResponseExt<T> = qb_request(
-        qb,
-        client,
-        Method::GET,
-        &format!("company/{}/query", qb.company_id),
-        None::<&()>,
-        None,
-        Some([("query", query.as_str())]),
-    )?;
-    #[cfg(feature = "logging")]
-    log::info!(
-        "Successfully Queried {} {}(s) for query string : {query_str}",
-        response.query_response.items.len(),
-        T::name()
-    );
-    Ok(response.query_response.items)
+    unsafe { qb_query_raw::<T>(query, qb, client) }
 }
 
 /// Internal struct that Quickbooks returns when querying objects

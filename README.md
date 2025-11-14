@@ -1,8 +1,8 @@
 # Quick-Oxibooks: Rust Client for QuickBooks Online API
 
-<!-- [![Crates.io](https://img.shields.io/crates/v/quick-oxibooks)](https://crates.io/crates/quick-oxibooks)
+[![Crates.io](https://img.shields.io/crates/v/quick-oxibooks)](https://crates.io/crates/quick-oxibooks)
 [![Documentation](https://docs.rs/quick-oxibooks/badge.svg)](https://docs.rs/quick-oxibooks)
-[![License](https://img.shields.io/crates/l/quick-oxibooks)](LICENSE) -->
+[![License](https://img.shields.io/crates/l/quick-oxibooks)](LICENSE)
 
 `quick-oxibooks` is a Rust library for interacting with the QuickBooks Online (QBO) API. It provides a high-level, type-safe, and easy to use interface for managing accounting data, including invoices, customers, payments, and more. Built on top of the `quickbooks-types` crate, it simplifies integration with QuickBooks while maintaining full control over API interactions.
 
@@ -26,14 +26,14 @@ Add the crate to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-quick-oxibooks = "0.1.0"
+quick-oxibooks = "0.1.2"
 ```
 
 Optional features can be enabled:
 
 ```toml
 [dependencies]
-quick-oxibooks = { version = "0.1.0", features = ["pdf", "attachments"] }
+quick-oxibooks = { version = "0.1.2", features = ["pdf", "attachments"] }
 ```
 
 ### Optional Features
@@ -71,10 +71,10 @@ We welcome contributions! Here’s how to get started:
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+This project is licensed under the MIT License. See [LICENSE](./LICENSE.md) for details.
 
-<!-- ---
+---
 
 ## Documentation
 
-For detailed documentation, visit [docs.rs/quick-oxibooks](https://docs.rs/quick-oxibooks). -->
+For detailed documentation, visit [docs.rs/quick-oxibooks](https://docs.rs/quick-oxibooks).
