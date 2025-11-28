@@ -23,7 +23,7 @@ fn main() -> Result<(), APIError> {
 
     let inv = Invoice::query_single(&format!(r"where DocNumber = '{doc_number}'"), &qb, &client)?;
 
-    println!("{inv}");
+    println!("{inv:?}");
 
     Ok(())
 }

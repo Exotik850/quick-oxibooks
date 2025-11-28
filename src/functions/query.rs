@@ -136,11 +136,15 @@ pub trait QBQuery {
     /// ```ignore
     /// "select * from {type_name} {query_str} MAXRESULTS {max_results}"
     /// ```
-    fn query_single(query_str: &str, qb: &QBContext, client: &Agent) -> APIResult<Self>
+    fn query_single(query_str: &str, qb: &QBContext, client: &Agent) -> APIResult<Option<Self>>
     where
         Self: Sized,
     {
-        Ok(Self::query(query_str, Some(1), qb, client)?.swap_remove(0))
+        let mut results = Self::query(query_str, Some(1), qb, client)?;
+        if results.is_empty() {
+            return Ok(None);
+        }
+        Ok(Some(results.swap_remove(0)))
     }
 }
 
