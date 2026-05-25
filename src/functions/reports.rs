@@ -148,7 +148,7 @@ impl QBReport for Report {
             qb,
             client,
             Method::GET,
-            dbg!(&path),
+            &path,
             None::<&()>,
             Some("application/json"),
             params

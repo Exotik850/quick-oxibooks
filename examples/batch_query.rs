@@ -49,9 +49,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut batch_items = Vec::new();
     for num in transaction_nxrs {
-        batch_items.push(QBBatchOperation::query(dbg!(format!(
+        batch_items.push(QBBatchOperation::query(format!(
             r"select * from {object_type} where DocNumber = '{num}'"
-        ))));
+        )));
     }
     let batch_resp = batch_items.batch(&qb, &client)?;
     for (op, item) in batch_resp {
