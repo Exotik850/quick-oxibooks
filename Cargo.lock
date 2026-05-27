@@ -2133,14 +2133,14 @@ dependencies = [
 
 [[package]]
 name = "quick-oxibooks"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "base64",
  "chrono",
  "env_logger",
  "log",
  "pastey",
- "quickbooks-types 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quickbooks-types 0.1.0",
  "serde",
  "serde_json",
  "thiserror",
@@ -2161,6 +2161,8 @@ dependencies = [
 [[package]]
 name = "quickbooks-types"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f6ac9c9878c188b41029c0c20002b625876556915022fdfe5374ed313d0891cd"
 dependencies = [
  "chrono",
  "derive_builder",
@@ -2174,9 +2176,7 @@ dependencies = [
 
 [[package]]
 name = "quickbooks-types"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6ac9c9878c188b41029c0c20002b625876556915022fdfe5374ed313d0891cd"
+version = "0.1.1"
 dependencies = [
  "chrono",
  "derive_builder",
