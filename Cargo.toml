@@ -12,29 +12,29 @@ categories = ["api-bindings", "web-programming"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-quickbooks-types = "0.1"
 log = { version = "0.4", optional = true }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
 thiserror = "2.0"
 base64 = "0.22"
-chrono = { version = "0.4", features = ["serde"] }
-ureq = { version = "3.0", features = ["json"] }
+ureq = { version = "3.3", features = ["json"] }
+quickbooks-xsd = { version = "3.75", path = "../quickbooks-xsd" }
 
 # Macros
-paste = { package = "pastey", version = "0.1", optional = true }
+paste = { package = "pastey", version = "0.2" }
 urlencoding = "2.1"
+quick-xml = { version = "0.38", features = ["serialize"] }
+serde = { version = "1.0.228", features = ["derive"] }
+chrono = { version = "0.4.44", features = ["serde"] }
 
 [dev-dependencies]
 env_logger = "0.11"
 
 [features]
-macros = ["dep:paste"]
+macros = []
 attachments = []
 pdf = []
-polars = ["quickbooks-types/polars"]
+# polars = ["quickbooks-types/polars"]
 logging = ["dep:log"]
-builder = ["quickbooks-types/builder"]
+# builder = ["quickbooks-types/builder"]
 
 [[example]]
 name = "invoice_query"
@@ -43,6 +43,3 @@ path = "examples/invoice_query.rs"
 [[example]]
 name = "report_query"
 path = "examples/report_query.rs"
-
-[workspace]
-members = ["quickbooks-types"]

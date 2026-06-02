@@ -5,7 +5,7 @@
 //! that implement both `QBItem` and `QBCreatable`. It includes validation to ensure
 //! that entities meet the necessary requirements before being sent to the API.
 
-use quickbooks_types::{QBCreatable, QBItem};
+// use quickbooks_types::{QBCreatable, QBItem};
 use ureq::{http::Method, Agent};
 
 use crate::{

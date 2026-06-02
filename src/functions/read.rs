@@ -1,6 +1,6 @@
 //! Functions for reading `QuickBooks` entities from the API.
 
-use quickbooks_types::QBItem;
+// use quickbooks_types::QBItem;
 use ureq::{http::Method, Agent};
 
 use crate::{

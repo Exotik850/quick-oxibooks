@@ -308,7 +308,8 @@ macro_rules! qb_query {
 #[cfg(test)]
 mod test {
     use crate::QBContext;
-    use quickbooks_types::Customer;
+    // use quickbooks_types::Customer;
+    use quickbooks_xsd::intuit_names_types::CustomerType as Customer;
 
     fn test_macro_works() -> Result<(), String> {
         let client = ureq::Agent::new_with_defaults();

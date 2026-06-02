@@ -24,14 +24,15 @@
 //! # }
 //! ```
 use base64::Engine;
-use quickbooks_types::{Attachable, QBAttachable};
+// use quickbooks_types::{Attachable, QBAttachable};
+use quickbooks_xsd::intuit_base_types::AttachableRefType as Attachable;
 use ureq::{
     http::{request::Builder, Request, StatusCode},
     Agent,
 };
 
 use crate::{
-    error::{APIError, APIErrorInner, QBErrorResponse},
+    error::{APIError, APIErrorInner},
     APIResult, QBContext,
 };
 
@@ -235,10 +236,10 @@ fn make_multipart(req: Builder, attachable: &Attachable) -> Result<Request<Strin
     body.push_str(&format!("--{BOUNDARY}\r\n"));
 
     body.push_str("Content-Disposition: form-data; name=\"file_metadata_01\"\r\n");
-    body.push_str("Content-Type: application/json\r\n\r\n");
+    body.push_str("Content-Type: application/xml\r\n\r\n");
 
-    let json_body = serde_json::to_string(attachable)?;
-    body.push_str(&json_body);
+    let xml_body = quick_xml::se::to_string(attachable)?;
+    body.push_str(&xml_body);
     body.push_str("\r\n");
 
     let file_content = std::fs::read(file_path)?;

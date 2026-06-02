@@ -1,10 +1,6 @@
 //! Error types for `QuickBooks` API operations.
 
-use quickbooks_types::QBTypeError;
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-
-use crate::batch::{QBBatchOperation, QBBatchResponseData};
+// use crate::batch::{QBBatchOperation, QBBatchResponseData};
 
 /// The main error type for all `QuickBooks` API operations.
 ///
@@ -172,12 +168,12 @@ pub enum APIErrorInner {
     HttpError(#[from] ureq::http::Error),
     #[error(transparent)]
     IoError(#[from] std::io::Error),
-    #[error("Bad request: {0}")]
-    BadRequest(QBErrorResponse),
+    #[error("Bad request: {0:?}")]
+    BadRequest(quickbooks_xsd::intuit_rest_service_def::ErrorType),
     #[error(transparent)]
-    JsonError(#[from] serde_json::Error),
-    #[error(transparent)]
-    QBTypeError(#[from] QBTypeError),
+    XMLError(#[from] quickbooks_xsd::types::quick_xml::Error),
+    // #[error(transparent)]
+    // QBTypeError(#[from] QBTypeError),
     #[error("Invalid Client! Try re-authenticating")]
     InvalidClient,
     #[error("Trying to update an object when it doesn't have an ID set")]
@@ -200,100 +196,25 @@ pub enum APIErrorInner {
     BatchLimitExceeded,
     #[error("Env Var error : {0}")]
     EnvVarError(#[from] std::env::VarError),
-    #[error("Invalid Batch Response, Missing items for : {0}")]
-    BatchRequestMissingItems(BatchMissingItemsError),
+    // #[error("Invalid Batch Response, Missing items for : {0}")]
+    // BatchRequestMissingItems(BatchMissingItemsError),
     #[error("Invalid File name or extenstion : {0}")]
     InvalidFile(String),
 }
 
-/// Error type for missing items in batch requests.
-#[derive(Debug, thiserror::Error)]
-pub struct BatchMissingItemsError {
-    pub items: std::collections::HashMap<String, crate::batch::QBBatchOperation>,
-    pub results: Vec<(QBBatchOperation, QBBatchResponseData)>,
-}
+// /// Error type for missing items in batch requests.
+// #[derive(Debug, thiserror::Error)]
+// pub struct BatchMissingItemsError {
+//     pub items: std::collections::HashMap<String, crate::batch::QBBatchOperation>,
+//     pub results: Vec<(QBBatchOperation, QBBatchResponseData)>,
+// }
 
-impl std::fmt::Display for BatchMissingItemsError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "BatchRequestMissingItems : {{ Missing Items: {:#?}, \n Results : {:#?} }}",
-            self.items, self.results
-        )
-    }
-}
-
-impl Serialize for APIError {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(self.to_string().as_str())
-    }
-}
-
-/// Represents a single error returned by the `QuickBooks` API.
-///
-/// This is currently not a strongly typed structure, as the `QuickBooks` API
-/// does not provide detailed documentation on the error fields.
-#[derive(Serialize, Deserialize, Debug)]
-pub struct QBError {
-    #[serde(alias = "Message")]
-    pub message: String,
-    pub code: String,
-    #[serde(alias = "Detail")]
-    pub detail: Option<String>,
-    pub element: Option<String>,
-}
-
-/// Represents the type of fault returned by the `QuickBooks` API.
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-pub enum FaultType {
-    #[serde(alias = "AUTHENTICATION")]
-    Authentication,
-    #[serde(rename = "ValidationFault")]
-    Validation,
-    #[serde(rename = "SystemFault")]
-    System,
-    // TODO Add the rest of the fault types, if found or needed
-    #[serde(untagged)]
-    Other(String),
-}
-
-/// Represents a fault returned by the `QuickBooks` API.
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Fault {
-    pub r#type: FaultType,
-    #[serde(alias = "Error")]
-    pub error: Vec<QBError>,
-}
-
-/// Represents an error response returned by the `QuickBooks` API.
-// TODO Make the fields more strongly typed, currently no documentation on the error types that I can find
-#[derive(Serialize, Deserialize, Debug, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct QBErrorResponse {
-    pub warnings: Option<Value>,
-    pub intuit_object: Option<Value>,
-    #[serde(alias = "Fault")]
-    pub fault: Option<Fault>,
-    pub report: Option<Value>,
-    pub sync_error_response: Option<Value>,
-    pub query_response: Option<Vec<Value>>,
-    pub batch_item_response: Option<Vec<Value>>,
-    pub request_id: Option<String>,
-    pub status: Option<String>,
-    #[serde(rename = "cdcresponse")]
-    pub cdc_response: Option<Vec<Value>>,
-}
-
-impl std::fmt::Display for QBErrorResponse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            serde_json::to_string_pretty(self)
-                .expect("Could not serialize QBErrorResponse for display!")
-        )
-    }
-}
+// impl std::fmt::Display for BatchMissingItemsError {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         write!(
+//             f,
+//             "BatchRequestMissingItems : {{ Missing Items: {:#?}, \n Results : {:#?} }}",
+//             self.items, self.results
+//         )
+//     }
+// }

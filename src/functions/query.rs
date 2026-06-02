@@ -2,11 +2,12 @@
 
 use std::fmt::{Display, Write};
 
-use quickbooks_types::QBItem;
+use quickbooks_xsd::types::quick_xml::WithDeserializer;
+// use quickbooks_types::QBItem;
 use serde::Deserialize;
 use ureq::{http::Method, Agent};
 
-use crate::{error::APIError, APIResult, QBContext};
+use crate::{error::APIError, traits::QBItem, APIResult, QBContext};
 
 use super::qb_request;
 
@@ -159,6 +160,28 @@ impl<T: QBItem> QBQuery for T {
     }
 }
 
+#[derive(Debug)]
+struct Empty;
+impl quickbooks_xsd::types::quick_xml::WithSerializer for Empty {
+    type Serializer<'x> = Empty;
+    fn serializer<'ser>(
+        &'ser self,
+        _: Option<&'ser str>,
+        _: bool,
+    ) -> Result<Self::Serializer<'ser>, quickbooks_xsd::types::quick_xml::Error> {
+        Ok(Empty)
+    }
+}
+impl<'ser> quickbooks_xsd::types::quick_xml::Serializer<'ser> for Empty {
+    fn next(
+        &mut self,
+        _: &mut quickbooks_xsd::types::quick_xml::SerializeHelper,
+    ) -> Option<Result<quick_xml::events::Event<'ser>, quickbooks_xsd::types::quick_xml::Error>>
+    {
+        None
+    }
+}
+
 /// Unsafe function to query the quickbooks context using the raw query string
 ///
 /// # Safety
@@ -177,7 +200,7 @@ pub unsafe fn qb_query_raw<T: QBItem>(
         client,
         Method::GET,
         &format!("company/{}/query", qb.company_id),
-        None::<&()>,
+        None::<&Empty>,
         None,
         Some([("query", format!("{query_str}"))]),
     )?;
@@ -204,42 +227,184 @@ fn qb_query<T: QBItem>(
     qb: &QBContext,
     client: &Agent,
 ) -> Result<Vec<T>, APIError> {
-    let mut query = format!("select * from {} {query_str}", T::name());
+    let mut query = format!("select * from {} {query_str}", T::NAME);
     if let Some(max) = max_results {
         write!(&mut query, " MAXRESULTS {max}").expect("Writing to string should not fail");
     }
     unsafe { qb_query_raw::<T>(query, qb, client) }
 }
 
+/*
+#[derive(Clone, Debug)]
+    pub struct QueryResponseType {
+        pub start_position: ::core::option::Option<::core::primitive::i32>,
+        pub max_results: ::core::option::Option<::core::primitive::i32>,
+        pub total_count: ::core::option::Option<::core::primitive::i32>,
+        pub content: ::std::vec::Vec<QueryResponseTypeContent>,
+    }
+    #[derive(Clone, Debug)]
+    pub enum QueryResponseTypeContent {
+        Warnings(WarningsType),
+        IntuitObject(IntuitObject),
+        Fault(FaultType),
+    }
+    #[derive(Clone, Debug)]
+    pub enum IntuitObject {
+        RecurringTransaction(RecurringTransactionType),
+        Customer(super::intuit_names_types::CustomerType),
+        CustomerType(super::intuit_names_types::CustomerTypeType),
+        Employee(super::intuit_names_types::EmployeeType),
+        Vendor(super::intuit_names_types::VendorType),
+        OtherName(super::intuit_names_types::OtherNameType),
+        Estimate(super::finance::EstimateType),
+        SalesOrder(super::finance::SalesOrderType),
+        SalesReceipt(super::finance::SalesReceiptType),
+        PurchaseOrder(super::finance::PurchaseOrderType),
+        Purchase(super::finance::PurchaseType),
+        BillPayment(super::finance::BillPaymentType),
+        Payment(super::finance::PaymentType),
+        CreditMemo(super::finance::CreditMemoType),
+        StatementCharge(super::finance::StatementChargeType),
+        ChargeCredit(super::finance::ChargeCreditType),
+        CreditCardPaymentTxn(super::finance::CreditCardPaymentTxnType),
+        ReimburseCharge(super::finance::ReimburseChargeType),
+        PaymentMethod(super::finance::PaymentMethodType),
+        Term(super::finance::TermType),
+        JournalEntry(super::finance::JournalEntryType),
+        Transfer(super::finance::TransferType),
+        Deposit(super::finance::DepositType),
+        Class(super::finance::ClassType),
+        TimeActivity(super::finance::TimeActivityType),
+        Item(super::finance::ItemType),
+        TaxClassification(super::finance::TaxClassificationType),
+        TaxCode(super::finance::TaxCodeType),
+        TaxPayment(super::finance::TaxPaymentType),
+        TaxReturn(super::finance::TaxReturnType),
+        TaxRate(super::finance::TaxRateType),
+        VendorCredit(super::finance::VendorCreditType),
+        SalesRep(super::finance::SalesRepType),
+        InventorySite(super::finance::InventorySiteType),
+        Task(super::finance::TaskType),
+        UserAlert(super::finance::UserAlertType),
+        VendorType(super::intuit_names_types::VendorTypeType),
+        PriceLevel(super::finance::PriceLevelType),
+        Company(super::finance::CompanyType),
+        CompanyInfo(super::finance::CompanyInfoType),
+        FixedAsset(super::finance::FixedAssetType),
+        RefundReceipt(super::finance::RefundReceiptType),
+        Account(super::finance::AccountType),
+        Preferences(super::finance::PreferencesType),
+        Invoice(super::finance::InvoiceType),
+        EmailDeliveryInfo(super::finance::EmailDeliveryInfoType),
+        Department(super::finance::DepartmentType),
+        Bill(super::finance::BillType),
+        Attachable(super::finance::AttachableType),
+        InventoryAdjustment(super::finance::InventoryAdjustmentType),
+        BooleanTypeCustomFieldDefinition(
+            super::intuit_base_types::BooleanTypeCustomFieldDefinitionType,
+        ),
+        CustomFieldDefinition(super::intuit_base_types::CustomFieldDefinitionType),
+        DateTypeCustomFieldDefinition(super::intuit_base_types::DateTypeCustomFieldDefinitionType),
+        NumberTypeCustomFieldDefinition(
+            super::intuit_base_types::NumberTypeCustomFieldDefinitionType,
+        ),
+        StringTypeCustomFieldDefinition(
+            super::intuit_base_types::StringTypeCustomFieldDefinitionType,
+        ),
+        Status(StatusType),
+        SyncActivity(SyncActivityType),
+        Budget(super::finance::BudgetType),
+        TaxAgency(super::intuit_names_types::TaxAgencyType),
+        TdsMetadata(super::finance::TdsMetadataType),
+        CompanyCurrency(super::finance::CompanyCurrencyType),
+        ExchangeRate(super::finance::ExchangeRateType),
+        JournalCode(super::finance::JournalCodeType),
+        QbdtEntityIdMapping(super::finance::QbdtEntityIdMappingType),
+        MasterAccount(super::finance::MasterAccountType),
+        Tag(super::finance::TagType),
+        TaxService(super::sales_tax::TaxServiceType),
+    }
+*/
+
 /// Internal struct that Quickbooks returns when querying objects
-#[derive(Debug, Clone, Default, Deserialize)]
-#[serde(rename_all = "PascalCase", default)]
+#[derive(Debug, Clone, Default)]
+// #[serde(rename_all = "PascalCase", default)]
 struct QueryResponse<T> {
     total_count: i64,
-    #[serde(
-        alias = "Item",
-        alias = "Account",
-        alias = "Invoice",
-        alias = "Attachable",
-        alias = "Bill",
-        alias = "CompanyInfo",
-        alias = "Customer",
-        alias = "Employee",
-        alias = "Estimate",
-        alias = "Payment",
-        alias = "SalesReceipt",
-        alias = "Vendor"
-    )]
+    // #[serde(
+    //     alias = "Item",
+    //     alias = "Account",
+    //     alias = "Invoice",
+    //     alias = "Attachable",
+    //     alias = "Bill",
+    //     alias = "CompanyInfo",
+    //     alias = "Customer",
+    //     alias = "Employee",
+    //     alias = "Estimate",
+    //     alias = "Payment",
+    //     alias = "SalesReceipt",
+    //     alias = "Vendor"
+    // )]
     items: Vec<T>,
     start_position: i64,
     max_results: i64,
 }
 
+#[derive(Debug)]
+pub struct QueryResponseDeserializer<T: WithDeserializer + std::fmt::Debug> {
+  inner: <T as WithDeserializer>::Deserializer,
+  start_position: i64,
+  max_results: i64,
+  total_count: i64,
+}
+
+impl<'de, D: WithDeserializer + std::fmt::Debug> quickbooks_xsd::types::quick_xml::Deserializer<'de, QueryResponse<D>> for QueryResponseDeserializer<D> {
+    fn init(helper: &mut quickbooks_xsd::types::quick_xml::DeserializeHelper, event: quick_xml::events::Event<'de>) -> quickbooks_xsd::types::quick_xml::DeserializerResult<'de, QueryResponse<D>> {
+        todo!()
+    }
+
+    fn next(self, helper: &mut quickbooks_xsd::types::quick_xml::DeserializeHelper, event: quick_xml::events::Event<'de>) -> quickbooks_xsd::types::quick_xml::DeserializerResult<'de, QueryResponse<D>> {
+        todo!()
+    }
+
+    fn finish(self, helper: &mut quickbooks_xsd::types::quick_xml::DeserializeHelper) -> Result<QueryResponse<D>, quickbooks_xsd::types::quick_xml::Error> {
+        todo!()
+    }
+}
+
+impl<D: WithDeserializer + std::fmt::Debug> WithDeserializer for QueryResponse<D> {
+    type Deserializer = QueryResponseDeserializer<D>;
+}
+
+#[derive(Debug)]
+struct QueryResponseExtDeserializer<T: WithDeserializer + std::fmt::Debug> {
+    inner: QueryResponseDeserializer<T>,
+    time: String,
+}
+
+impl<'de, T: WithDeserializer + std::fmt::Debug> quickbooks_xsd::types::quick_xml::Deserializer<'de, QueryResponseExt<T>> for QueryResponseExtDeserializer<T> {
+    fn init(helper: &mut quickbooks_xsd::types::quick_xml::DeserializeHelper, event: quick_xml::events::Event<'de>) -> quickbooks_xsd::types::quick_xml::DeserializerResult<'de, QueryResponseExt<T>> {
+        todo!()
+    }
+
+    fn next(self, helper: &mut quickbooks_xsd::types::quick_xml::DeserializeHelper, event: quick_xml::events::Event<'de>) -> quickbooks_xsd::types::quick_xml::DeserializerResult<'de, QueryResponseExt<T>> {
+        todo!()
+    }
+
+    fn finish(self, helper: &mut quickbooks_xsd::types::quick_xml::DeserializeHelper) -> Result<QueryResponseExt<T>, quickbooks_xsd::types::quick_xml::Error> {
+        todo!()
+    }
+}
+
 /// Internal struct that Quickbooks returns when querying objects
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone)]
 struct QueryResponseExt<T> {
-    #[serde(default, rename = "QueryResponse")]
+    // #[serde(default, rename = "QueryResponse")]
     query_response: QueryResponse<T>,
     #[allow(dead_code)]
     time: String,
+}
+
+impl<T: WithDeserializer + std::fmt::Debug> WithDeserializer for QueryResponseExt<T> {
+    type Deserializer = QueryResponseExtDeserializer<T>;
 }

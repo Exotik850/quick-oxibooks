@@ -3,7 +3,8 @@
 //! This module contains functions for interacting with the `QuickBooks` API, including
 //! creating, reading, updating, and deleting various `QuickBooks` entities.
 
-use quickbooks_types::{QBItem, QBSendable};
+use quickbooks_xsd::types::quick_xml::{WithDeserializer, WithSerializer};
+// use quickbooks_types::{QBItem, QBSendable};
 use serde::{Deserialize, Serialize};
 use ureq::http::Response;
 use ureq::Body;
@@ -14,15 +15,15 @@ use crate::{
     APIResult, QBContext,
 };
 
-#[cfg(feature = "attachments")]
-pub mod attachment;
-pub mod create;
-pub mod delete;
-#[cfg(feature = "pdf")]
-pub mod pdf;
+// #[cfg(feature = "attachments")]
+// pub mod attachment;
+// pub mod create;
+// pub mod delete;
+// #[cfg(feature = "pdf")]
+// pub mod pdf;
 pub mod query;
-pub mod read;
-pub mod reports;
+// pub mod read;
+// pub mod reports;
 
 /// Sends a request to the `QuickBooks` API endpoint with the given parameters,
 /// accounts for rate limiting
@@ -45,18 +46,19 @@ pub(crate) fn qb_request<S, SS, T, U>(
     query: Option<impl IntoIterator<Item = (S, SS)>>,
 ) -> APIResult<U>
 where
-    T: Serialize,
-    U: serde::de::DeserializeOwned,
+    T: WithSerializer,
+    U: WithDeserializer,
     S: AsRef<str>,
     SS: AsRef<str>,
 {
     let response = qb.with_permission(|qb| {
         execute_request(qb, client, method, path, body, content_type, query)
     })?;
-    Ok(response.into_body().read_json()?)
+    let body = response.into_body().into_reader();
+    crate::xml_deserialize(body)
 }
 
-pub(crate) fn execute_request<S, SS, T: Serialize>(
+pub(crate) fn execute_request<S, SS, T: WithSerializer>(
     qb: &QBContext,
     client: &Agent,
     method: Method,
@@ -74,13 +76,16 @@ where
         path,
         body,
         query,
-        content_type.unwrap_or("application/json"),
+        content_type.unwrap_or("application/xml"),
         qb.environment,
         &qb.access_token,
     )?;
     let response = client.run(request)?;
     if !response.status().is_success() {
-        return Err(APIErrorInner::BadRequest(response.into_body().read_json()?).into());
+        return Err(APIErrorInner::BadRequest(crate::xml_deserialize(
+            response.into_body().into_reader(),
+        )?)
+        .into());
     }
     Ok(response)
 }
@@ -109,27 +114,27 @@ pub(crate) struct QBResponse<T> {
     time: String,
 }
 
-/// Send email of the object to the email given through quickbooks context
-pub fn qb_send_email<T: QBItem + QBSendable>(
-    item: &T,
-    email: &str,
-    qb: &QBContext,
-    client: &Agent,
-) -> Result<T, APIError> {
-    let Some(id) = item.id() else {
-        return Err(APIErrorInner::NoIdOnSend.into());
-    };
+// /// Send email of the object to the email given through quickbooks context
+// pub fn qb_send_email<T: QBItem + QBSendable>(
+//     item: &T,
+//     email: &str,
+//     qb: &QBContext,
+//     client: &Agent,
+// ) -> Result<T, APIError> {
+//     let Some(id) = item.id() else {
+//         return Err(APIErrorInner::NoIdOnSend.into());
+//     };
 
-    let response: QBResponse<T> = qb_request(
-        qb,
-        client,
-        Method::POST,
-        &format!("company/{}/{}/{}/send", qb.company_id, T::qb_id(), id),
-        None::<&()>,
-        None,
-        Some([("sendTo", email)]),
-    )?;
-    #[cfg(feature = "logging")]
-    log::info!("Successfully Sent {} object with ID : {}", T::name(), id);
-    Ok(response.object)
-}
+//     let response: QBResponse<T> = qb_request(
+//         qb,
+//         client,
+//         Method::POST,
+//         &format!("company/{}/{}/{}/send", qb.company_id, T::QB_ID, id),
+//         None::<&()>,
+//         None,
+//         Some([("sendTo", email)]),
+//     )?;
+//     #[cfg(feature = "logging")]
+//     log::info!("Successfully Sent {} object with ID : {}", T::name(), id);
+//     Ok(response.object)
+// }

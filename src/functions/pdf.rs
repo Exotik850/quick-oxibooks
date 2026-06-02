@@ -44,7 +44,7 @@
 //! ```
 use std::io::Write;
 
-use quickbooks_types::{QBItem, QBPDFable};
+// use quickbooks_types::{QBItem, QBPDFable};
 use ureq::Agent;
 
 use crate::{

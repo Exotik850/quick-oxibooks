@@ -47,7 +47,6 @@
 //! After being throttled, wait 60 seconds before retrying.
 
 use crate::{APIResult, Environment};
-use serde::Serialize;
 use ureq::{
     http::{request::Builder, Method, Request},
     SendBody,
@@ -55,6 +54,7 @@ use ureq::{
 mod context;
 mod refresh;
 pub use context::QBContext;
+use quickbooks_xsd::types::quick_xml::WithSerializer;
 pub use refresh::RefreshableQBContext;
 use urlencoding::encode;
 
@@ -64,7 +64,7 @@ pub(crate) fn set_headers(content_type: &str, access_token: &str, request: Build
     if content_type != "multipart/form-data" {
         request = request.header("Content-Type", content_type);
     }
-    request.header("Accept", "application/json")
+    request.header("Accept", "application/xml")
 }
 
 pub(crate) fn build_request<B, S, SS>(
@@ -77,7 +77,7 @@ pub(crate) fn build_request<B, S, SS>(
     access_token: &str,
 ) -> APIResult<Request<SendBody<'static>>>
 where
-    B: Serialize,
+    B: WithSerializer,
     S: AsRef<str>,
     SS: AsRef<str>,
 {
@@ -88,8 +88,8 @@ where
     let request = match (method == Method::GET || method == Method::DELETE, body) {
         (true, _) | (false, None) => request.body(SendBody::none()),
         (false, Some(body)) => {
-            let json_bytes = serde_json::to_vec(body)?;
-            let reader = std::io::Cursor::new(json_bytes);
+            let bytes: Vec<u8> = crate::xml_serialize(body)?;
+            let reader = std::io::Cursor::new(bytes);
             request.body(SendBody::from_owned_reader(reader))
         }
     }?;

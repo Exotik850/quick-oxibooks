@@ -1,7 +1,6 @@
 {
     "rust-analyzer.linkedProjects": [
         ".\\Cargo.toml",
-        ".\\quickbooks-types\\Cargo.toml",
     ],
     "rust-analyzer.diagnostics.disabled": [
         "unresolved-proc-macro"
@@ -9,7 +8,6 @@
     "rust-analyzer.cargo.features": [
       "attachments",
       "pdf",
-      "polars",
       "macros",
     ]
 }

@@ -54,29 +54,28 @@
 //! For more detailed usage examples, refer to the documentation for each module and type.
 #![warn(clippy::pedantic)]
 
-pub mod batch;
+// pub mod batch;
 pub mod client;
 pub use client::QBContext;
 use error::APIError;
-use serde::{Deserialize, Serialize};
+use quickbooks_xsd::types::quick_xml::{SerializeSync, WithDeserializer, WithSerializer, DeserializeSync};
 use ureq::Agent;
 pub mod error;
+pub mod traits;
 
-pub mod types {
-    //! Re-exports of all types from the `quickbooks_types` crate.
-    pub use quickbooks_types::*;
-}
+pub mod types;
 
 pub mod functions;
 pub(crate) mod limiter;
 
-use crate::error::APIErrorInner;
-#[cfg(feature = "attachments")]
-pub use crate::functions::attachment;
-#[cfg(feature = "pdf")]
-pub use crate::functions::pdf;
-#[cfg(feature = "macros")]
-pub mod macros;
+// #[cfg(feature = "attachments")]
+// pub use crate::functions::attachment;
+// #[cfg(feature = "pdf")]
+// pub use crate::functions::pdf;
+// #[cfg(feature = "macros")]
+// pub mod macros;
+
+use serde::{Deserialize, Serialize};
 
 /// The result type used throughout the library for operations that may fail.
 ///
@@ -281,8 +280,24 @@ impl DiscoveryDoc {
         let url = environment.discovery_url();
         let request = client.get(url).call()?;
         if !request.status().is_success() {
-            return Err(APIErrorInner::BadRequest(request.into_body().read_json()?).into());
+            todo!();
+            // return Err(APIErrorInner::BadRequest(xml_deserialize(
+            //     request.into_body().into_reader(),
+            // )?)
+            // .into());
         }
         Ok(request.into_body().read_json()?)
     }
+}
+
+pub(crate) fn xml_serialize<T: WithSerializer>(value: &T) -> APIResult<Vec<u8>> {
+    let mut out = Vec::new();
+    value.serialize("", &mut quick_xml::Writer::new(&mut out))?;
+    Ok(out)
+}
+
+pub(crate) fn xml_deserialize<T: WithDeserializer>(reader: impl std::io::Read) -> APIResult<T> {
+    let buffered = std::io::BufReader::new(reader);
+    let mut reader = quickbooks_xsd::types::quick_xml::IoReader::new(buffered);
+    T::deserialize(&mut reader).map_err(|e| e.into())
 }

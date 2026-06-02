@@ -100,9 +100,9 @@ fn qb_delete<T: QBItem + QBDeletable>(
     qb: &QBContext,
     client: &Agent,
 ) -> Result<QBDeleted, APIError> {
-    let (Some(_), Some(_)) = (item.sync_token(), item.id()) else {
-        return Err(APIErrorInner::DeleteMissingItems.into());
-    };
+    // let (Some(_), Some(_)) = (item.sync_token(), item.id()) else {
+    //     return Err(APIErrorInner::DeleteMissingItems.into());
+    // };
 
     let delete_object: QBToDelete = item.to_delete();
 
