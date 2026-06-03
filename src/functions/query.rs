@@ -1,15 +1,16 @@
 //! Functions for querying `QuickBooks` entities using SQL-like syntax.
 
-use std::fmt::{Display, Write};
+use std::fmt::Write;
+use std::io::{BufRead, Read};
 
-use quickbooks_xsd::types::quick_xml::WithDeserializer;
-// use quickbooks_types::QBItem;
-use serde::Deserialize;
+use quick_xml::events::Event;
+use quick_xml::Reader;
+use quickbooks_xsd::types::quick_xml::{DeserializeSync, WithDeserializer, WithSerializer};
 use ureq::{http::Method, Agent};
 
 use crate::{error::APIError, traits::QBItem, APIResult, QBContext};
 
-use super::qb_request;
+use super::execute_request;
 
 /// Trait for querying `QuickBooks` entities using SQL-like syntax.
 ///
@@ -162,16 +163,18 @@ impl<T: QBItem> QBQuery for T {
 
 #[derive(Debug)]
 struct Empty;
-impl quickbooks_xsd::types::quick_xml::WithSerializer for Empty {
+
+impl WithSerializer for Empty {
     type Serializer<'x> = Empty;
     fn serializer<'ser>(
         &'ser self,
         _: Option<&'ser str>,
         _: bool,
-    ) -> Result<Self::Serializer<'ser>, quickbooks_xsd::types::quick_xml::Error> {
+    ) -> Result<Self, quickbooks_xsd::types::quick_xml::Error> {
         Ok(Empty)
     }
 }
+
 impl<'ser> quickbooks_xsd::types::quick_xml::Serializer<'ser> for Empty {
     fn next(
         &mut self,
@@ -182,45 +185,40 @@ impl<'ser> quickbooks_xsd::types::quick_xml::Serializer<'ser> for Empty {
     }
 }
 
-/// Unsafe function to query the quickbooks context using the raw query string
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/// Execute an arbitrary query string against the QuickBooks API.
 ///
 /// # Safety
 ///
-/// This function is unsafe because it allows arbitrary query strings to be executed
-/// against the QuickBooks API. Malformed or malicious query strings could lead to
-/// unexpected behavior or security vulnerabilities. It is the caller's responsibility
-/// to ensure that the query string is well-formed and safe to execute.
+/// The caller must guarantee the query string is well-formed and safe.
+/// Malformed queries may result in undefined behaviour or errors from the API.
 pub unsafe fn qb_query_raw<T: QBItem>(
-    query_str: impl Display,
+    query_str: impl std::fmt::Display,
     qb: &QBContext,
     client: &Agent,
 ) -> Result<Vec<T>, APIError> {
-    let response: QueryResponseExt<T> = qb_request(
-        qb,
-        client,
-        Method::GET,
-        &format!("company/{}/query", qb.company_id),
-        None::<&Empty>,
-        None,
-        Some([("query", format!("{query_str}"))]),
-    )?;
+    let query_str = format!("{query_str}");
+    let response = qb.with_permission(|qb| {
+        execute_request::<&str, &str, Empty>(
+            qb,
+            client,
+            Method::GET,
+            &format!("company/{}/query", qb.company_id),
+            None::<&Empty>,
+            None,
+            Some([("query", query_str.as_str())]),
+        )
+    })?;
     #[cfg(feature = "logging")]
-    log::info!("Successfully Queried Raw Data for query string : {query_str}",);
-    Ok(response.query_response.items)
+    log::info!("Successfully Queried Raw Data for query string : {query_str}");
+    let body = response.into_body().into_reader();
+    parse_query_response::<T>(body)
 }
 
-/// Query the quickbooks context using the query string,
-/// The type determines what type of quickbooks object you are
-/// Query `QuickBooks` for objects matching the query string
-///
-/// Builds a query using the `query_str` and queries for objects of
-/// type `T`. Returns up to `max_results` objects in a `Vec`.
-///
-/// The `query_str` parameter will be placed into the query
-/// like so:
-/// ```ignore
-///  "select * from {type_name} {query_str} MAXRESULTS {max_results}"
-/// ```
+/// Build and execute a `select * from {type} {query_str}` query.
 fn qb_query<T: QBItem>(
     query_str: &str,
     max_results: Option<usize>,
@@ -234,177 +232,173 @@ fn qb_query<T: QBItem>(
     unsafe { qb_query_raw::<T>(query, qb, client) }
 }
 
-/*
-#[derive(Clone, Debug)]
-    pub struct QueryResponseType {
-        pub start_position: ::core::option::Option<::core::primitive::i32>,
-        pub max_results: ::core::option::Option<::core::primitive::i32>,
-        pub total_count: ::core::option::Option<::core::primitive::i32>,
-        pub content: ::std::vec::Vec<QueryResponseTypeContent>,
-    }
-    #[derive(Clone, Debug)]
-    pub enum QueryResponseTypeContent {
-        Warnings(WarningsType),
-        IntuitObject(IntuitObject),
-        Fault(FaultType),
-    }
-    #[derive(Clone, Debug)]
-    pub enum IntuitObject {
-        RecurringTransaction(RecurringTransactionType),
-        Customer(super::intuit_names_types::CustomerType),
-        CustomerType(super::intuit_names_types::CustomerTypeType),
-        Employee(super::intuit_names_types::EmployeeType),
-        Vendor(super::intuit_names_types::VendorType),
-        OtherName(super::intuit_names_types::OtherNameType),
-        Estimate(super::finance::EstimateType),
-        SalesOrder(super::finance::SalesOrderType),
-        SalesReceipt(super::finance::SalesReceiptType),
-        PurchaseOrder(super::finance::PurchaseOrderType),
-        Purchase(super::finance::PurchaseType),
-        BillPayment(super::finance::BillPaymentType),
-        Payment(super::finance::PaymentType),
-        CreditMemo(super::finance::CreditMemoType),
-        StatementCharge(super::finance::StatementChargeType),
-        ChargeCredit(super::finance::ChargeCreditType),
-        CreditCardPaymentTxn(super::finance::CreditCardPaymentTxnType),
-        ReimburseCharge(super::finance::ReimburseChargeType),
-        PaymentMethod(super::finance::PaymentMethodType),
-        Term(super::finance::TermType),
-        JournalEntry(super::finance::JournalEntryType),
-        Transfer(super::finance::TransferType),
-        Deposit(super::finance::DepositType),
-        Class(super::finance::ClassType),
-        TimeActivity(super::finance::TimeActivityType),
-        Item(super::finance::ItemType),
-        TaxClassification(super::finance::TaxClassificationType),
-        TaxCode(super::finance::TaxCodeType),
-        TaxPayment(super::finance::TaxPaymentType),
-        TaxReturn(super::finance::TaxReturnType),
-        TaxRate(super::finance::TaxRateType),
-        VendorCredit(super::finance::VendorCreditType),
-        SalesRep(super::finance::SalesRepType),
-        InventorySite(super::finance::InventorySiteType),
-        Task(super::finance::TaskType),
-        UserAlert(super::finance::UserAlertType),
-        VendorType(super::intuit_names_types::VendorTypeType),
-        PriceLevel(super::finance::PriceLevelType),
-        Company(super::finance::CompanyType),
-        CompanyInfo(super::finance::CompanyInfoType),
-        FixedAsset(super::finance::FixedAssetType),
-        RefundReceipt(super::finance::RefundReceiptType),
-        Account(super::finance::AccountType),
-        Preferences(super::finance::PreferencesType),
-        Invoice(super::finance::InvoiceType),
-        EmailDeliveryInfo(super::finance::EmailDeliveryInfoType),
-        Department(super::finance::DepartmentType),
-        Bill(super::finance::BillType),
-        Attachable(super::finance::AttachableType),
-        InventoryAdjustment(super::finance::InventoryAdjustmentType),
-        BooleanTypeCustomFieldDefinition(
-            super::intuit_base_types::BooleanTypeCustomFieldDefinitionType,
-        ),
-        CustomFieldDefinition(super::intuit_base_types::CustomFieldDefinitionType),
-        DateTypeCustomFieldDefinition(super::intuit_base_types::DateTypeCustomFieldDefinitionType),
-        NumberTypeCustomFieldDefinition(
-            super::intuit_base_types::NumberTypeCustomFieldDefinitionType,
-        ),
-        StringTypeCustomFieldDefinition(
-            super::intuit_base_types::StringTypeCustomFieldDefinitionType,
-        ),
-        Status(StatusType),
-        SyncActivity(SyncActivityType),
-        Budget(super::finance::BudgetType),
-        TaxAgency(super::intuit_names_types::TaxAgencyType),
-        TdsMetadata(super::finance::TdsMetadataType),
-        CompanyCurrency(super::finance::CompanyCurrencyType),
-        ExchangeRate(super::finance::ExchangeRateType),
-        JournalCode(super::finance::JournalCodeType),
-        QbdtEntityIdMapping(super::finance::QbdtEntityIdMappingType),
-        MasterAccount(super::finance::MasterAccountType),
-        Tag(super::finance::TagType),
-        TaxService(super::sales_tax::TaxServiceType),
-    }
-*/
+/// Parse a QuickBooks query response body, extracting items of type `T`
+/// from inside the `<QueryResponse>` element.
+///
+/// Expected structure:
+/// ```xml
+/// <IntuitResponse xmlns="..." time="...">
+///     <QueryResponse startPosition="1" maxResults="N" totalCount="N">
+///         <EntityName>...</EntityName>
+///     </QueryResponse>
+/// </IntuitResponse>
+/// ```
+fn parse_query_response<T: WithDeserializer>(reader: impl Read) -> Result<Vec<T>, APIError> {
+    let mut reader = Reader::from_reader(std::io::BufReader::new(reader));
+    reader.config_mut().trim_text(true);
 
-/// Internal struct that Quickbooks returns when querying objects
-#[derive(Debug, Clone, Default)]
-// #[serde(rename_all = "PascalCase", default)]
-struct QueryResponse<T> {
-    total_count: i64,
-    // #[serde(
-    //     alias = "Item",
-    //     alias = "Account",
-    //     alias = "Invoice",
-    //     alias = "Attachable",
-    //     alias = "Bill",
-    //     alias = "CompanyInfo",
-    //     alias = "Customer",
-    //     alias = "Employee",
-    //     alias = "Estimate",
-    //     alias = "Payment",
-    //     alias = "SalesReceipt",
-    //     alias = "Vendor"
-    // )]
-    items: Vec<T>,
-    start_position: i64,
-    max_results: i64,
+    let mut outer_buf = Vec::new();
+    let mut inner_buf = Vec::new();
+    let mut raw_buf = Vec::new();
+    let mut items = Vec::new();
+
+    // Navigate to <QueryResponse>
+    loop {
+        match reader.read_event_into(&mut outer_buf)? {
+            Event::Start(ref e) if e.name().as_ref() == b"QueryResponse" => break,
+            Event::Eof => return Ok(items),
+            _ => {}
+        }
+        outer_buf.clear();
+    }
+    outer_buf.clear();
+
+    // Read each direct child of <QueryResponse>, reconstruct its XML, deserialize
+    loop {
+        match reader.read_event_into(&mut outer_buf)? {
+            Event::Start(ref e) => {
+                raw_buf.clear();
+                read_element_body_into(&mut reader, e, &mut inner_buf, &mut raw_buf)?;
+                items.push(deserialize_from_bytes::<T>(&raw_buf)?);
+            }
+            Event::Empty(ref e) => {
+                raw_buf.clear();
+                write_self_closing_tag_to(&mut raw_buf, e);
+                items.push(deserialize_from_bytes::<T>(&raw_buf)?);
+            }
+            Event::End(_) | Event::Eof => break,
+            _ => {}
+        }
+        outer_buf.clear();
+    }
+
+    Ok(items)
 }
 
-#[derive(Debug)]
-pub struct QueryResponseDeserializer<T: WithDeserializer + std::fmt::Debug> {
-  inner: <T as WithDeserializer>::Deserializer,
-  start_position: i64,
-  max_results: i64,
-  total_count: i64,
-}
+/// Read events for one element body and reconstruct its XML bytes into `raw`.
+///
+/// `buf` is a reusable event buffer (distinct from the outer loop's buffer,
+/// so the `BytesStart` borrow from the caller doesn't conflict).
+fn read_element_body_into(
+    reader: &mut Reader<impl BufRead>,
+    start: &quick_xml::events::BytesStart,
+    buf: &mut Vec<u8>,
+    raw: &mut Vec<u8>,
+) -> Result<(), quick_xml::Error> {
+    write_tag_start_to(raw, start);
+    let mut depth: u32 = 1;
 
-impl<'de, D: WithDeserializer + std::fmt::Debug> quickbooks_xsd::types::quick_xml::Deserializer<'de, QueryResponse<D>> for QueryResponseDeserializer<D> {
-    fn init(helper: &mut quickbooks_xsd::types::quick_xml::DeserializeHelper, event: quick_xml::events::Event<'de>) -> quickbooks_xsd::types::quick_xml::DeserializerResult<'de, QueryResponse<D>> {
-        todo!()
+    loop {
+        match reader.read_event_into(buf)? {
+            Event::Start(ref e) => {
+                depth += 1;
+                write_tag_start_to(raw, e);
+            }
+            Event::End(ref e) => {
+                depth -= 1;
+                raw.extend_from_slice(b"</");
+                raw.extend_from_slice(e.name().as_ref());
+                raw.extend_from_slice(b">");
+                if depth == 0 {
+                    break;
+                }
+            }
+            Event::Empty(ref e) => write_self_closing_tag_to(raw, e),
+            Event::Text(ref e) => raw.extend_from_slice(e.as_ref()),
+            Event::CData(ref e) => {
+                raw.extend_from_slice(b"<![CDATA[");
+                raw.extend_from_slice(e.as_ref());
+                raw.extend_from_slice(b"]]>");
+            }
+            Event::Comment(ref e) => {
+                raw.extend_from_slice(b"<!--");
+                raw.extend_from_slice(e.as_ref());
+                raw.extend_from_slice(b"-->");
+            }
+            Event::Decl(ref e) => {
+                raw.extend_from_slice(b"<?");
+                raw.extend_from_slice(e.as_ref());
+                raw.extend_from_slice(b"?>");
+            }
+            Event::PI(ref e) => {
+                raw.extend_from_slice(b"<?");
+                raw.extend_from_slice(e.as_ref());
+                raw.extend_from_slice(b"?>");
+            }
+            Event::DocType(ref e) => {
+                raw.extend_from_slice(b"<!DOCTYPE ");
+                raw.extend_from_slice(e.as_ref());
+                raw.extend_from_slice(b">");
+            }
+            Event::GeneralRef(ref e) => {
+                raw.extend_from_slice(b"&");
+                raw.extend_from_slice(e.as_ref());
+                raw.extend_from_slice(b";");
+            }
+            Event::Eof => break,
+        }
+        buf.clear();
     }
 
-    fn next(self, helper: &mut quickbooks_xsd::types::quick_xml::DeserializeHelper, event: quick_xml::events::Event<'de>) -> quickbooks_xsd::types::quick_xml::DeserializerResult<'de, QueryResponse<D>> {
-        todo!()
-    }
-
-    fn finish(self, helper: &mut quickbooks_xsd::types::quick_xml::DeserializeHelper) -> Result<QueryResponse<D>, quickbooks_xsd::types::quick_xml::Error> {
-        todo!()
-    }
+    Ok(())
 }
 
-impl<D: WithDeserializer + std::fmt::Debug> WithDeserializer for QueryResponse<D> {
-    type Deserializer = QueryResponseDeserializer<D>;
-}
-
-#[derive(Debug)]
-struct QueryResponseExtDeserializer<T: WithDeserializer + std::fmt::Debug> {
-    inner: QueryResponseDeserializer<T>,
-    time: String,
-}
-
-impl<'de, T: WithDeserializer + std::fmt::Debug> quickbooks_xsd::types::quick_xml::Deserializer<'de, QueryResponseExt<T>> for QueryResponseExtDeserializer<T> {
-    fn init(helper: &mut quickbooks_xsd::types::quick_xml::DeserializeHelper, event: quick_xml::events::Event<'de>) -> quickbooks_xsd::types::quick_xml::DeserializerResult<'de, QueryResponseExt<T>> {
-        todo!()
+/// Append a start-tag to `raw`: `<Name attr="val">`.
+fn write_tag_start_to(raw: &mut Vec<u8>, e: &quick_xml::events::BytesStart) {
+    raw.extend_from_slice(b"<");
+    raw.extend_from_slice(e.name().as_ref());
+    for attr in e.attributes().flatten() {
+        raw.extend_from_slice(b" ");
+        raw.extend_from_slice(attr.key.as_ref());
+        raw.extend_from_slice(b"=\"");
+        raw.extend_from_slice(&attr.value);
+        raw.extend_from_slice(b"\"");
     }
-
-    fn next(self, helper: &mut quickbooks_xsd::types::quick_xml::DeserializeHelper, event: quick_xml::events::Event<'de>) -> quickbooks_xsd::types::quick_xml::DeserializerResult<'de, QueryResponseExt<T>> {
-        todo!()
-    }
-
-    fn finish(self, helper: &mut quickbooks_xsd::types::quick_xml::DeserializeHelper) -> Result<QueryResponseExt<T>, quickbooks_xsd::types::quick_xml::Error> {
-        todo!()
-    }
+    raw.extend_from_slice(b">");
 }
 
-/// Internal struct that Quickbooks returns when querying objects
-#[derive(Debug, Clone)]
-struct QueryResponseExt<T> {
-    // #[serde(default, rename = "QueryResponse")]
-    query_response: QueryResponse<T>,
-    #[allow(dead_code)]
-    time: String,
+/// Append a self-closing tag to `raw`: `<Name attr="val"/>`.
+fn write_self_closing_tag_to(raw: &mut Vec<u8>, e: &quick_xml::events::BytesStart) {
+    raw.extend_from_slice(b"<");
+    raw.extend_from_slice(e.name().as_ref());
+    for attr in e.attributes().flatten() {
+        raw.extend_from_slice(b" ");
+        raw.extend_from_slice(attr.key.as_ref());
+        raw.extend_from_slice(b"=\"");
+        raw.extend_from_slice(&attr.value);
+        raw.extend_from_slice(b"\"");
+    }
+    raw.extend_from_slice(b"/>");
 }
 
-impl<T: WithDeserializer + std::fmt::Debug> WithDeserializer for QueryResponseExt<T> {
-    type Deserializer = QueryResponseExtDeserializer<T>;
+/// Deserialize raw XML bytes into `T` via its `WithDeserializer`.
+fn deserialize_from_bytes<T: WithDeserializer>(bytes: &[u8]) -> Result<T, APIError> {
+    let mut reader = quickbooks_xsd::types::quick_xml::IoReader::new(bytes);
+    T::deserialize(&mut reader).map_err(Into::into)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::types::prelude::Invoice;
+
+    #[test]
+    fn test_query_response_deserializer() {
+        let xml = include_str!("../../test/data/query_response.xml");
+        let items: Vec<Invoice> = super::parse_query_response(xml.as_bytes()).unwrap();
+        assert_eq!(items.len(), 1);
+        let inv = &items[0];
+        assert_eq!(inv.id(), Some(&"239".to_string()));
+        assert_eq!(inv.doc_number(), Some(&"1070".to_string()));
+        assert_eq!(inv.total_amt(), Some(&150.00));
+    }
 }

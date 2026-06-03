@@ -58,7 +58,9 @@
 pub mod client;
 pub use client::QBContext;
 use error::APIError;
-use quickbooks_xsd::types::quick_xml::{SerializeSync, WithDeserializer, WithSerializer, DeserializeSync};
+use quickbooks_xsd::types::quick_xml::{
+    DeserializeSync, SerializeSync, WithDeserializer, WithSerializer,
+};
 use ureq::Agent;
 pub mod error;
 pub mod traits;

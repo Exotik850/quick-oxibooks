@@ -1,5 +1,6 @@
-use quick_oxibooks::{error::APIError, functions::query::QBQuery, QBContext};
-use quickbooks_types::Invoice;
+use quick_oxibooks::{
+    error::APIError, functions::query::QBQuery, types::prelude::Invoice, QBContext,
+};
 
 // #[tokio::main]
 fn main() -> Result<(), APIError> {
@@ -23,7 +24,7 @@ fn main() -> Result<(), APIError> {
 
     let inv = Invoice::query_single(&format!(r"where DocNumber = '{doc_number}'"), &qb, &client)?;
 
-    println!("{inv:?}");
+    println!("{inv:#?}");
 
     Ok(())
 }

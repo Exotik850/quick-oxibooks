@@ -1,7 +1,9 @@
 pub use crate::types::prelude::*;
 use quickbooks_xsd::types::quick_xml::{WithDeserializer, WithSerializer};
 
-pub trait QBItem: WithSerializer + WithDeserializer + Clone + Sized + Send + std::fmt::Debug {
+pub trait QBItem:
+    WithSerializer + WithDeserializer + Clone + Sized + Send + std::fmt::Debug
+{
     const NAME: &'static str;
     const QB_ID: &'static str;
 

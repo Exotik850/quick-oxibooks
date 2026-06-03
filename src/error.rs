@@ -172,6 +172,8 @@ pub enum APIErrorInner {
     BadRequest(quickbooks_xsd::intuit_rest_service_def::ErrorType),
     #[error(transparent)]
     XMLError(#[from] quickbooks_xsd::types::quick_xml::Error),
+    #[error(transparent)]
+    XMLErrorDe(#[from] quick_xml::Error),
     // #[error(transparent)]
     // QBTypeError(#[from] QBTypeError),
     #[error("Invalid Client! Try re-authenticating")]

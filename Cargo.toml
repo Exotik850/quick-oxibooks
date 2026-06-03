@@ -40,6 +40,6 @@ logging = ["dep:log"]
 name = "invoice_query"
 path = "examples/invoice_query.rs"
 
-[[example]]
-name = "report_query"
-path = "examples/report_query.rs"
+# [[example]]
+# name = "report_query"
+# path = "examples/report_query.rs"
