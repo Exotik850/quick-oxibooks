@@ -401,4 +401,13 @@ mod tests {
         assert_eq!(inv.doc_number(), Some(&"1070".to_string()));
         assert_eq!(inv.total_amt(), Some(&150.00));
     }
+
+    #[test]
+    fn test_query_response_deserializer_empty() {
+        let xml = r#"<IntuitResponse xmlns="http://schema.intuit.com/finance/v3" time="2026-06-05T08:11:46.819-07:00">
+                              <QueryResponse/>
+                          </IntuitResponse>"#;
+        let items: Vec<Invoice> = super::parse_query_response(xml.as_bytes()).unwrap();
+        assert!(items.is_empty());
+    }
 }
