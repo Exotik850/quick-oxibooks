@@ -53,7 +53,7 @@ impl RateLimiter {
                     window_start,
                 };
             }
-            let wait = self.duration - now.duration_since(guard.window_start);
+            let wait = self.duration.checked_sub(now.duration_since(guard.window_start)).unwrap();
             drop(guard);
             std::thread::sleep(wait);
         }

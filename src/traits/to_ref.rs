@@ -1,4 +1,6 @@
-use quickbooks_xsd::intuit_base_types::{AttachableRefType as QBAttachableRef, ReferenceTypeType as QBRef};
+use quickbooks_xsd::intuit_base_types::{
+    AttachableRefType as QBAttachableRef, ReferenceTypeType as QBRef,
+};
 
 /// Error returned when an entity cannot be converted to a reference because it
 /// has no ID set.

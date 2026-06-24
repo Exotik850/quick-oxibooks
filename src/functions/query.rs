@@ -4,11 +4,11 @@ use std::fmt::Write;
 
 use quickbooks_xsd::types::quick_xml::{
     DeserializeHelper, Deserializer, DeserializerArtifact, DeserializerEvent, DeserializerOutput,
-    DeserializerResult, Event, SerializeHelper, Serializer, WithDeserializer, WithSerializer,
+    DeserializerResult, Event, WithDeserializer,
 };
 use ureq::{http::Method, Agent};
 
-use crate::{error::APIError, traits::QBItem, APIResult, QBContext};
+use crate::{error::APIError, functions::Empty, traits::QBItem, APIResult, QBContext};
 
 use super::execute_request;
 
@@ -162,33 +162,6 @@ impl<T: QBItem> QBQuery for T {
 }
 
 // ---------------------------------------------------------------------------
-// Minimal empty type for serialization (used when there is no request body)
-// ---------------------------------------------------------------------------
-
-#[derive(Debug)]
-struct Empty;
-
-impl WithSerializer for Empty {
-    type Serializer<'x> = Empty;
-    fn serializer<'ser>(
-        &'ser self,
-        _: Option<&'ser str>,
-        _: bool,
-    ) -> Result<Self, quickbooks_xsd::types::quick_xml::Error> {
-        Ok(Empty)
-    }
-}
-
-impl<'ser> Serializer<'ser> for Empty {
-    fn next(
-        &mut self,
-        _: &mut SerializeHelper,
-    ) -> Option<Result<Event<'ser>, quickbooks_xsd::types::quick_xml::Error>> {
-        None
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -210,7 +183,7 @@ pub unsafe fn qb_query_raw<T: QBItem>(
             client,
             Method::GET,
             &format!("company/{}/query", qb.company_id),
-            None::<&Empty>,
+            None,
             None,
             Some([("query", query_str.as_str())]),
         )
@@ -303,106 +276,104 @@ impl<'de, T: QBItem> Deserializer<'de, QueryResponseItems<T>> for QueryResponseI
         helper: &mut DeserializeHelper,
         event: Event<'de>,
     ) -> DeserializerResult<'de, QueryResponseItems<T>> {
-        loop {
-            // ── Delegate to active child deserializer ────────────────────
-            if let Some(child) = self.child.take() {
-                let output = child.next(helper, event)?;
+        // ── Delegate to active child deserializer ────────────────────
+        if let Some(child) = self.child.take() {
+            let output = child.next(helper, event)?;
 
-                let (data, next_child) = output.artifact.into_parts();
-                if let Some(item) = data {
-                    self.items.push(item);
-                } else if next_child.is_none() {
+            let (data, next_child) = output.artifact.into_parts();
+            if let Some(item) = data {
+                self.items.push(item);
+            } else if next_child.is_none() {
+                return Err(quickbooks_xsd::types::quick_xml::Error::custom(QBDeError(
+                    "Child deserializer finished without producing an item".to_string(),
+                )));
+            }
+            self.child = next_child;
+
+            // Child consumed the event — keep waiting.
+            return Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Deserializer(self),
+                event: DeserializerEvent::None,
+                allow_any: false,
+            });
+        }
+
+        // ── Not inside a child — handle the event ourselves ──────────
+        if !self.inside_response {
+            // Searching for <QueryResponse>
+            if matches!(&event, Event::Start(e) | Event::Empty(e) if e.name().as_ref() == b"QueryResponse")
+            {
+                self.inside_response = true;
+                let artifact = if matches!(event, Event::Empty(_)) {
+                    DeserializerArtifact::Data(QueryResponseItems(self.items))
+                } else {
+                    DeserializerArtifact::Deserializer(self)
+                };
+                return Ok(DeserializerOutput {
+                    artifact,
+                    event: DeserializerEvent::None,
+                    allow_any: true,
+                });
+            }
+            // Skip anything before <QueryResponse>.
+            let allow_any = matches!(event, Event::Start(_) | Event::Empty(_));
+            return Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Deserializer(self),
+                event: DeserializerEvent::None,
+                allow_any,
+            });
+        }
+
+        // Inside <QueryResponse>
+        match &event {
+            Event::Start(_) | Event::Empty(_) => {
+                // Only delegate to the child deserializer when the element
+                // name matches the expected entity. Any other element is
+                // unexpected inside <QueryResponse> and produces an error.
+                let name = match &event {
+                    Event::Start(e) | Event::Empty(e) => e.name(),
+                    _ => unreachable!(),
+                };
+                if name.as_ref() != T::NAME.as_bytes() {
                     return Err(quickbooks_xsd::types::quick_xml::Error::custom(QBDeError(
-                        "Child deserializer finished without producing an item".to_string(),
+                        format!(
+                            "Unexpected element <{}> inside <QueryResponse>, expected <{}>",
+                            String::from_utf8_lossy(name.as_ref()),
+                            T::NAME
+                        ),
                     )));
                 }
-                self.child = next_child;
 
-                // Child consumed the event — keep waiting.
+                let child_output = T::init(helper, event)?;
+                let (item, child_de) = child_output.artifact.into_parts();
+                if let Some(item) = item {
+                    self.items.push(item);
+                }
+                self.child = child_de;
                 return Ok(DeserializerOutput {
                     artifact: DeserializerArtifact::Deserializer(self),
                     event: DeserializerEvent::None,
                     allow_any: false,
                 });
             }
-
-            // ── Not inside a child — handle the event ourselves ──────────
-            if !self.inside_response {
-                // Searching for <QueryResponse>
-                if matches!(&event, Event::Start(e) | Event::Empty(e) if e.name().as_ref() == b"QueryResponse")
-                {
-                    self.inside_response = true;
-                    let artifact = if matches!(event, Event::Empty(_)) {
-                        DeserializerArtifact::Data(QueryResponseItems(self.items))
-                    } else {
-                        DeserializerArtifact::Deserializer(self)
-                    };
-                    return Ok(DeserializerOutput {
-                        artifact,
-                        event: DeserializerEvent::None,
-                        allow_any: true,
-                    });
-                }
-                // Skip anything before <QueryResponse>.
-                let allow_any = matches!(event, Event::Start(_) | Event::Empty(_));
+            Event::End(e) if e.name().as_ref() == b"QueryResponse" => {
+                return Ok(DeserializerOutput {
+                    artifact: DeserializerArtifact::Data(QueryResponseItems(self.items)),
+                    event: DeserializerEvent::None,
+                    allow_any: false,
+                });
+            }
+            _ =>
+            // Skip any non-start events inside <QueryResponse>.
+            {
                 return Ok(DeserializerOutput {
                     artifact: DeserializerArtifact::Deserializer(self),
                     event: DeserializerEvent::None,
-                    allow_any,
+                    allow_any: false,
                 });
-            }
-
-            // Inside <QueryResponse>
-            match &event {
-                Event::Start(_) | Event::Empty(_) => {
-                    // Only delegate to the child deserializer when the element
-                    // name matches the expected entity. Any other element is
-                    // unexpected inside <QueryResponse> and produces an error.
-                    let name = match &event {
-                        Event::Start(e) | Event::Empty(e) => e.name(),
-                        _ => unreachable!(),
-                    };
-                    if name.as_ref() != T::NAME.as_bytes() {
-                        return Err(quickbooks_xsd::types::quick_xml::Error::custom(QBDeError(
-                            format!(
-                                "Unexpected element <{}> inside <QueryResponse>, expected <{}>",
-                                String::from_utf8_lossy(name.as_ref()),
-                                T::NAME
-                            ),
-                        )));
-                    }
-
-                    let child_output = T::init(helper, event)?;
-                    let (item, child_de) = child_output.artifact.into_parts();
-                    if let Some(item) = item {
-                        self.items.push(item);
-                    }
-                    self.child = child_de;
-                    return Ok(DeserializerOutput {
-                        artifact: DeserializerArtifact::Deserializer(self),
-                        event: DeserializerEvent::None,
-                        allow_any: false,
-                    });
-                }
-                Event::End(e) if e.name().as_ref() == b"QueryResponse" => {
-                    return Ok(DeserializerOutput {
-                        artifact: DeserializerArtifact::Data(QueryResponseItems(self.items)),
-                        event: DeserializerEvent::None,
-                        allow_any: false,
-                    });
-                }
-                _ =>
-                // Skip any non-start events inside <QueryResponse>.
-                {
-                    return Ok(DeserializerOutput {
-                        artifact: DeserializerArtifact::Deserializer(self),
-                        event: DeserializerEvent::None,
-                        allow_any: false,
-                    });
-                    // return Err(quickbooks_xsd::types::quick_xml::Error::custom(QBDeError(
-                    //     format!("Unexpected event inside <QueryResponse>: {event:?}"),
-                    // )));
-                }
+                // return Err(quickbooks_xsd::types::quick_xml::Error::custom(QBDeError(
+                //     format!("Unexpected event inside <QueryResponse>: {event:?}"),
+                // )));
             }
         }
     }

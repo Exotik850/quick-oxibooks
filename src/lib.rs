@@ -70,10 +70,10 @@ pub mod types;
 pub mod functions;
 pub(crate) mod limiter;
 
-// #[cfg(feature = "attachments")]
-// pub use crate::functions::attachment;
-// #[cfg(feature = "pdf")]
-// pub use crate::functions::pdf;
+#[cfg(feature = "attachments")]
+pub use crate::functions::attachment;
+#[cfg(feature = "pdf")]
+pub use crate::functions::pdf;
 // #[cfg(feature = "macros")]
 // pub mod macros;
 
@@ -301,5 +301,5 @@ pub(crate) fn xml_serialize<T: WithSerializer>(value: &T) -> APIResult<Vec<u8>> 
 pub(crate) fn xml_deserialize<T: WithDeserializer>(reader: impl std::io::Read) -> APIResult<T> {
     let buffered = std::io::BufReader::new(reader);
     let mut reader = quickbooks_xsd::types::quick_xml::IoReader::new(buffered);
-    T::deserialize(&mut reader).map_err(|e| e.into())
+    T::deserialize(&mut reader).map_err(std::convert::Into::into)
 }

@@ -6,15 +6,20 @@ pub use create::QBCreatable;
 mod to_ref;
 pub use to_ref::{NoIdForRef, QBToAttachableRef, QBToRef};
 
+#[cfg(feature = "pdf")]
+mod pdf;
+#[cfg(feature = "pdf")]
+pub use pdf::QBPDFAvailable;
+
 pub trait QBItem:
     WithSerializer + WithDeserializer + Clone + Sized + Send + std::fmt::Debug
 {
     const NAME: &'static str;
     const QB_ID: &'static str;
 
-    fn id<'a>(&'a self) -> Option<&'a str>;
-    fn sync_token<'a>(&'a self) -> Option<&'a str>;
-    fn meta_data<'a>(&'a self) -> Option<&'a Metadata>;
+    fn id(&self) -> Option<&str>;
+    fn sync_token(&self) -> Option<&str>;
+    fn meta_data(&self) -> Option<&Metadata>;
 }
 
 macro_rules! impl_qb_data {

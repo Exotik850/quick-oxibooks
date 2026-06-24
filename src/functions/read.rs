@@ -97,7 +97,7 @@ impl<'ser> Serializer<'ser> for Empty {
 // Public API
 // ---------------------------------------------------------------------------
 
-/// Execute an arbitrary read request against the QuickBooks API for a single entity.
+/// Execute an arbitrary read request against the `QuickBooks` API for a single entity.
 ///
 /// # Safety
 ///
@@ -205,99 +205,96 @@ impl<'de, T: QBItem> Deserializer<'de, QBResponse<T>> for QBResponseDe<T> {
         helper: &mut DeserializeHelper,
         event: Event<'de>,
     ) -> DeserializerResult<'de, QBResponse<T>> {
-        loop {
-            // ── Delegate to active child deserializer ────────────────────
-            if let Some(child) = self.child.take() {
-                let output = child.next(helper, event)?;
+        // ── Delegate to active child deserializer ────────────────────
+        if let Some(child) = self.child.take() {
+            let output = child.next(helper, event)?;
 
-                let (data, next_child) = output.artifact.into_parts();
-                if let Some(item) = data {
-                    self.item = Some(item);
-                } else if next_child.is_none() {
-                    return Err(quickbooks_xsd::types::quick_xml::Error::custom(QBDeError(
-                        "Child deserializer finished without producing an item".to_string(),
-                    )));
-                }
-                self.child = next_child;
-
-                // Child consumed the event — keep waiting.
-                return Ok(DeserializerOutput {
-                    artifact: DeserializerArtifact::Deserializer(self),
-                    event: DeserializerEvent::None,
-                    allow_any: false,
-                });
+            let (data, next_child) = output.artifact.into_parts();
+            if let Some(item) = data {
+                self.item = Some(item);
+            } else if next_child.is_none() {
+                return Err(quickbooks_xsd::types::quick_xml::Error::custom(QBDeError(
+                    "Child deserializer finished without producing an item".to_string(),
+                )));
             }
+            self.child = next_child;
 
-            // ── Not inside a child — handle the event ourselves ──────────
-            // `init` already consumed the outer <IntuitResponse> Start, so we
-            // are always inside it here.
-            debug_assert!(self.inside_intuit_response);
+            // Child consumed the event — keep waiting.
+            return Ok(DeserializerOutput {
+                artifact: DeserializerArtifact::Deserializer(self),
+                event: DeserializerEvent::None,
+                allow_any: false,
+            });
+        }
 
-            match &event {
-                Event::Start(_) | Event::Empty(_) => {
-                    if self.seen_entity_start {
-                        // We already saw the entity start, so this is an
-                        // unexpected element. Skip it (and its subtree for a
-                        // Start) by letting the orchestrator handle it.
-                        return Ok(DeserializerOutput {
-                            artifact: DeserializerArtifact::Deserializer(self),
-                            event: DeserializerEvent::None,
-                            allow_any: true,
-                        });
-                    }
+        // ── Not inside a child — handle the event ourselves ──────────
+        // `init` already consumed the outer <IntuitResponse> Start, so we
+        // are always inside it here.
+        debug_assert!(self.inside_intuit_response);
 
-                    // Get the local name of the event.
-                    let name = match &event {
-                        Event::Start(e) | Event::Empty(e) => e.name(),
-                        _ => unreachable!(),
-                    };
-                    if name.as_ref() == T::NAME.as_bytes() {
-                        // This is the entity we want.
-                        self.seen_entity_start = true;
-                        let child_output = T::init(helper, event)?;
-                        let (item, child_de) = child_output.artifact.into_parts();
-                        if let Some(item) = item {
-                            self.item = Some(item);
-                        }
-                        self.child = child_de;
-                        return Ok(DeserializerOutput {
-                            artifact: DeserializerArtifact::Deserializer(self),
-                            event: DeserializerEvent::None,
-                            allow_any: false,
-                        });
-                    } else {
-                        // This is not the entity we expect. Skip it (and its
-                        // subtree for a Start) by letting the orchestrator
-                        // handle it.
-                        return Ok(DeserializerOutput {
-                            artifact: DeserializerArtifact::Deserializer(self),
-                            event: DeserializerEvent::None,
-                            allow_any: true,
-                        });
-                    }
-                }
-                Event::End(e) if e.name().as_ref() == b"IntuitResponse" => {
-                    // End of IntuitResponse.
-                    let item = self.item.ok_or_else(|| {
-                        quickbooks_xsd::types::quick_xml::Error::custom(QBDeError(
-                            "Expected exactly one item in IntuitResponse".to_string(),
-                        ))
-                    })?;
+        match &event {
+            Event::Start(_) | Event::Empty(_) => {
+                if self.seen_entity_start {
+                    // We already saw the entity start, so this is an
+                    // unexpected element. Skip it (and its subtree for a
+                    // Start) by letting the orchestrator handle it.
                     return Ok(DeserializerOutput {
-                        artifact: DeserializerArtifact::Data(QBResponse(item)),
+                        artifact: DeserializerArtifact::Deserializer(self),
                         event: DeserializerEvent::None,
-                        allow_any: false,
+                        allow_any: true,
                     });
                 }
-                _ =>
-                // Skip any non-start events inside <IntuitResponse> that we are not delegating.
-                {
+
+                // Get the local name of the event.
+                let name = match &event {
+                    Event::Start(e) | Event::Empty(e) => e.name(),
+                    _ => unreachable!(),
+                };
+                if name.as_ref() == T::NAME.as_bytes() {
+                    // This is the entity we want.
+                    self.seen_entity_start = true;
+                    let child_output = T::init(helper, event)?;
+                    let (item, child_de) = child_output.artifact.into_parts();
+                    if let Some(item) = item {
+                        self.item = Some(item);
+                    }
+                    self.child = child_de;
                     return Ok(DeserializerOutput {
                         artifact: DeserializerArtifact::Deserializer(self),
                         event: DeserializerEvent::None,
                         allow_any: false,
                     });
                 }
+                // This is not the entity we expect. Skip it (and its
+                // subtree for a Start) by letting the orchestrator
+                // handle it.
+                return Ok(DeserializerOutput {
+                    artifact: DeserializerArtifact::Deserializer(self),
+                    event: DeserializerEvent::None,
+                    allow_any: true,
+                });
+            }
+            Event::End(e) if e.name().as_ref() == b"IntuitResponse" => {
+                // End of IntuitResponse.
+                let item = self.item.ok_or_else(|| {
+                    quickbooks_xsd::types::quick_xml::Error::custom(QBDeError(
+                        "Expected exactly one item in IntuitResponse".to_string(),
+                    ))
+                })?;
+                return Ok(DeserializerOutput {
+                    artifact: DeserializerArtifact::Data(QBResponse(item)),
+                    event: DeserializerEvent::None,
+                    allow_any: false,
+                });
+            }
+            _ =>
+            // Skip any non-start events inside <IntuitResponse> that we are not delegating.
+            {
+                return Ok(DeserializerOutput {
+                    artifact: DeserializerArtifact::Deserializer(self),
+                    event: DeserializerEvent::None,
+                    allow_any: false,
+                });
             }
         }
     }

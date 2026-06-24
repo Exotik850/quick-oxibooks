@@ -49,6 +49,7 @@ use ureq::Agent;
 
 use crate::{
     error::{APIError, APIErrorInner},
+    traits::{QBItem, QBPDFAvailable},
     APIResult, QBContext,
 };
 
@@ -181,7 +182,7 @@ use crate::{
 /// - Large invoices with many line items take longer to generate  
 /// - Consider caching PDFs if they'll be accessed multiple times
 /// - Batch operations should include delays to avoid rate limiting
-pub trait QBGetPDF {
+pub trait QBGetPDF: QBPDFAvailable {
     /// Gets the PDF bytes
     /// returns an error if the item has no ID
     /// or if the request itself fails
@@ -194,12 +195,12 @@ pub trait QBGetPDF {
     /// or if the request itself fails
     fn save_pdf_to_file(&self, file_name: &str, qb: &QBContext, client: &Agent) -> APIResult<()>
     where
-        Self: Sized + QBPDFable + QBItem,
+        Self: Sized,
     {
         qb_save_pdf_to_file(self, file_name, qb, client)
     }
 }
-impl<T: QBItem + QBPDFable> QBGetPDF for T {
+impl<T: QBItem + QBPDFAvailable> QBGetPDF for T {
     fn get_pdf_bytes(&self, qb: &QBContext, client: &Agent) -> APIResult<Vec<u8>> {
         qb_get_pdf_bytes(self, qb, client)
     }
@@ -208,7 +209,7 @@ impl<T: QBItem + QBPDFable> QBGetPDF for T {
 /// Gets the PDF bytes of the item
 /// returns an error if the item has no ID
 /// or if the request itself fails
-fn qb_get_pdf_bytes<T: QBItem + QBPDFable>(
+fn qb_get_pdf_bytes<T: QBPDFAvailable>(
     item: &T,
     qb: &QBContext,
     client: &Agent,
@@ -219,8 +220,8 @@ fn qb_get_pdf_bytes<T: QBItem + QBPDFable>(
 
     let request = crate::client::build_request(
         &ureq::http::Method::GET,
-        &format!("company/{}/{}/{}/pdf", qb.company_id, T::qb_id(), id),
-        None::<&()>,
+        &format!("company/{}/{}/{}/pdf", qb.company_id, T::QB_ID, id),
+        None::<&crate::functions::Empty>,
         None::<std::iter::Empty<(&str, &str)>>,
         "application/json",
         qb.environment,
@@ -230,7 +231,10 @@ fn qb_get_pdf_bytes<T: QBItem + QBPDFable>(
     let response = qb.with_permission(|_| Ok(client.run(request)?))?;
 
     if !response.status().is_success() {
-        return Err(APIErrorInner::BadRequest(response.into_body().read_json()?).into());
+        return Err(APIErrorInner::BadRequest(crate::xml_deserialize(
+            response.into_body().into_reader(),
+        )?)
+        .into());
     }
 
     #[cfg(feature = "logging")]
@@ -243,7 +247,7 @@ fn qb_get_pdf_bytes<T: QBItem + QBPDFable>(
     Ok(response.into_body().read_to_vec()?)
 }
 
-fn qb_save_pdf_to_file<T: QBItem + QBPDFable>(
+fn qb_save_pdf_to_file<T: QBPDFAvailable>(
     item: &T,
     file_name: &str,
     qb: &QBContext,

@@ -8,7 +8,7 @@ use crate::{limiter::RateLimiter, APIResult, DiscoveryDoc, Environment};
 
 const RATE_LIMIT: usize = 500;
 const BATCH_RATE_LIMIT: usize = 40;
-const RESET_DURATION: Duration = Duration::from_secs(60);
+const RESET_DURATION: Duration = Duration::from_mins(1);
 
 /// The core context for interacting with the `QuickBooks` Online API.
 ///
