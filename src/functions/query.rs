@@ -1,11 +1,11 @@
 //! Functions for querying `QuickBooks` entities using SQL-like syntax.
 
 use std::fmt::Write;
-use std::io::{BufRead, Read};
 
-use quick_xml::events::Event;
-use quick_xml::Reader;
-use quickbooks_xsd::types::quick_xml::{DeserializeSync, WithDeserializer, WithSerializer};
+use quickbooks_xsd::types::quick_xml::{
+    DeserializeHelper, Deserializer, DeserializerArtifact, DeserializerEvent, DeserializerOutput,
+    DeserializerResult, Event, SerializeHelper, Serializer, WithDeserializer, WithSerializer,
+};
 use ureq::{http::Method, Agent};
 
 use crate::{error::APIError, traits::QBItem, APIResult, QBContext};
@@ -161,6 +161,10 @@ impl<T: QBItem> QBQuery for T {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Minimal empty type for serialization (used when there is no request body)
+// ---------------------------------------------------------------------------
+
 #[derive(Debug)]
 struct Empty;
 
@@ -175,12 +179,11 @@ impl WithSerializer for Empty {
     }
 }
 
-impl<'ser> quickbooks_xsd::types::quick_xml::Serializer<'ser> for Empty {
+impl<'ser> Serializer<'ser> for Empty {
     fn next(
         &mut self,
-        _: &mut quickbooks_xsd::types::quick_xml::SerializeHelper,
-    ) -> Option<Result<quick_xml::events::Event<'ser>, quickbooks_xsd::types::quick_xml::Error>>
-    {
+        _: &mut SerializeHelper,
+    ) -> Option<Result<Event<'ser>, quickbooks_xsd::types::quick_xml::Error>> {
         None
     }
 }
@@ -214,8 +217,10 @@ pub unsafe fn qb_query_raw<T: QBItem>(
     })?;
     #[cfg(feature = "logging")]
     log::info!("Successfully Queried Raw Data for query string : {query_str}");
+
     let body = response.into_body().into_reader();
-    parse_query_response::<T>(body)
+    let wrapper: QueryResponseItems<T> = crate::xml_deserialize(body)?;
+    Ok(wrapper.0)
 }
 
 /// Build and execute a `select * from {type} {query_str}` query.
@@ -232,171 +237,224 @@ fn qb_query<T: QBItem>(
     unsafe { qb_query_raw::<T>(query, qb, client) }
 }
 
-/// Parse a QuickBooks query response body, extracting items of type `T`
-/// from inside the `<QueryResponse>` element.
-///
-/// Expected structure:
-/// ```xml
-/// <IntuitResponse xmlns="..." time="...">
-///     <QueryResponse startPosition="1" maxResults="N" totalCount="N">
-///         <EntityName>...</EntityName>
-///     </QueryResponse>
-/// </IntuitResponse>
-/// ```
-fn parse_query_response<T: WithDeserializer>(reader: impl Read) -> Result<Vec<T>, APIError> {
-    let mut reader = Reader::from_reader(std::io::BufReader::new(reader));
-    reader.config_mut().trim_text(true);
+// ---------------------------------------------------------------------------
+// QueryResponseItems<T> — deserializes a <QueryResponse> containing Vec<T>
+// ---------------------------------------------------------------------------
 
-    let mut outer_buf = Vec::new();
-    let mut inner_buf = Vec::new();
-    let mut raw_buf = Vec::new();
-    let mut items = Vec::new();
+/// Wrapper type whose [`Deserializer`] collects items of `T` from inside a
+/// `<QueryResponse>` element.
+#[derive(Debug)]
+struct QueryResponseItems<T>(Vec<T>);
 
-    // Navigate to <QueryResponse>
-    loop {
-        match reader.read_event_into(&mut outer_buf)? {
-            Event::Start(ref e) if e.name().as_ref() == b"QueryResponse" => break,
-            Event::Eof => return Ok(items),
-            _ => {}
-        }
-        outer_buf.clear();
-    }
-    outer_buf.clear();
-
-    // Read each direct child of <QueryResponse>, reconstruct its XML, deserialize
-    loop {
-        match reader.read_event_into(&mut outer_buf)? {
-            Event::Start(ref e) => {
-                raw_buf.clear();
-                read_element_body_into(&mut reader, e, &mut inner_buf, &mut raw_buf)?;
-                items.push(deserialize_from_bytes::<T>(&raw_buf)?);
-            }
-            Event::Empty(ref e) => {
-                raw_buf.clear();
-                write_self_closing_tag_to(&mut raw_buf, e);
-                items.push(deserialize_from_bytes::<T>(&raw_buf)?);
-            }
-            Event::End(_) | Event::Eof => break,
-            _ => {}
-        }
-        outer_buf.clear();
-    }
-
-    Ok(items)
+impl<T: QBItem> WithDeserializer for QueryResponseItems<T> {
+    type Deserializer = QueryResponseItemsDe<T>;
 }
 
-/// Read events for one element body and reconstruct its XML bytes into `raw`.
-///
-/// `buf` is a reusable event buffer (distinct from the outer loop's buffer,
-/// so the `BytesStart` borrow from the caller doesn't conflict).
-fn read_element_body_into(
-    reader: &mut Reader<impl BufRead>,
-    start: &quick_xml::events::BytesStart,
-    buf: &mut Vec<u8>,
-    raw: &mut Vec<u8>,
-) -> Result<(), quick_xml::Error> {
-    write_tag_start_to(raw, start);
-    let mut depth: u32 = 1;
+// ---------------------------------------------------------------------------
+// Deserializer state machine
+// ---------------------------------------------------------------------------
 
-    loop {
-        match reader.read_event_into(buf)? {
-            Event::Start(ref e) => {
-                depth += 1;
-                write_tag_start_to(raw, e);
+#[derive(Debug)]
+struct QueryResponseItemsDe<T: QBItem> {
+    /// Accumulated items.
+    items: Vec<T>,
+    /// When `Some`, we are inside a child and delegating.
+    child: Option<T::Deserializer>,
+    /// `true` once we've seen `<QueryResponse>`.
+    inside_response: bool,
+}
+
+impl<T: QBItem> QueryResponseItemsDe<T> {
+    fn new() -> Self {
+        Self {
+            items: Vec::new(),
+            child: None,
+            inside_response: false,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct QBDeError(pub String);
+
+impl std::fmt::Display for QBDeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "QueryResponseItemsDe error: {}", self.0)
+    }
+}
+impl std::error::Error for QBDeError {}
+
+impl<'de, T: QBItem> Deserializer<'de, QueryResponseItems<T>> for QueryResponseItemsDe<T> {
+    fn init(
+        _helper: &mut DeserializeHelper,
+        _event: Event<'de>,
+    ) -> DeserializerResult<'de, QueryResponseItems<T>> {
+        // The first event is the outer <IntuitResponse> Start — silently
+        // consume it. Subsequent events flow through `next`.
+        Ok(DeserializerOutput {
+            artifact: DeserializerArtifact::Deserializer(Self::new()),
+            event: DeserializerEvent::None,
+            allow_any: false,
+        })
+    }
+
+    fn next(
+        mut self,
+        helper: &mut DeserializeHelper,
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, QueryResponseItems<T>> {
+        loop {
+            // ── Delegate to active child deserializer ────────────────────
+            if let Some(child) = self.child.take() {
+                let output = child.next(helper, event)?;
+
+                let (data, next_child) = output.artifact.into_parts();
+                if let Some(item) = data {
+                    self.items.push(item);
+                } else if next_child.is_none() {
+                    return Err(quickbooks_xsd::types::quick_xml::Error::custom(QBDeError(
+                        "Child deserializer finished without producing an item".to_string(),
+                    )));
+                }
+                self.child = next_child;
+
+                // Child consumed the event — keep waiting.
+                return Ok(DeserializerOutput {
+                    artifact: DeserializerArtifact::Deserializer(self),
+                    event: DeserializerEvent::None,
+                    allow_any: false,
+                });
             }
-            Event::End(ref e) => {
-                depth -= 1;
-                raw.extend_from_slice(b"</");
-                raw.extend_from_slice(e.name().as_ref());
-                raw.extend_from_slice(b">");
-                if depth == 0 {
-                    break;
+
+            // ── Not inside a child — handle the event ourselves ──────────
+            if !self.inside_response {
+                // Searching for <QueryResponse>
+                if matches!(&event, Event::Start(e) | Event::Empty(e) if e.name().as_ref() == b"QueryResponse")
+                {
+                    self.inside_response = true;
+                    let artifact = if matches!(event, Event::Empty(_)) {
+                        DeserializerArtifact::Data(QueryResponseItems(self.items))
+                    } else {
+                        DeserializerArtifact::Deserializer(self)
+                    };
+                    return Ok(DeserializerOutput {
+                        artifact,
+                        event: DeserializerEvent::None,
+                        allow_any: true,
+                    });
+                }
+                // Skip anything before <QueryResponse>.
+                let allow_any = matches!(event, Event::Start(_) | Event::Empty(_));
+                return Ok(DeserializerOutput {
+                    artifact: DeserializerArtifact::Deserializer(self),
+                    event: DeserializerEvent::None,
+                    allow_any,
+                });
+            }
+
+            // Inside <QueryResponse>
+            match &event {
+                Event::Start(_) | Event::Empty(_) => {
+                    // Only delegate to the child deserializer when the element
+                    // name matches the expected entity. Any other element is
+                    // unexpected inside <QueryResponse> and produces an error.
+                    let name = match &event {
+                        Event::Start(e) | Event::Empty(e) => e.name(),
+                        _ => unreachable!(),
+                    };
+                    if name.as_ref() != T::NAME.as_bytes() {
+                        return Err(quickbooks_xsd::types::quick_xml::Error::custom(QBDeError(
+                            format!(
+                                "Unexpected element <{}> inside <QueryResponse>, expected <{}>",
+                                String::from_utf8_lossy(name.as_ref()),
+                                T::NAME
+                            ),
+                        )));
+                    }
+
+                    let child_output = T::init(helper, event)?;
+                    let (item, child_de) = child_output.artifact.into_parts();
+                    if let Some(item) = item {
+                        self.items.push(item);
+                    }
+                    self.child = child_de;
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Deserializer(self),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                Event::End(e) if e.name().as_ref() == b"QueryResponse" => {
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Data(QueryResponseItems(self.items)),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                }
+                _ =>
+                // Skip any non-start events inside <QueryResponse>.
+                {
+                    return Ok(DeserializerOutput {
+                        artifact: DeserializerArtifact::Deserializer(self),
+                        event: DeserializerEvent::None,
+                        allow_any: false,
+                    });
+                    // return Err(quickbooks_xsd::types::quick_xml::Error::custom(QBDeError(
+                    //     format!("Unexpected event inside <QueryResponse>: {event:?}"),
+                    // )));
                 }
             }
-            Event::Empty(ref e) => write_self_closing_tag_to(raw, e),
-            Event::Text(ref e) => raw.extend_from_slice(e.as_ref()),
-            Event::CData(ref e) => {
-                raw.extend_from_slice(b"<![CDATA[");
-                raw.extend_from_slice(e.as_ref());
-                raw.extend_from_slice(b"]]>");
-            }
-            Event::Comment(ref e) => {
-                raw.extend_from_slice(b"<!--");
-                raw.extend_from_slice(e.as_ref());
-                raw.extend_from_slice(b"-->");
-            }
-            Event::Decl(ref e) => {
-                raw.extend_from_slice(b"<?");
-                raw.extend_from_slice(e.as_ref());
-                raw.extend_from_slice(b"?>");
-            }
-            Event::PI(ref e) => {
-                raw.extend_from_slice(b"<?");
-                raw.extend_from_slice(e.as_ref());
-                raw.extend_from_slice(b"?>");
-            }
-            Event::DocType(ref e) => {
-                raw.extend_from_slice(b"<!DOCTYPE ");
-                raw.extend_from_slice(e.as_ref());
-                raw.extend_from_slice(b">");
-            }
-            Event::GeneralRef(ref e) => {
-                raw.extend_from_slice(b"&");
-                raw.extend_from_slice(e.as_ref());
-                raw.extend_from_slice(b";");
-            }
-            Event::Eof => break,
         }
-        buf.clear();
     }
 
-    Ok(())
-}
-
-/// Append a start-tag to `raw`: `<Name attr="val">`.
-fn write_tag_start_to(raw: &mut Vec<u8>, e: &quick_xml::events::BytesStart) {
-    raw.extend_from_slice(b"<");
-    raw.extend_from_slice(e.name().as_ref());
-    for attr in e.attributes().flatten() {
-        raw.extend_from_slice(b" ");
-        raw.extend_from_slice(attr.key.as_ref());
-        raw.extend_from_slice(b"=\"");
-        raw.extend_from_slice(&attr.value);
-        raw.extend_from_slice(b"\"");
+    fn finish(
+        self,
+        _helper: &mut DeserializeHelper,
+    ) -> Result<QueryResponseItems<T>, quickbooks_xsd::types::quick_xml::Error> {
+        Ok(QueryResponseItems(self.items))
     }
-    raw.extend_from_slice(b">");
-}
-
-/// Append a self-closing tag to `raw`: `<Name attr="val"/>`.
-fn write_self_closing_tag_to(raw: &mut Vec<u8>, e: &quick_xml::events::BytesStart) {
-    raw.extend_from_slice(b"<");
-    raw.extend_from_slice(e.name().as_ref());
-    for attr in e.attributes().flatten() {
-        raw.extend_from_slice(b" ");
-        raw.extend_from_slice(attr.key.as_ref());
-        raw.extend_from_slice(b"=\"");
-        raw.extend_from_slice(&attr.value);
-        raw.extend_from_slice(b"\"");
-    }
-    raw.extend_from_slice(b"/>");
-}
-
-/// Deserialize raw XML bytes into `T` via its `WithDeserializer`.
-fn deserialize_from_bytes<T: WithDeserializer>(bytes: &[u8]) -> Result<T, APIError> {
-    let mut reader = quickbooks_xsd::types::quick_xml::IoReader::new(bytes);
-    T::deserialize(&mut reader).map_err(Into::into)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::types::prelude::Invoice;
+    use crate::types::prelude::{Customer, Invoice};
+
+    #[test]
+    fn test_invoice_deserializer() {
+        let xml = r#"<Invoice domain="QBO" sparse="false">
+            <Id>239</Id>
+            <SyncToken>0</SyncToken>
+            <DocNumber>1070</DocNumber>
+        </Invoice>"#;
+        use quickbooks_xsd::types::quick_xml::{DeserializeSync, IoReader};
+        let mut reader = IoReader::new(std::io::BufReader::new(xml.as_bytes()));
+        let _inv: Invoice = Invoice::deserialize(&mut reader).unwrap();
+    }
+
+    #[test]
+    fn test_query_response_with_simple_type() {
+        let xml = r#"<IntuitResponse xmlns="http://schema.intuit.com/finance/v3" time="2026-06-05T08:11:46.819-07:00">
+            <QueryResponse>
+                <Customer domain="QBO" sparse="false">
+                    <Id>123</Id>
+                    <SyncToken>4</SyncToken>
+                    <DisplayName>Test Customer</DisplayName>
+                </Customer>
+            </QueryResponse>
+        </IntuitResponse>"#;
+        use super::QueryResponseItems;
+        let items: QueryResponseItems<Customer> = crate::xml_deserialize(xml.as_bytes()).unwrap();
+        assert_eq!(items.0.len(), 1);
+        assert_eq!(items.0[0].id(), Some(&"123".to_string()));
+    }
 
     #[test]
     fn test_query_response_deserializer() {
         let xml = include_str!("../../test/data/query_response.xml");
-        let items: Vec<Invoice> = super::parse_query_response(xml.as_bytes()).unwrap();
-        assert_eq!(items.len(), 1);
-        let inv = &items[0];
+        use super::QueryResponseItems;
+        let items: QueryResponseItems<Invoice> = crate::xml_deserialize(xml.as_bytes()).unwrap();
+        assert_eq!(items.0.len(), 1);
+        let inv = &items.0[0];
         assert_eq!(inv.id(), Some(&"239".to_string()));
         assert_eq!(inv.doc_number(), Some(&"1070".to_string()));
         assert_eq!(inv.total_amt(), Some(&150.00));
@@ -407,7 +465,21 @@ mod tests {
         let xml = r#"<IntuitResponse xmlns="http://schema.intuit.com/finance/v3" time="2026-06-05T08:11:46.819-07:00">
                               <QueryResponse/>
                           </IntuitResponse>"#;
-        let items: Vec<Invoice> = super::parse_query_response(xml.as_bytes()).unwrap();
-        assert!(items.is_empty());
+        use super::QueryResponseItems;
+        let items: QueryResponseItems<Invoice> = crate::xml_deserialize(xml.as_bytes()).unwrap();
+        assert!(items.0.is_empty());
+    }
+
+    #[test]
+    fn test_invalid_query_response() {
+        let xml = r#"<IntuitResponse xmlns="http://schema.intuit.com/finance/v3" time="2026-06-05T08:11:46.819-07:00">
+                              <QueryResponse>
+                                  <InvalidElement/>
+                              </QueryResponse>
+                          </IntuitResponse>"#;
+        use super::QueryResponseItems;
+        let result: Result<QueryResponseItems<Invoice>, _> = crate::xml_deserialize(xml.as_bytes());
+        dbg!(&result);
+        assert!(result.is_err());
     }
 }
