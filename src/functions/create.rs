@@ -10,7 +10,8 @@ use ureq::{http::Method, Agent};
 
 use crate::{
     error::{APIError, APIErrorInner},
-    functions::{qb_request, QBResponse},
+    functions::{qb_request, read::QBResponse},
+    traits::{QBCreatable, QBItem},
     APIResult, QBContext,
 };
 
@@ -87,15 +88,15 @@ fn qb_create<T: QBItem + QBCreatable>(
     qb: &QBContext,
     client: &Agent,
 ) -> Result<T, APIError> {
-    if !item.can_create() {
-        return Err(APIErrorInner::CreateMissingItems.into());
+    if let Err(fields) = item.can_create() {
+        return Err(APIErrorInner::CreateMissingItems(fields.fields).into());
     }
 
     let response: QBResponse<T> = qb_request(
         qb,
         client,
         Method::POST,
-        &format!("company/{}/{}", qb.company_id, T::qb_id()),
+        &format!("company/{}/{}", qb.company_id, T::QB_ID),
         Some(item),
         None,
         None::<std::iter::Empty<(&str, &str)>>,
@@ -105,8 +106,8 @@ fn qb_create<T: QBItem + QBCreatable>(
     log::info!(
         "Successfully created {} with ID of '{:?}'",
         T::name(),
-        response.object.id().into_iter().next()
+        response.0.id().into_iter().next()
     );
 
-    Ok(response.object)
+    Ok(response.0)
 }
