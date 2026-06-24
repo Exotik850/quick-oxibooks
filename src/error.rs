@@ -182,8 +182,8 @@ pub enum APIErrorInner {
     NoIdOnRead,
     #[error("Trying to send object email when it doesn't have an ID set")]
     NoIdOnSend,
-    #[error("Missing objects when trying to create item")]
-    CreateMissingItems,
+    #[error("Missing objects when trying to create item: {0:?}")]
+    CreateMissingItems(Vec<&'static str>),
     #[error("Can't delete objects without ID or SyncToken")]
     DeleteMissingItems,
     #[error("Missing ID when trying to get PDF of object")]
@@ -192,6 +192,8 @@ pub enum APIErrorInner {
     ByteLengthMismatch,
     #[error("Missing Attachable object on upload response")]
     NoAttachableObjects,
+    #[error("QuickBooks returned a fault on attachment upload: {0:?}")]
+    AttachableFault(quickbooks_xsd::intuit_rest_service_def::FaultType),
     #[error("Throttle limit reached")]
     ThrottleLimitReached,
     #[error("Batch limit exceeded")]

@@ -1,6 +1,11 @@
 pub use crate::types::prelude::*;
 use quickbooks_xsd::types::quick_xml::{WithDeserializer, WithSerializer};
 
+mod create;
+pub use create::QBCreatable;
+mod to_ref;
+pub use to_ref::{NoIdForRef, QBToAttachableRef, QBToRef};
+
 pub trait QBItem:
     WithSerializer + WithDeserializer + Clone + Sized + Send + std::fmt::Debug
 {
